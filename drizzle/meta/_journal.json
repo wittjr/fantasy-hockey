@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788723199724,
+      "tag": "0000_nebulous_scrambler",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788736791104,
+      "tag": "0001_charming_randall_flagg",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788743464428,
+      "tag": "0002_magical_bucky",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788745399050,
+      "tag": "0003_flawless_green_goblin",
+      "breakpoints": true
+    }
+  ]
+}
