@@ -51,7 +51,7 @@ export default async function AnalysisPage({
   if (!row || row.user_league.userId !== session.user.id) notFound();
   const { user_league: userLeague, fantrax_league: league } = row;
 
-  if (!userLeague.myFantraxTeamId) redirect(`/leagues/${userLeagueId}`);
+  if (!userLeague.myFantraxTeamId || league.provider !== "fantrax") redirect(`/leagues/${userLeagueId}`);
 
   const season = seasonParam ?? defaultSeason(league.startDate, league.endDate);
   const hasSchedule = await seasonHasSchedule(season);

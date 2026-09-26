@@ -67,6 +67,10 @@ export const verificationTokens = pgTable(
 
 export const fantraxLeagues = pgTable("fantrax_league", {
   id: uuid("id").defaultRandom().primaryKey(),
+  // "fantrax" | "yahoo". For Yahoo leagues fantraxLeagueId holds the Yahoo league_key
+  // (e.g. "465.l.12345") and fantrax_team.fantraxTeamId holds the Yahoo team_key - the
+  // table names predate Yahoo support.
+  provider: text("provider").notNull().default("fantrax"),
   fantraxLeagueId: text("fantrax_league_id").notNull().unique(),
   name: text("name").notNull(),
   sport: text("sport").notNull().default("NHL"),
@@ -107,6 +111,21 @@ export const userLeagues = pgTable(
   },
   (t) => [uniqueIndex("user_league_user_league_idx").on(t.userId, t.leagueId)]
 );
+
+// A user's Yahoo Fantasy OAuth grant. Yahoo is NOT an app login (Discord is) - this is a
+// separate "connect" step that lets the app read the user's Yahoo leagues on their behalf.
+export const yahooConnections = pgTable("yahoo_connection", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  yahooGuid: text("yahoo_guid"),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+  // Yahoo's refresh grant requires the redirect_uri the grant was issued with.
+  redirectUri: text("redirect_uri").notNull(),
+  connectedAt: timestamp("connected_at", { mode: "date" }).defaultNow(),
+});
 
 // --- NHL reference data ---
 

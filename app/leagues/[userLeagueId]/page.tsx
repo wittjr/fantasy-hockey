@@ -64,6 +64,37 @@ export default async function LeaguePage({
     );
   }
 
+  if (league.provider === "yahoo") {
+    const myTeam = (await getTeamsForLeague(league.id)).find((t) => t.fantraxTeamId === userLeague.myFantraxTeamId);
+    const slots = Object.entries(
+      (league.settingsJson as { positionConstraints?: Record<string, { maxActive?: number; maxTotal?: number }> } | null)
+        ?.positionConstraints ?? {}
+    );
+    return (
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 p-8">
+        <Link href="/" className="text-sm text-neutral-500 hover:underline">
+          ← All leagues
+        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold">{league.name}</h1>
+          <p className="text-sm text-neutral-500">
+            Yahoo league · {league.seasonYear} · your team: {myTeam?.name ?? "—"}
+          </p>
+        </div>
+        <section className="rounded-md border border-neutral-200 p-4 text-sm dark:border-neutral-800">
+          <h2 className="mb-2 font-medium">Roster slots</h2>
+          <p className="text-neutral-600 dark:text-neutral-400">
+            {slots.map(([pos, c]) => `${c.maxActive ?? c.maxTotal} ${pos}${c.maxActive ? "" : " (reserve)"}`).join(" · ")}
+          </p>
+        </section>
+        <p className="text-sm text-neutral-500">
+          League and teams imported from Yahoo. Roster import and the Draft Day Helper don&apos;t support Yahoo
+          leagues yet - that&apos;s the next step.
+        </p>
+      </main>
+    );
+  }
+
   const rosterRows = await getTeamRosterRows(userLeagueId);
   const byBucket = new Map<string, typeof rosterRows>();
   for (const r of rosterRows) {

@@ -17,6 +17,8 @@ import { removePlayer, restoreAllPlayers, restorePlayer } from "@/lib/fantrax/re
 import { importNhlSeasonSchedule } from "@/lib/nhl/import-schedule";
 import { parseProjectionsSpreadsheet } from "@/lib/import/spreadsheet";
 import { importSpreadsheetForUser } from "@/lib/import/projections";
+import { importYahooLeague } from "@/lib/yahoo/import-league";
+import { disconnectYahoo } from "@/lib/yahoo/oauth";
 
 async function requireUserId(): Promise<string> {
   const session = await auth();
@@ -34,19 +36,41 @@ export async function importLeagueAction(formData: FormData): Promise<void> {
   redirect(`/leagues/${result.userLeagueId}`);
 }
 
+export async function importYahooLeagueAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const leagueKey = String(formData.get("leagueKey") ?? "");
+  if (!leagueKey) throw new Error("No Yahoo league selected");
+
+  const result = await importYahooLeague(userId, leagueKey);
+  revalidatePath("/");
+  redirect(`/leagues/${result.userLeagueId}`);
+}
+
+export async function disconnectYahooAction(): Promise<void> {
+  const userId = await requireUserId();
+  await disconnectYahoo(userId);
+  revalidatePath("/");
+}
+
+// Roster sync only talks to Fantrax so far - Yahoo leagues skip it until Yahoo rosters are supported.
+async function isFantraxLeague(userLeagueId: string): Promise<boolean> {
+  const row = await getUserLeagueWithLeague(userLeagueId);
+  return row?.fantrax_league.provider === "fantrax";
+}
+
 export async function setMyTeamAction(userLeagueId: string, formData: FormData): Promise<void> {
   await requireUserId();
   const fantraxTeamId = String(formData.get("fantraxTeamId") ?? "");
   if (!fantraxTeamId) throw new Error("Select a team");
 
   await setMyTeam(userLeagueId, fantraxTeamId);
-  await syncTeamRoster(userLeagueId);
+  if (await isFantraxLeague(userLeagueId)) await syncTeamRoster(userLeagueId);
   revalidatePath(`/leagues/${userLeagueId}`);
 }
 
 export async function resyncRosterAction(userLeagueId: string): Promise<void> {
   await requireUserId();
-  await syncTeamRoster(userLeagueId);
+  if (await isFantraxLeague(userLeagueId)) await syncTeamRoster(userLeagueId);
   revalidatePath(`/leagues/${userLeagueId}`);
 }
 

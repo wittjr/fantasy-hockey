@@ -2,13 +2,39 @@ import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getUserLeaguesForUser } from "@/lib/fantrax/import-league";
-import { importLeagueAction } from "@/lib/actions/league-actions";
+import { disconnectYahooAction, importLeagueAction, importYahooLeagueAction } from "@/lib/actions/league-actions";
+import { getYahooConnection } from "@/lib/yahoo/oauth";
+import { listMyNhlLeagues, type YahooLeagueSummary } from "@/lib/yahoo/client";
 
-export default async function DashboardPage() {
+const YAHOO_STATUS_MESSAGES: Record<string, { text: string; ok: boolean }> = {
+  connected: { text: "Yahoo account connected.", ok: true },
+  denied: { text: "Yahoo access wasn't granted.", ok: false },
+  invalid: { text: "Yahoo sign-in expired or didn't match - try connecting again.", ok: false },
+  error: { text: "Couldn't finish connecting to Yahoo - check the server logs.", ok: false },
+};
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ yahoo?: string }> }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const leagues = await getUserLeaguesForUser(session.user.id);
+  const { yahoo: yahooStatus } = await searchParams;
+  const [leagues, yahooConnection] = await Promise.all([
+    getUserLeaguesForUser(session.user.id),
+    getYahooConnection(session.user.id),
+  ]);
+
+  let yahooLeagues: YahooLeagueSummary[] = [];
+  let yahooError: string | null = null;
+  if (yahooConnection) {
+    try {
+      yahooLeagues = await listMyNhlLeagues(session.user.id);
+    } catch (err) {
+      console.error("Listing Yahoo leagues failed", err);
+      yahooError = err instanceof Error ? err.message : String(err);
+    }
+  }
+  const importedKeys = new Set(leagues.map((l) => l.fantrax_league.fantraxLeagueId));
+  const statusMessage = yahooStatus ? YAHOO_STATUS_MESSAGES[yahooStatus] : undefined;
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 p-8">
@@ -38,7 +64,8 @@ export default async function DashboardPage() {
               >
                 <div className="font-medium">{fantrax_league.name}</div>
                 <div className="text-sm text-neutral-500">
-                  {fantrax_league.seasonYear} · {user_league.myFantraxTeamId ? "team set" : "team not set"}
+                  {fantrax_league.provider === "yahoo" ? "Yahoo" : "Fantrax"} · {fantrax_league.seasonYear} ·{" "}
+                  {user_league.myFantraxTeamId ? "team set" : "team not set"}
                 </div>
               </Link>
             </li>
@@ -63,6 +90,76 @@ export default async function DashboardPage() {
             Import
           </button>
         </form>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Yahoo leagues</h2>
+          {yahooConnection && (
+            <form action={disconnectYahooAction}>
+              <button type="submit" className="text-sm text-neutral-500 hover:underline">
+                Disconnect Yahoo
+              </button>
+            </form>
+          )}
+        </div>
+        {statusMessage && (
+          <p className={`text-sm ${statusMessage.ok ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+            {statusMessage.text}
+          </p>
+        )}
+        {!yahooConnection ? (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-sm text-neutral-500">
+              Connect your Yahoo account to import a Yahoo Fantasy hockey league. This only grants read access to
+              your leagues - you still sign in to this app with Discord.
+            </p>
+            {/* Plain <a>, not <Link>: this route redirects off-site to Yahoo. */}
+            <a
+              href="/api/yahoo/connect"
+              className="rounded-md bg-[#6001D2] px-4 py-2 text-sm font-medium text-white hover:bg-[#4d01a8]"
+            >
+              Connect Yahoo
+            </a>
+          </div>
+        ) : yahooError ? (
+          <p className="text-sm text-red-600 dark:text-red-400">Couldn&apos;t load your Yahoo leagues: {yahooError}</p>
+        ) : yahooLeagues.length === 0 ? (
+          <p className="text-sm text-neutral-500">No Yahoo hockey leagues found for this season.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-neutral-200 dark:divide-neutral-800">
+            {yahooLeagues.map((l) => (
+              <li key={l.leagueKey} className="flex items-center justify-between gap-4 py-2 text-sm">
+                <span>
+                  {l.name}{" "}
+                  <span className="text-neutral-500">
+                    ({l.season} · {l.numTeams} teams)
+                  </span>
+                </span>
+                {importedKeys.has(l.leagueKey) ? (
+                  <span className="text-xs text-neutral-400">Imported</span>
+                ) : (
+                  <form action={importYahooLeagueAction}>
+                    <input type="hidden" name="leagueKey" value={l.leagueKey} />
+                    <button
+                      type="submit"
+                      className="rounded bg-neutral-900 px-3 py-1 text-xs font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
+                    >
+                      Import
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-xs text-neutral-400">
+          Fantasy data provided by{" "}
+          <a href="https://sports.yahoo.com/fantasy/" className="underline">
+            Yahoo Fantasy
+          </a>
+          .
+        </p>
       </section>
     </main>
   );
