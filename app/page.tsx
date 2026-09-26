@@ -4,20 +4,24 @@ import Link from "next/link";
 import { getUserLeaguesForUser } from "@/lib/fantrax/import-league";
 import { disconnectYahooAction, importLeagueAction, importYahooLeagueAction } from "@/lib/actions/league-actions";
 import { getYahooConnection } from "@/lib/yahoo/oauth";
-import { listMyNhlLeagues, type YahooLeagueSummary } from "@/lib/yahoo/client";
+import { diagnoseYahooAccess, listMyNhlLeagues, type YahooLeagueSummary } from "@/lib/yahoo/client";
 
 const YAHOO_STATUS_MESSAGES: Record<string, { text: string; ok: boolean }> = {
   connected: { text: "Yahoo account connected.", ok: true },
   denied: { text: "Yahoo access wasn't granted.", ok: false },
   invalid: { text: "Yahoo sign-in expired or didn't match - try connecting again.", ok: false },
-  error: { text: "Couldn't finish connecting to Yahoo - check the server logs.", ok: false },
+  error: { text: "Couldn't finish connecting to Yahoo.", ok: false },
 };
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ yahoo?: string }> }) {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ yahoo?: string; yahooDetail?: string }>;
+}) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const { yahoo: yahooStatus } = await searchParams;
+  const { yahoo: yahooStatus, yahooDetail } = await searchParams;
   const [leagues, yahooConnection] = await Promise.all([
     getUserLeaguesForUser(session.user.id),
     getYahooConnection(session.user.id),
@@ -25,12 +29,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   let yahooLeagues: YahooLeagueSummary[] = [];
   let yahooError: string | null = null;
+  let yahooDiagnostics: Awaited<ReturnType<typeof diagnoseYahooAccess>> = [];
   if (yahooConnection) {
     try {
       yahooLeagues = await listMyNhlLeagues(session.user.id);
     } catch (err) {
       console.error("Listing Yahoo leagues failed", err);
       yahooError = err instanceof Error ? err.message : String(err);
+      yahooDiagnostics = await diagnoseYahooAccess(session.user.id).catch(() => []);
     }
   }
   const importedKeys = new Set(leagues.map((l) => l.fantrax_league.fantraxLeagueId));
@@ -106,6 +112,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {statusMessage && (
           <p className={`text-sm ${statusMessage.ok ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
             {statusMessage.text}
+            {!statusMessage.ok && yahooDetail && <span className="block text-xs opacity-80">Details: {yahooDetail}</span>}
           </p>
         )}
         {!yahooConnection ? (
@@ -123,7 +130,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </a>
           </div>
         ) : yahooError ? (
-          <p className="text-sm text-red-600 dark:text-red-400">Couldn&apos;t load your Yahoo leagues: {yahooError}</p>
+          <div className="flex flex-col gap-2 text-sm">
+            <p className="text-red-600 dark:text-red-400">Couldn&apos;t load your Yahoo leagues: {yahooError}</p>
+            {yahooDiagnostics.length > 0 && (
+              <table className="text-xs">
+                <tbody>
+                  {yahooDiagnostics.map((d) => (
+                    <tr key={d.path} className="align-top">
+                      <td className="pr-3 font-mono">{d.path}</td>
+                      <td className={`pr-3 ${d.status < 300 ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                        {d.status}
+                      </td>
+                      <td className="text-neutral-500">{d.description ?? "OK"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         ) : yahooLeagues.length === 0 ? (
           <p className="text-sm text-neutral-500">No Yahoo hockey leagues found for this season.</p>
         ) : (

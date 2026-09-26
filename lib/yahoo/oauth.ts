@@ -3,8 +3,10 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { yahooConnections } from "@/lib/db/schema";
 
-// Yahoo app is registered as a PUBLIC client: PKCE is mandatory and there is no client
-// secret, so token requests authenticate with client_id + code_verifier only.
+// Works with either kind of Yahoo app. PKCE is always used (mandatory for public clients,
+// harmless for confidential ones). When YAHOO_CLIENT_SECRET is set (a confidential/"private"
+// app), token requests also authenticate with HTTP Basic client_id:client_secret, as
+// Yahoo's docs describe; otherwise they rely on client_id + code_verifier alone.
 const AUTHORIZE_URL = "https://api.login.yahoo.com/oauth2/request_auth";
 const TOKEN_URL = "https://api.login.yahoo.com/oauth2/get_token";
 
@@ -54,9 +56,14 @@ interface TokenResponse {
 }
 
 async function requestToken(params: Record<string, string>): Promise<TokenResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
+  const secret = process.env.YAHOO_CLIENT_SECRET;
+  if (secret) {
+    headers.Authorization = `Basic ${Buffer.from(`${yahooClientId()}:${secret}`).toString("base64")}`;
+  }
   const res = await fetch(TOKEN_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers,
     body: new URLSearchParams({ client_id: yahooClientId(), ...params }),
   });
   if (!res.ok) {

@@ -15,6 +15,29 @@ export async function yahooGet<T = unknown>(userId: string, path: string): Promi
   return normalizeYahoo(body.fantasy_content) as T;
 }
 
+/**
+ * When the Fantasy API refuses a request, probes progressively more user-specific paths
+ * so the error shows WHERE Yahoo draws the line (whole app refused vs. only user data).
+ * Returns each path with its HTTP status and Yahoo's error description, if any.
+ */
+export async function diagnoseYahooAccess(
+  userId: string
+): Promise<Array<{ path: string; status: number; description: string | null }>> {
+  const token = await getYahooAccessToken(userId);
+  const paths = ["/game/nhl", "/users;use_login=1", "/users;use_login=1/games", "/users;use_login=1/games;game_codes=nhl/leagues"];
+  const results = [];
+  for (const path of paths) {
+    const res = await fetch(`${API_BASE}${path}?format=json`, { headers: { Authorization: `Bearer ${token}` } });
+    let description: string | null = null;
+    if (!res.ok) {
+      const text = await res.text();
+      description = text.match(/"description"\s*:\s*"([^"]*)"/)?.[1] ?? text.slice(0, 120);
+    }
+    results.push({ path, status: res.status, description });
+  }
+  return results;
+}
+
 export interface YahooLeagueSummary {
   leagueKey: string;
   name: string;
