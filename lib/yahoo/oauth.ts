@@ -37,6 +37,9 @@ export function buildAuthorizeUrl(redirectUri: string, state: string, codeChalle
   url.searchParams.set("client_id", yahooClientId());
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
+  // Without an explicit scope Yahoo issues a token that the Fantasy API rejects with 403
+  // "application is not authorized", even when the app has Fantasy Sports permission.
+  url.searchParams.set("scope", "fspt-r");
   url.searchParams.set("state", state);
   url.searchParams.set("code_challenge", codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");
