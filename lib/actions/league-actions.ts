@@ -50,6 +50,9 @@ export async function disconnectYahooAction(): Promise<void> {
   const userId = await requireUserId();
   await disconnectYahoo(userId);
   revalidatePath("/");
+  // Drop any ?yahoo=connected status left in the URL from the last connect, or its
+  // "connected" message would keep showing after disconnecting.
+  redirect("/");
 }
 
 // Roster sync only talks to Fantrax so far - Yahoo leagues skip it until Yahoo rosters are supported.
