@@ -111,8 +111,10 @@ export function getPlayerIds(sport: "NHL" | "NFL" | "MLB" | "NBA" = "NHL") {
 }
 
 export interface FantraxDraftResults {
-  draftDate: string;
-  draftPicks: Array<{ round: number; pick: number; teamId: string; time: number; pickInRound: number }>;
+  draftDate: string; // e.g. "2026-09-27T20:00:00.0-0400"
+  draftState: string; // "running" (also before the first pick, once scheduled) / "completed"
+  /** Every slot in the draft; playerId is added once that pick is made. */
+  draftPicks: Array<{ round: number; pick: number; teamId: string; time: number; pickInRound: number; playerId?: string }>;
 }
 
 export function getDraftResults(leagueId: string) {

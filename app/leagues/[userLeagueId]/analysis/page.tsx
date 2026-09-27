@@ -10,6 +10,11 @@ import { getOpponentRosters } from "@/lib/analysis/opponent-rosters";
 import { matchProjectionsToFantraxIds } from "@/lib/analysis/match-projections";
 import { rankPlayersByFit } from "@/lib/analysis/rank-players-by-fit";
 import { getRemovedPlayerIds } from "@/lib/fantrax/removed-players";
+import { getDraftResults, getPlayerIds, type FantraxPlayer } from "@/lib/fantrax/client";
+import { fantraxNameToFirstLast } from "@/lib/import/match-players";
+import { fantraxTimestampMs } from "@/lib/fantrax/draft-plan";
+import { getCachedSeasonProjections } from "@/lib/fantrax/cached-projections";
+import type { FantraxSeasonProjection } from "@/lib/fantrax/projections";
 import {
   addDraftTargetAction,
   importProjectionsAction,
@@ -19,10 +24,12 @@ import {
   resetDraftTargetsAction,
   restoreAllPlayersAction,
   restorePlayerAction,
+  syncDraftPicksAction,
   toggleKeeperOverrideAction,
 } from "@/lib/actions/league-actions";
+import { DraftPickSync } from "@/components/DraftPickSync";
 import { PlayerStatsTable } from "@/components/PlayerStatsTable";
-import { ProjectionsTable } from "@/components/ProjectionsTable";
+import { ProjectionsTable, type ProjectionRow } from "@/components/ProjectionsTable";
 
 export const metadata = { title: "Draft Day Helper" };
 
@@ -140,6 +147,12 @@ export default async function AnalysisPage({
   const boundToggleKeeper = (fantraxPlayerId: string) => toggleKeeperOverrideAction.bind(null, userLeagueId, fantraxPlayerId);
   const removedPlayerIds = await getRemovedPlayerIds(userLeagueId);
   const { regularOffNightsByTeam, playoffs } = await getFantasySeasonGames(league.fantraxLeagueId, season);
+  const fantraxColumns = (f: FantraxSeasonProjection | undefined) => ({
+    fantraxRank: f?.rank ?? null,
+    fantraxFpts: f?.fpts ?? null,
+    fantraxFpg: f?.fpg ?? null,
+    fantraxAdp: f?.adp ?? null,
+  });
   const scheduleCounts = (team: string | null) => ({
     playoffGames: playoffs && team ? (playoffs.gamesByTeam.get(team) ?? 0) : null,
     offNightsRegular: team ? (regularOffNightsByTeam.get(team) ?? 0) : null,
@@ -158,23 +171,95 @@ export default async function AnalysisPage({
     opponentTeams.flatMap((t) => t.players.filter((p) => p.isConsidered).map((p) => p.fantraxPlayerId))
   );
 
+  // Fantrax's own season projections (the "Fantrax data" columns) - optional, like the banner.
+  const [fantraxProjections, playerPool] = await Promise.all([
+    getCachedSeasonProjections(league.fantraxLeagueId).catch((): Record<string, FantraxSeasonProjection> => ({})),
+    getPlayerIds("NHL").catch((): Record<string, FantraxPlayer> => ({})),
+  ]);
+
+  // Fantrax controls which players exist, so a matched spreadsheet row takes Fantrax's name, NHL
+  // team and position ("Nick Robertson", not the sheet's "Nicholas Robertson"; current team after
+  // trades). Unmatched rows, or everything if the pool is unavailable, keep the spreadsheet's.
+  const teamOf = (player: FantraxPlayer) => (player.team === "(N/A)" ? null : player.team);
+  const withFantraxIdentity = <T extends { id: string; name: string; position: string | null; nhlTeamAbbrev: string | null }>(
+    row: T
+  ): T => {
+    const player = playerPool[rowIdToPlayerId.get(row.id) ?? ""];
+    return player
+      ? { ...row, name: fantraxNameToFirstLast(player.name), position: player.position, nhlTeamAbbrev: teamOf(player) }
+      : row;
+  };
+
   const excludedRowIds = new Set<string>();
-  const removedRowsById = new Map<string, (typeof projections)[number]>();
+  const removedRowsById = new Map<string, { name: string; nhlTeamAbbrev: string | null }>();
   for (const [rowId, playerId] of rowIdToPlayerId) {
     if (myConsideredPlayerIds.has(playerId) || keptElsewhereIds.has(playerId)) {
       excludedRowIds.add(rowId);
     } else if (removedPlayerIds.has(playerId)) {
       excludedRowIds.add(rowId);
       const row = projections.find((p) => p.id === rowId);
-      if (row) removedRowsById.set(playerId, row);
+      if (row) removedRowsById.set(playerId, withFantraxIdentity(row));
     }
   }
 
-  const draftablePool = projections.filter((p) => !excludedRowIds.has(p.id));
+  const draftablePool = projections.filter((p) => !excludedRowIds.has(p.id)).map(withFantraxIdentity);
   const rankedPlayersByBucket = rankPlayersByFit(draftablePool, Object.keys(slotConstraints), teamFit, 20);
   const boundImportProjections = importProjectionsAction.bind(null, userLeagueId);
   const boundRemovePlayer = removePlayerAction.bind(null, userLeagueId);
   const boundRestorePlayer = restorePlayerAction.bind(null, userLeagueId);
+  // Only drives the live-sync banner - the page works fine without it if Fantrax is unreachable.
+  const draft = await getDraftResults(league.fantraxLeagueId).catch(() => null);
+  // Available players: every Fantrax-listed player not excluded above - spreadsheet rows that
+  // matched a Fantrax player, with the spreadsheet's numbers, then players Fantrax projects or
+  // has an ADP for who aren't in the spreadsheet (spreadsheet columns blank).
+  const availablePlayers: ProjectionRow[] = draftablePool.flatMap((p) => {
+    const id = rowIdToPlayerId.get(p.id);
+    if (!id) return [];
+    return [
+      {
+        id: p.id,
+        rank: p.rank,
+        name: p.name,
+        position: p.position,
+        nhlTeamAbbrev: p.nhlTeamAbbrev,
+        age: p.age,
+        fantasyPoints: p.fantasyPoints,
+        fantasyPointsPerGp: p.fantasyPointsPerGp,
+        vorp: p.vorp,
+        adp: p.adp,
+        ...scheduleCounts(p.nhlTeamAbbrev),
+        fantraxPlayerId: id,
+        ...fantraxColumns(fantraxProjections[id]),
+      },
+    ];
+  });
+  const spreadsheetPlayerIds = new Set(rowIdToPlayerId.values());
+
+  for (const [id, f] of Object.entries(fantraxProjections)) {
+    const player = playerPool[id];
+    if (!player || spreadsheetPlayerIds.has(id) || myConsideredPlayerIds.has(id) || keptElsewhereIds.has(id)) continue;
+    const name = fantraxNameToFirstLast(player.name);
+    const team = teamOf(player);
+    if (removedPlayerIds.has(id)) {
+      removedRowsById.set(id, { name, nhlTeamAbbrev: team });
+      continue;
+    }
+    availablePlayers.push({
+      id: `fantrax-${id}`,
+      rank: null,
+      name,
+      position: player.position,
+      nhlTeamAbbrev: team,
+      age: f.age,
+      fantasyPoints: null,
+      fantasyPointsPerGp: null,
+      vorp: null,
+      adp: null,
+      ...scheduleCounts(team),
+      fantraxPlayerId: id,
+      ...fantraxColumns(f),
+    });
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8 lg:max-w-6xl 2xl:max-w-7xl">
@@ -190,6 +275,14 @@ export default async function AnalysisPage({
             .join(" / ")}
         </p>
       </div>
+
+      {draft?.draftDate && (
+        <DraftPickSync
+          syncAction={syncDraftPicksAction.bind(null, userLeagueId)}
+          draftStartMs={fantraxTimestampMs(draft.draftDate)}
+          initialState={draft.draftState}
+        />
+      )}
 
       <section className="flex flex-col gap-4 rounded-lg border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-950">
         <div className="flex items-start justify-between gap-4">
@@ -317,18 +410,21 @@ export default async function AnalysisPage({
           <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
             Available players{" "}
             <span className="font-normal text-neutral-500">
-              {projections.length > 0 ? `(${draftablePool.length})` : ""}
+              {projections.length > 0 ? `(${availablePlayers.length})` : ""}
             </span>
           </h2>
           <p className="text-sm text-neutral-500">
-            Every projected player not already on your team, marked &quot;Consider&quot; in Opponent rosters, or
+            Every Fantrax player with a Fantrax projection or ADP or in your spreadsheet, under Fantrax&apos;s names
+            (blank spreadsheet columns = not in your spreadsheet), who isn&apos;t already on your team, marked &quot;Consider&quot; in Opponent rosters, or
             removed. &quot;Add&quot; puts them on your team above; &quot;Remove&quot; drops them from the pool (e.g.
-            drafted by someone else). Click a column header to sort; click again to reverse.
+            drafted by someone else). Click a column header to sort; click again to reverse. &quot;Fantrax
+            data&quot; is Fantrax&apos;s draft-room numbers: Rk is the order by Fantrax ADP, and FPts/FP/G are its
+            season projection in your league&apos;s scoring.
           </p>
           <p className="text-sm text-neutral-500">
             {playoffs
-              ? `PO GP: NHL games each player's team plays during your fantasy playoffs (${playoffs.startDate} to ${playoffs.endDate}). Off Nights: games on nights with fewer than 8 NHL games, as fantasy regular season/playoffs.`
-              : "PO GP is blank: this league has no fantasy playoffs in its Fantrax settings. Off Nights: games on nights with fewer than 8 NHL games during the fantasy season."}
+              ? `Schedule - PO: NHL games each player's team plays during your fantasy playoffs (${playoffs.startDate} to ${playoffs.endDate}). Off: games on nights with fewer than 8 NHL games, as fantasy regular season/playoffs.`
+              : "Schedule - PO is blank: this league has no fantasy playoffs in its Fantrax settings. Off: games on nights with fewer than 8 NHL games during the fantasy season."}
           </p>
         </div>
         {projections.length === 0 ? (
@@ -338,20 +434,7 @@ export default async function AnalysisPage({
             addAction={boundAddDraftTarget}
             removeAction={boundRemovePlayer}
             season={season}
-            players={draftablePool.map((p) => ({
-              id: p.id,
-              rank: p.rank,
-              name: p.name,
-              position: p.position,
-              nhlTeamAbbrev: p.nhlTeamAbbrev,
-              age: p.age,
-              fantasyPoints: p.fantasyPoints,
-              fantasyPointsPerGp: p.fantasyPointsPerGp,
-              vorp: p.vorp,
-              adp: p.adp,
-              ...scheduleCounts(p.nhlTeamAbbrev),
-              fantraxPlayerId: rowIdToPlayerId.get(p.id) ?? null,
-            }))}
+            players={availablePlayers}
           />
         )}
       </section>
@@ -509,8 +592,8 @@ export default async function AnalysisPage({
             roster, and anyone marked &quot;Consider&quot; in Opponent rosters above, are excluded. Hit
             &quot;Remove&quot; during the draft once a player is taken so they drop off this list.
             {playoffs
-              ? " PO GP is the number of games their team plays during your fantasy playoffs. Off Nights is their team's games on nights with fewer than 8 NHL games, as fantasy regular season/playoffs."
-              : " Off Nights is their team's games on nights with fewer than 8 NHL games during the fantasy season."}
+              ? " Schedule - PO is the number of games their team plays during your fantasy playoffs; Off is their team's games on nights with fewer than 8 NHL games, as fantasy regular season/playoffs."
+              : " Schedule - Off is their team's games on nights with fewer than 8 NHL games during the fantasy season."}
           </p>
         </div>
 
@@ -570,6 +653,7 @@ export default async function AnalysisPage({
                     showGamesAvailable
                     showPlayoffGames={playoffs !== null}
                     showOffNightGames
+                    showFantraxData
                     season={season}
                     addAction={boundAddDraftTarget}
                     removeAction={boundRemovePlayer}
@@ -585,6 +669,7 @@ export default async function AnalysisPage({
                       vorp: p.vorp,
                       adp: p.adp,
                       fantraxPlayerId: rowIdToPlayerId.get(p.id),
+                      ...fantraxColumns(fantraxProjections[rowIdToPlayerId.get(p.id) ?? ""]),
                     }))}
                   />
                 </div>

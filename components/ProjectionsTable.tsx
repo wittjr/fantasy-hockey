@@ -21,6 +21,11 @@ export interface ProjectionRow {
   offNightsPlayoff: number | null;
   /** Null when the spreadsheet row couldn't be matched to a Fantrax player - no Add/Remove then. */
   fantraxPlayerId: string | null;
+  /** Fantrax's draft-room Rk / FPts / FP/G / ADP; null where Fantrax has none. */
+  fantraxRank: number | null;
+  fantraxFpts: number | null;
+  fantraxFpg: number | null;
+  fantraxAdp: number | null;
 }
 
 type SortKey = Exclude<keyof ProjectionRow, "id" | "fantraxPlayerId" | "offNightsPlayoff">;
@@ -34,30 +39,77 @@ interface Column {
   render?: (p: ProjectionRow) => string;
   /** Direction used on first click - "higher is better" stats start descending. */
   defaultDir?: "asc" | "desc";
+  /** Label on the merged first header row over consecutive columns sharing it. */
+  group?: string;
+  /** Plain header with no sort button or arrow space - saves width. */
+  unsortable?: boolean;
+  /** Hover text for a shortened header. */
+  title?: string;
 }
 
+const CUSTOM = "Custom upload data";
+const FANTRAX = "Fantrax data";
+const SCHEDULE = "Schedule";
+
 const COLUMNS: Column[] = [
-  { key: "rank", header: "RK", numeric: true },
-  { key: "name", header: "Name" },
-  { key: "position", header: "Pos" },
-  { key: "nhlTeamAbbrev", header: "Team" },
-  { key: "age", header: "Age", numeric: true },
-  { key: "fantasyPoints", header: "FP", numeric: true, format: (v) => v.toFixed(0), defaultDir: "desc" },
-  { key: "fantasyPointsPerGp", header: "/GP", numeric: true, format: (v) => v.toFixed(2), defaultDir: "desc" },
-  { key: "vorp", header: "VORP", numeric: true, format: (v) => v.toFixed(0), defaultDir: "desc" },
-  { key: "adp", header: "ADP", numeric: true, format: (v) => v.toFixed(1) },
-  { key: "playoffGames", header: "PO GP", numeric: true, defaultDir: "desc" },
+  { key: "name", header: "Name", unsortable: true },
+  { key: "position", header: "Pos", unsortable: true },
+  { key: "nhlTeamAbbrev", header: "Team", unsortable: true },
+  { key: "age", header: "Age", numeric: true, unsortable: true },
+  { key: "rank", header: "RK", numeric: true, group: CUSTOM },
+  { key: "fantasyPoints", header: "FP", numeric: true, format: (v) => v.toFixed(0), defaultDir: "desc", group: CUSTOM },
+  { key: "fantasyPointsPerGp", header: "/GP", numeric: true, format: (v) => v.toFixed(2), defaultDir: "desc", group: CUSTOM },
+  { key: "adp", header: "ADP", numeric: true, format: (v) => v.toFixed(1), group: CUSTOM },
+  { key: "vorp", header: "VORP", numeric: true, format: (v) => v.toFixed(0), defaultDir: "desc", group: CUSTOM },
+  { key: "fantraxRank", header: "Rk", numeric: true, group: FANTRAX },
+  { key: "fantraxFpts", header: "FPts", numeric: true, format: (v) => v.toFixed(0), defaultDir: "desc", group: FANTRAX },
+  { key: "fantraxFpg", header: "FP/G", numeric: true, format: (v) => v.toFixed(2), defaultDir: "desc", group: FANTRAX },
+  { key: "fantraxAdp", header: "ADP", numeric: true, format: (v) => v.toFixed(1), group: FANTRAX },
+  {
+    key: "playoffGames",
+    header: "PO",
+    title: "Playoff games: NHL games during your fantasy playoffs",
+    numeric: true,
+    defaultDir: "desc",
+    group: SCHEDULE,
+  },
   {
     key: "offNightsRegular",
-    header: "Off Nights",
+    header: "Off",
+    title: "Off nights: games on nights with fewer than 8 NHL games (fantasy regular season / playoffs)",
     numeric: true,
     defaultDir: "desc",
     render: (p) => formatOffNights(p.offNightsRegular, p.offNightsPlayoff),
+    group: SCHEDULE,
   },
 ];
 
+// First header row: one cell per run of consecutive columns with the same group (blank if none).
+const GROUP_SPANS = COLUMNS.reduce<Array<{ group?: string; span: number; key: string }>>((spans, c) => {
+  const last = spans[spans.length - 1];
+  if (last && last.group === c.group) last.span++;
+  else spans.push({ group: c.group, span: 1, key: c.key });
+  return spans;
+}, []);
+
+/** Vertical bars before and after each column group, down the header and every row. */
+const EDGES = COLUMNS.map((c, i) => ({
+  start: !!c.group && COLUMNS[i - 1]?.group !== c.group,
+  end: !!c.group && COLUMNS[i + 1]?.group !== c.group,
+}));
+const DIVIDER = "border-neutral-300 dark:border-neutral-700";
+const bodyDivider = ({ start, end }: { start: boolean; end: boolean }) =>
+  start || end ? `${start ? "border-l" : ""} ${end ? "border-r" : ""} ${DIVIDER}` : "";
+// Collapsed table borders are painted by the table, underneath the sticky header's background,
+// so header cells draw their lines as inset shadows instead (color from --divider on <thead>).
+const headerLines = (left: boolean, right: boolean) => {
+  const shadows = [left && "inset 1px 0 0 var(--divider)", right && "inset -1px 0 0 var(--divider)"].filter(Boolean);
+  return shadows.length ? { boxShadow: shadows.join(", ") } : undefined;
+};
+
 const VISIBLE_ROWS = 25;
 const ROW_HEIGHT_REM = 2;
+const GROUP_ROW_HEIGHT_REM = 1.5;
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 
@@ -104,31 +156,52 @@ export function ProjectionsTable({
     // table (with its sticky header) to this rounded scroll box, so rows spill out over the page.
     <div
       className="relative isolate overflow-auto rounded-md border border-neutral-200 dark:border-neutral-800"
-      style={{ maxHeight: `${(VISIBLE_ROWS + 1) * ROW_HEIGHT_REM}rem` }}
+      style={{ maxHeight: `${GROUP_ROW_HEIGHT_REM + (VISIBLE_ROWS + 1) * ROW_HEIGHT_REM}rem` }}
     >
       <table className="w-full text-sm text-neutral-700 dark:text-neutral-300">
-        <thead className="sticky top-0 z-10 bg-neutral-100 dark:bg-neutral-900">
+        <thead className="sticky top-0 z-10 bg-neutral-100 [--divider:var(--color-neutral-300)] dark:bg-neutral-900 dark:[--divider:var(--color-neutral-700)]">
+          <tr style={{ height: `${GROUP_ROW_HEIGHT_REM}rem` }}>
+            {GROUP_SPANS.map((g) => (
+              <th
+                key={g.key}
+                colSpan={g.span}
+                style={g.group ? headerLines(true, true) : undefined}
+                className="px-3 text-center text-xs font-semibold whitespace-nowrap text-neutral-600 dark:text-neutral-400"
+              >
+                {g.group}
+              </th>
+            ))}
+            <th />
+          </tr>
           <tr style={{ height: `${ROW_HEIGHT_REM}rem` }}>
-            {COLUMNS.map((c) => {
+            {COLUMNS.map((c, i) => {
               const active = c.key === sortKey;
               return (
                 <th
                   key={c.key}
-                  aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                  aria-sort={
+                    c.unsortable ? undefined : active ? (sortDir === "asc" ? "ascending" : "descending") : "none"
+                  }
+                  title={c.title}
+                  style={headerLines(EDGES[i].start, EDGES[i].end)}
                   className={`px-3 text-xs font-medium whitespace-nowrap ${c.numeric ? "text-right" : "text-left"}`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => onSort(c)}
-                    className={`inline-flex items-center gap-1 hover:text-neutral-900 dark:hover:text-neutral-100 ${
-                      active ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-500"
-                    }`}
-                  >
-                    {c.header}
-                    <span aria-hidden className={active ? "" : "invisible"}>
-                      {sortDir === "asc" ? "▲" : "▼"}
-                    </span>
-                  </button>
+                  {c.unsortable ? (
+                    <span className="text-neutral-500">{c.header}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onSort(c)}
+                      className={`inline-flex items-center gap-1 hover:text-neutral-900 dark:hover:text-neutral-100 ${
+                        active ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-500"
+                      }`}
+                    >
+                      {c.header}
+                      <span aria-hidden className={active ? "" : "invisible"}>
+                        {sortDir === "asc" ? "▲" : "▼"}
+                      </span>
+                    </button>
+                  )}
                 </th>
               );
             })}
@@ -144,7 +217,7 @@ export function ProjectionsTable({
               style={{ height: `${ROW_HEIGHT_REM}rem` }}
               className="border-t border-neutral-100 even:bg-neutral-50 dark:border-neutral-900 dark:even:bg-neutral-900/40"
             >
-              {COLUMNS.map((c) => {
+              {COLUMNS.map((c, i) => {
                 const v = p[c.key];
                 const text = c.render
                   ? c.render(p)
@@ -156,7 +229,7 @@ export function ProjectionsTable({
                 return (
                   <td
                     key={c.key}
-                    className={`px-3 whitespace-nowrap ${c.numeric ? "text-right tabular-nums" : "text-left"}`}
+                    className={`px-3 whitespace-nowrap ${c.numeric ? "text-right tabular-nums" : "text-left"} ${bodyDivider(EDGES[i])}`}
                   >
                     {text}
                   </td>

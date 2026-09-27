@@ -14,6 +14,7 @@ import {
 import { addDraftTarget, clearDraftTargets, removeDraftTarget } from "@/lib/fantrax/draft-targets";
 import { setKeeperOverride } from "@/lib/fantrax/keeper-overrides";
 import { removePlayer, restoreAllPlayers, restorePlayer } from "@/lib/fantrax/removed-players";
+import { syncDraftPicks, type DraftSyncResult } from "@/lib/fantrax/draft-sync";
 import { importNhlSeasonSchedule } from "@/lib/nhl/import-schedule";
 import { parseProjectionsSpreadsheet } from "@/lib/import/spreadsheet";
 import { importSpreadsheetForUser } from "@/lib/import/projections";
@@ -178,6 +179,26 @@ export async function restoreAllPlayersAction(userLeagueId: string): Promise<voi
   await requireUserId();
   await restoreAllPlayers(userLeagueId);
   revalidatePath(`/leagues/${userLeagueId}/analysis`);
+}
+
+/** Called on a timer by DraftPickSync during a live draft. Re-renders the page only when picks changed something. */
+export async function syncDraftPicksAction(userLeagueId: string): Promise<DraftSyncResult> {
+  const userId = await requireUserId();
+  const row = await getUserLeagueWithLeague(userLeagueId);
+  if (!row || row.user_league.userId !== userId) throw new Error("League not found");
+  const { user_league: userLeague, fantrax_league: league } = row;
+  if (!userLeague.myFantraxTeamId || league.provider !== "fantrax") throw new Error("Pick your Fantrax team first");
+
+  const rosterInfo = league.settingsJson as { positionConstraints?: Record<string, unknown> } | null;
+  const result = await syncDraftPicks(
+    userLeagueId,
+    league.id,
+    league.fantraxLeagueId,
+    userLeague.myFantraxTeamId,
+    Object.keys(rosterInfo?.positionConstraints ?? {})
+  );
+  if (result.changed) revalidatePath(`/leagues/${userLeagueId}/analysis`);
+  return result;
 }
 
 export async function importProjectionsAction(userLeagueId: string, formData: FormData): Promise<void> {

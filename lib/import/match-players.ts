@@ -23,7 +23,7 @@ export function normalizeName(name: string): string {
 }
 
 /** Fantrax player names are "Last, First" - convert to "First Last" for comparison with the spreadsheet. */
-function fantraxNameToFirstLast(fantraxName: string): string {
+export function fantraxNameToFirstLast(fantraxName: string): string {
   const [last, first] = fantraxName.split(",").map((s) => s.trim());
   return first && last ? `${first} ${last}` : fantraxName;
 }
@@ -55,7 +55,7 @@ export function buildFantraxPlayerIndex(players: Record<string, FantraxPlayer>):
 export interface MatchResult {
   fantraxPlayerId: string;
   player: FantraxPlayer;
-  confidence: "exact" | "exact-multi-disambiguated" | "fuzzy";
+  confidence: "exact" | "exact-multi-disambiguated" | "fuzzy" | "last-name-team";
 }
 
 const FUZZY_SCORE_THRESHOLD = -400; // fuzzysort: 0 = perfect match, more negative = worse
@@ -67,7 +67,9 @@ const FUZZY_SCORE_THRESHOLD = -400; // fuzzysort: 0 = perfect match, more negati
  * to silently attach it to the wrong player.
  */
 export function matchSpreadsheetRow(row: MatchableRow, index: ReturnType<typeof buildFantraxPlayerIndex>): MatchResult | null {
-  const normalized = normalizeName(row.name);
+  // Drop parenthesized notes like "Elias Pettersson (D)" - the spreadsheet's own disambiguation,
+  // which position handles below.
+  const normalized = normalizeName(row.name.replace(/\([^)]*\)/g, " "));
   const exactCandidates = index.byNormalizedName.get(normalized) ?? [];
 
   if (exactCandidates.length === 1) {
@@ -96,6 +98,16 @@ export function matchSpreadsheetRow(row: MatchableRow, index: ReturnType<typeof 
   if (results.length > 0 && results[0].score >= FUZZY_SCORE_THRESHOLD) {
     const match = results[0].obj;
     return { fantraxPlayerId: match.fantraxPlayerId, player: match.player, confidence: "fuzzy" };
+  }
+
+  // Different first names for the same player (Nick/Nicholas Robertson, J.J./Janis Moser, Egor/Yegor
+  // Chinakhov) - accept the only player on the same NHL team with that last name.
+  const lastName = normalized.split(" ").pop();
+  if (row.nhlTeamAbbrev && lastName) {
+    const sameLast = pool.filter((c) => c.player.team === row.nhlTeamAbbrev && c.normalizedName.split(" ").pop() === lastName);
+    if (sameLast.length === 1) {
+      return { fantraxPlayerId: sameLast[0].fantraxPlayerId, player: sameLast[0].player, confidence: "last-name-team" };
+    }
   }
 
   return null;

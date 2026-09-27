@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { getPeriodProjections, getRosterDayProjections } from "./projections";
+import { getPeriodProjections, getRosterDayProjections, getSeasonProjections } from "./projections";
 
 // Fantrax's projections are slow to fetch (two ~1MB player-list requests plus one lineup
 // request per day) and change at most daily, so keep them for up to 24 hours. unstable_cache
@@ -29,3 +29,9 @@ export const getCachedRosterDayProjections = unstable_cache(
   ["fantrax-roster-day-projections"],
   { revalidate: ONE_DAY, tags: [TAG] }
 );
+
+/** Cached getSeasonProjections, keyed by league - the draft-room Rk/FPts/FP/G/ADP. */
+export const getCachedSeasonProjections = unstable_cache(getSeasonProjections, ["fantrax-season-projections-v3"], {
+  revalidate: ONE_DAY,
+  tags: [TAG],
+});

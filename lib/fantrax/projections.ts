@@ -1,4 +1,4 @@
-import { getPlayerStats, getTeamRosterInfo, type FxpaRow, type FxpaSeasonOrProjection } from "./client";
+import { getAdp, getPlayerStats, getTeamRosterInfo, type FxpaRow, type FxpaSeasonOrProjection } from "./client";
 
 const PER_GAME = "PROJECTED_WEEKLY";
 
@@ -58,5 +58,55 @@ export async function getRosterDayProjections(leagueId: string, teamId: string, 
   for (const table of data.tables) {
     for (const [id, fpts] of columnByPlayer(table.header.cells, table.rows, "FPts")) out[id] = fpts;
   }
+  return out;
+}
+
+const SEASON = "PROJECTED_SEASON";
+
+export interface FantraxSeasonProjection {
+  /** Position in Fantrax's ADP order - what the draft room's Rk shows. Null without an ADP. */
+  rank: number | null;
+  fpts: number | null;
+  fpg: number | null;
+  adp: number | null;
+  /** From the projection table; null for players only in the ADP feed. */
+  age: number | null;
+}
+
+/**
+ * The draft room's Rk / FPts / FP/G / ADP for every player that has a projection or an ADP.
+ * FPts and FP/G come from Fantrax's "Projected - Season" view in the league's own scoring;
+ * only ~1,000 of the ~8,700 players are projected above 0 and rows are sorted by FPts, so the
+ * first page of 1,500 holds them all. Rk and ADP come from the cross-league ADP feed: the
+ * Players page's own Rk is just the row number for its sort (FPts), which doesn't match the
+ * draft room - e.g. Jason Robertson is 6th by FPts but 9th in the draft room and by ADP
+ * (checked 2026-09-27).
+ */
+export async function getSeasonProjections(leagueId: string): Promise<Record<string, FantraxSeasonProjection>> {
+  const params = { statusOrTeamFilter: "ALL", positionOrGroup: "ALL", sortType: "SCORE", pageNumber: "1" };
+  // The default view is per-game; a one-row request is the cheap way to learn this season's code.
+  const [probe, adpList] = await Promise.all([getPlayerStats(leagueId, { ...params, maxResultsPerPage: "1" }), getAdp("NHL")]);
+  const season = probe.seasonOrProjections.find((p) => p.timeframeTypeCode === SEASON);
+  if (!season) throw new Error("Fantrax no longer offers a season projection view");
+  const data = await getPlayerStats(leagueId, {
+    ...params,
+    maxResultsPerPage: "1500",
+    seasonOrProjection: season.code,
+    timeframeTypeCode: SEASON,
+  });
+  if (data.displayedSeasonOrProjection.timeframeTypeCode !== SEASON) {
+    throw new Error(`Fantrax returned ${data.displayedSeasonOrProjection.name} instead of season projections`);
+  }
+
+  const fpts = columnByPlayer(data.tableHeader.cells, data.statsTable, "FPts");
+  const fpg = columnByPlayer(data.tableHeader.cells, data.statsTable, "FP/G");
+  const age = columnByPlayer(data.tableHeader.cells, data.statsTable, "Age");
+  const out: Record<string, FantraxSeasonProjection> = {};
+  for (const [id, points] of fpts) {
+    if (points > 0) out[id] = { rank: null, fpts: points, fpg: fpg.get(id) ?? null, adp: null, age: age.get(id) ?? null };
+  }
+  [...adpList].sort((a, b) => a.ADP - b.ADP).forEach((entry, i) => {
+    out[entry.id] = { ...(out[entry.id] ?? { fpts: null, fpg: null, age: null }), rank: i + 1, adp: entry.ADP };
+  });
   return out;
 }

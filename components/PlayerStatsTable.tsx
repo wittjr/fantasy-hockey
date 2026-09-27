@@ -16,6 +16,9 @@ export interface PlayerStatsRow {
   fantasyPointsPerGp: number | null;
   vorp: number | null;
   adp: number | null;
+  fantraxRank?: number | null;
+  fantraxFpts?: number | null;
+  fantraxFpg?: number | null;
   fantraxAdp?: number | null;
   fantraxPlayerId?: string | null;
   isConsidered?: boolean;
@@ -28,7 +31,16 @@ interface Column {
   header: string;
   align?: "left" | "right";
   render: (p: PlayerStatsRow) => ReactNode;
+  /** Label on the merged first header row over consecutive columns sharing it. */
+  group?: string;
+  /** Hover text for a shortened header. */
+  title?: string;
 }
+
+const CUSTOM = "Custom upload data";
+const FANTRAX = "Fantrax data";
+const SCHEDULE = "Schedule";
+const DIVIDER = "border-neutral-300 dark:border-neutral-700";
 
 export function PlayerStatsTable({
   players,
@@ -39,6 +51,7 @@ export function PlayerStatsTable({
   showPlayoffGames,
   showOffNightGames,
   showFantraxAdp,
+  showFantraxData,
   addAction,
   removeAction,
   season,
@@ -54,6 +67,8 @@ export function PlayerStatsTable({
   /** Games on nights with fewer than 8 NHL games, as regular/playoff - each row needs offNightsRegular/offNightsPlayoff set. */
   showOffNightGames?: boolean;
   showFantraxAdp?: boolean;
+  /** Fantrax's draft-room Rk / FPts / FP/G / ADP - each row needs fantraxRank/Fpts/Fpg/Adp set. */
+  showFantraxData?: boolean;
   /**
    * When provided, adds an "Add" button per row (skipped for rows with no fantraxPlayerId).
    * Takes plain FormData - fantraxPlayerId and season are sent as hidden fields, matching
@@ -129,12 +144,37 @@ export function PlayerStatsTable({
           },
         ]
       : []),
+    { key: "rank", header: "RK", align: "right", group: CUSTOM, render: (p) => p.rank ?? "—" },
+    { key: "fp", header: "FP", align: "right", group: CUSTOM, render: (p) => p.fantasyPoints?.toFixed(0) ?? "—" },
+    { key: "gp", header: "/GP", align: "right", group: CUSTOM, render: (p) => p.fantasyPointsPerGp?.toFixed(2) ?? "—" },
+    { key: "adp", header: "ADP", align: "right", group: CUSTOM, render: (p) => p.adp?.toFixed(1) ?? "—" },
+    { key: "vorp", header: "VORP", align: "right", group: CUSTOM, render: (p) => p.vorp?.toFixed(0) ?? "—" },
+    ...(showFantraxData
+      ? [
+          { key: "fantraxRank", header: "Rk", render: (p: PlayerStatsRow) => p.fantraxRank ?? "—" },
+          { key: "fantraxFpts", header: "FPts", render: (p: PlayerStatsRow) => p.fantraxFpts?.toFixed(0) ?? "—" },
+          { key: "fantraxFpg", header: "FP/G", render: (p: PlayerStatsRow) => p.fantraxFpg?.toFixed(2) ?? "—" },
+        ].map((c) => ({ ...c, align: "right" as const, group: FANTRAX }))
+      : []),
+    ...(showFantraxData || showFantraxAdp
+      ? [
+          {
+            key: "fantraxAdp",
+            header: "ADP",
+            align: "right" as const,
+            group: FANTRAX,
+            render: (p: PlayerStatsRow) => p.fantraxAdp?.toFixed(1) ?? "—",
+          },
+        ]
+      : []),
     ...(showPlayoffGames
       ? [
           {
             key: "playoffGames",
-            header: "PO GP",
+            header: "PO",
+            title: "Playoff games: NHL games during your fantasy playoffs",
             align: "right" as const,
+            group: SCHEDULE,
             render: (p: PlayerStatsRow) => p.playoffGames ?? "—",
           },
         ]
@@ -143,24 +183,11 @@ export function PlayerStatsTable({
       ? [
           {
             key: "offNightGames",
-            header: "Off Nights",
+            header: "Off",
+            title: "Off nights: games on nights with fewer than 8 NHL games (fantasy regular season / playoffs)",
             align: "right" as const,
+            group: SCHEDULE,
             render: (p: PlayerStatsRow) => formatOffNights(p.offNightsRegular, p.offNightsPlayoff),
-          },
-        ]
-      : []),
-    { key: "rank", header: "RK", align: "right", render: (p) => p.rank ?? "—" },
-    { key: "fp", header: "FP", align: "right", render: (p) => p.fantasyPoints?.toFixed(0) ?? "—" },
-    { key: "gp", header: "/GP", align: "right", render: (p) => p.fantasyPointsPerGp?.toFixed(2) ?? "—" },
-    { key: "vorp", header: "VORP", align: "right", render: (p) => p.vorp?.toFixed(0) ?? "—" },
-    { key: "adp", header: "ADP", align: "right", render: (p) => p.adp?.toFixed(1) ?? "—" },
-    ...(showFantraxAdp
-      ? [
-          {
-            key: "fantraxAdp",
-            header: "Fantrax ADP",
-            align: "right" as const,
-            render: (p: PlayerStatsRow) => p.fantraxAdp?.toFixed(1) ?? "—",
           },
         ]
       : []),
@@ -210,16 +237,45 @@ export function PlayerStatsTable({
       : []),
   ];
 
+  // First header row: one cell per run of consecutive columns with the same group (blank if none),
+  // and vertical bars before and after each group, down the header and every row.
+  const groupSpans = columns.reduce<Array<{ group?: string; span: number; key: string }>>((spans, c) => {
+    const last = spans[spans.length - 1];
+    if (last && last.group === c.group) last.span++;
+    else spans.push({ group: c.group, span: 1, key: c.key });
+    return spans;
+  }, []);
+  const dividers = columns.map((c, i) => {
+    if (!c.group) return "";
+    const start = columns[i - 1]?.group !== c.group ? "border-l" : "";
+    const end = columns[i + 1]?.group !== c.group ? "border-r" : "";
+    return start || end ? `${start} ${end} ${DIVIDER}` : "";
+  });
+
   return (
-    <table className="border-separate border-spacing-x-3 border-spacing-y-1 text-sm text-neutral-700 dark:text-neutral-300">
+    <table className="text-sm text-neutral-700 dark:text-neutral-300">
       <thead>
         <tr>
-          {columns.map((c) => (
+          {groupSpans.map((g) => (
+            <th
+              key={g.key}
+              colSpan={g.span}
+              className={`px-1.5 text-center text-xs font-semibold whitespace-nowrap text-neutral-500 dark:text-neutral-400 ${
+                g.group ? `border-x ${DIVIDER}` : ""
+              }`}
+            >
+              {g.group}
+            </th>
+          ))}
+        </tr>
+        <tr>
+          {columns.map((c, i) => (
             <th
               key={c.key}
-              className={`text-xs font-medium text-neutral-400 dark:text-neutral-500 ${
+              title={c.title}
+              className={`px-1.5 pb-1 text-xs font-medium whitespace-nowrap text-neutral-400 dark:text-neutral-500 ${
                 c.align === "right" ? "text-right" : "text-left"
-              }`}
+              } ${dividers[i]}`}
             >
               {c.header}
             </th>
@@ -229,8 +285,11 @@ export function PlayerStatsTable({
       <tbody>
         {players.map((p) => (
           <tr key={p.key} className="even:bg-neutral-50 dark:even:bg-neutral-900/40">
-            {columns.map((c) => (
-              <td key={c.key} className={`py-1 ${c.align === "right" ? "text-right tabular-nums" : "text-left"}`}>
+            {columns.map((c, i) => (
+              <td
+                key={c.key}
+                className={`px-1.5 py-1 ${c.align === "right" ? "text-right tabular-nums" : "text-left"} ${dividers[i]}`}
+              >
                 {c.render(p)}
               </td>
             ))}
