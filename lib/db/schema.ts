@@ -241,6 +241,21 @@ export const removedPlayers = pgTable(
   (t) => [uniqueIndex("removed_player_league_player_idx").on(t.userLeagueId, t.fantraxPlayerId)]
 );
 
+// Players the user starred in the Draft Day Helper's Available players list to keep an eye on.
+// No FK to fantrax_player, same reasoning as removed_player.
+export const watchedPlayers = pgTable(
+  "watched_player",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userLeagueId: uuid("user_league_id")
+      .notNull()
+      .references(() => userLeagues.id, { onDelete: "cascade" }),
+    fantraxPlayerId: text("fantrax_player_id").notNull(),
+    watchedAt: timestamp("watched_at", { mode: "date" }).defaultNow(),
+  },
+  (t) => [uniqueIndex("watched_player_league_player_idx").on(t.userLeagueId, t.fantraxPlayerId)]
+);
+
 // Cached rows from the user's uploaded "The List" projections spreadsheet
 export const spreadsheetProjections = pgTable("spreadsheet_projection", {
   id: uuid("id").defaultRandom().primaryKey(),

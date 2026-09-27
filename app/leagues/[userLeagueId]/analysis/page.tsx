@@ -10,6 +10,7 @@ import { getOpponentRosters } from "@/lib/analysis/opponent-rosters";
 import { matchProjectionsToFantraxIds } from "@/lib/analysis/match-projections";
 import { rankPlayersByFit } from "@/lib/analysis/rank-players-by-fit";
 import { getRemovedPlayerIds } from "@/lib/fantrax/removed-players";
+import { getWatchedPlayerIds } from "@/lib/fantrax/watched-players";
 import { getDraftResults, getPlayerIds, type FantraxPlayer } from "@/lib/fantrax/client";
 import { fantraxNameToFirstLast } from "@/lib/import/match-players";
 import { fantraxTimestampMs } from "@/lib/fantrax/draft-plan";
@@ -17,6 +18,7 @@ import { getCachedSeasonProjections } from "@/lib/fantrax/cached-projections";
 import type { FantraxSeasonProjection } from "@/lib/fantrax/projections";
 import {
   addDraftTargetAction,
+  clearWatchlistAction,
   importProjectionsAction,
   importScheduleAction,
   removeDraftTargetAction,
@@ -24,6 +26,7 @@ import {
   resetDraftTargetsAction,
   restoreAllPlayersAction,
   restorePlayerAction,
+  setWatchedAction,
   syncDraftPicksAction,
   toggleKeeperOverrideAction,
 } from "@/lib/actions/league-actions";
@@ -145,7 +148,10 @@ export default async function AnalysisPage({
     rowIdToPlayerId
   );
   const boundToggleKeeper = (fantraxPlayerId: string) => toggleKeeperOverrideAction.bind(null, userLeagueId, fantraxPlayerId);
-  const removedPlayerIds = await getRemovedPlayerIds(userLeagueId);
+  const [removedPlayerIds, watchedPlayerIds] = await Promise.all([
+    getRemovedPlayerIds(userLeagueId),
+    getWatchedPlayerIds(userLeagueId),
+  ]);
   const { regularOffNightsByTeam, playoffs } = await getFantasySeasonGames(league.fantraxLeagueId, season);
   const fantraxColumns = (f: FantraxSeasonProjection | undefined) => ({
     fantraxRank: f?.rank ?? null,
@@ -230,6 +236,7 @@ export default async function AnalysisPage({
         ...scheduleCounts(p.nhlTeamAbbrev),
         fantraxPlayerId: id,
         ...fantraxColumns(fantraxProjections[id]),
+        watched: watchedPlayerIds.has(id),
       },
     ];
   });
@@ -258,8 +265,49 @@ export default async function AnalysisPage({
       ...scheduleCounts(team),
       fantraxPlayerId: id,
       ...fantraxColumns(f),
+      watched: watchedPlayerIds.has(id),
     });
   }
+
+  // The hidden-players list (with Restore) - shown under both Available players and the best-fit
+  // lists, so it's reachable from either without scrolling. Tone matches the surrounding section.
+  const tones = {
+    neutral: { box: "border-neutral-200 dark:border-neutral-800", rule: "border-neutral-100 dark:border-neutral-900" },
+    emerald: { box: "border-emerald-200 dark:border-emerald-900/50", rule: "border-emerald-100 dark:border-emerald-900/40" },
+  };
+  const hiddenPlayersList = (tone: keyof typeof tones) =>
+    removedRowsById.size > 0 && (
+      <details className={`rounded-md border bg-white dark:bg-neutral-950 ${tones[tone].box}`}>
+        <summary className="cursor-pointer select-none p-3 text-sm font-medium">
+          Hidden players ({removedRowsById.size})
+        </summary>
+        <div className={`flex justify-end border-t px-3 pt-3 ${tones[tone].rule}`}>
+          <form action={restoreAllPlayersAction.bind(null, userLeagueId)}>
+            <button
+              type="submit"
+              className="rounded-md border border-indigo-300 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+            >
+              Restore all
+            </button>
+          </form>
+        </div>
+        <ul className="flex flex-col divide-y divide-neutral-100 p-3 text-sm dark:divide-neutral-900">
+          {[...removedRowsById.entries()].map(([playerId, proj]) => (
+            <li key={playerId} className="flex items-center justify-between gap-4 py-1.5">
+              <span>
+                {proj.name} <span className="text-neutral-500">({proj.nhlTeamAbbrev ?? "—"})</span>
+              </span>
+              <form action={boundRestorePlayer}>
+                <input type="hidden" name="fantraxPlayerId" value={playerId} />
+                <button type="submit" className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
+                  Restore
+                </button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      </details>
+    );
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-8 lg:max-w-6xl 2xl:max-w-7xl">
@@ -416,7 +464,7 @@ export default async function AnalysisPage({
           <p className="text-sm text-neutral-500">
             Every Fantrax player with a Fantrax projection or ADP or in your spreadsheet, under Fantrax&apos;s names
             (blank spreadsheet columns = not in your spreadsheet), who isn&apos;t already on your team, marked &quot;Consider&quot; in Opponent rosters, or
-            removed. &quot;Add&quot; puts them on your team above; &quot;Remove&quot; drops them from the pool (e.g.
+            hidden. &quot;Add&quot; puts them on your team above; &quot;Hide&quot; drops them from the pool (e.g.
             drafted by someone else). Click a column header to sort; click again to reverse. &quot;Fantrax
             data&quot; is Fantrax&apos;s draft-room numbers: Rk is the order by Fantrax ADP, and FPts/FP/G are its
             season projection in your league&apos;s scoring.
@@ -427,6 +475,7 @@ export default async function AnalysisPage({
               : "Schedule - PO is blank: this league has no fantasy playoffs in its Fantrax settings. Off: games on nights with fewer than 8 NHL games during the fantasy season."}
           </p>
         </div>
+        {hiddenPlayersList("neutral")}
         {projections.length === 0 ? (
           <p className="text-sm text-neutral-500">Import your projections spreadsheet below to see players here.</p>
         ) : (
@@ -436,6 +485,8 @@ export default async function AnalysisPage({
             season={season}
             players={availablePlayers}
             positionBuckets={Object.keys(slotConstraints)}
+            watchAction={setWatchedAction.bind(null, userLeagueId)}
+            clearWatchlistAction={clearWatchlistAction.bind(null, userLeagueId)}
           />
         )}
       </section>
@@ -591,45 +642,14 @@ export default async function AnalysisPage({
             Top 20 draftable players per position, ordered by Games Available (how many of your gap-days their team
             plays on) first, then by projected rank (RK). Players from teams already fully represented on your own
             roster, and anyone marked &quot;Consider&quot; in Opponent rosters above, are excluded. Hit
-            &quot;Remove&quot; during the draft once a player is taken so they drop off this list.
+            &quot;Hide&quot; during the draft once a player is taken so they drop off this list.
             {playoffs
               ? " Schedule - PO is the number of games their team plays during your fantasy playoffs; Off is their team's games on nights with fewer than 8 NHL games, as fantasy regular season/playoffs."
               : " Schedule - Off is their team's games on nights with fewer than 8 NHL games during the fantasy season."}
           </p>
         </div>
 
-        {removedRowsById.size > 0 && (
-          <details className="rounded-md border border-emerald-200 bg-white dark:border-emerald-900/50 dark:bg-neutral-950">
-            <summary className="cursor-pointer select-none p-3 text-sm font-medium">
-              Removed players ({removedRowsById.size})
-            </summary>
-            <div className="flex justify-end border-t border-emerald-100 px-3 pt-3 dark:border-emerald-900/40">
-              <form action={restoreAllPlayersAction.bind(null, userLeagueId)}>
-                <button
-                  type="submit"
-                  className="rounded-md border border-indigo-300 px-3 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
-                >
-                  Restore all
-                </button>
-              </form>
-            </div>
-            <ul className="flex flex-col divide-y divide-neutral-100 p-3 text-sm dark:divide-neutral-900">
-              {[...removedRowsById.entries()].map(([playerId, proj]) => (
-                <li key={playerId} className="flex items-center justify-between gap-4 py-1.5">
-                  <span>
-                    {proj.name} <span className="text-neutral-500">({proj.nhlTeamAbbrev ?? "—"})</span>
-                  </span>
-                  <form action={boundRestorePlayer}>
-                    <input type="hidden" name="fantraxPlayerId" value={playerId} />
-                    <button type="submit" className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
-                      Restore
-                    </button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
+        {hiddenPlayersList("emerald")}
 
         {Object.keys(slotConstraints).map((bucket) => {
           const players = rankedPlayersByBucket.get(bucket) ?? [];

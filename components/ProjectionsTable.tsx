@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { formatOffNights } from "@/lib/analysis/off-nights";
 import { mapPositionToBucket } from "@/lib/fantrax/position-mapping";
 
@@ -20,16 +20,18 @@ export interface ProjectionRow {
   /** Games on nights with fewer than 8 NHL games in the fantasy regular season / playoffs; null when unknown or no playoffs. */
   offNightsRegular: number | null;
   offNightsPlayoff: number | null;
-  /** Null when the spreadsheet row couldn't be matched to a Fantrax player - no Add/Remove then. */
+  /** Null when the spreadsheet row couldn't be matched to a Fantrax player - no Add/Hide then. */
   fantraxPlayerId: string | null;
   /** Fantrax's draft-room Rk / FPts / FP/G / ADP; null where Fantrax has none. */
   fantraxRank: number | null;
   fantraxFpts: number | null;
   fantraxFpg: number | null;
   fantraxAdp: number | null;
+  /** On the user's watchlist (starred). */
+  watched: boolean;
 }
 
-type SortKey = Exclude<keyof ProjectionRow, "id" | "fantraxPlayerId" | "offNightsPlayoff">;
+type SortKey = Exclude<keyof ProjectionRow, "id" | "fantraxPlayerId" | "offNightsPlayoff" | "watched">;
 
 interface Column {
   key: SortKey;
@@ -120,6 +122,8 @@ export function ProjectionsTable({
   removeAction,
   season,
   positionBuckets,
+  watchAction,
+  clearWatchlistAction,
 }: {
   players: ProjectionRow[];
   /** Same (formData) shape as PlayerStatsTable's addAction/removeAction - fantraxPlayerId + season as hidden fields. */
@@ -128,11 +132,40 @@ export function ProjectionsTable({
   season: string;
   /** The league's roster slots (e.g. F/D/G) - the position filter's options. */
   positionBuckets: string[];
+  /** Saves a star toggle. The star flips immediately; a failed save flips it back. */
+  watchAction: (fantraxPlayerId: string, watched: boolean) => Promise<void>;
+  /** Unstars every player; same optimistic handling as watchAction. */
+  clearWatchlistAction: () => Promise<void>;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [teamFilter, setTeamFilter] = useState("");
   const [bucketFilter, setBucketFilter] = useState("");
+  const [watchFilter, setWatchFilter] = useState<"" | "watched" | "unwatched">("");
+  // Star toggles made on this page, until the next server render brings them back in `players`.
+  const [watchOverrides, setWatchOverrides] = useState<Map<string, boolean>>(new Map());
+  const isWatched = useCallback(
+    (p: ProjectionRow) => (p.fantraxPlayerId ? watchOverrides.get(p.fantraxPlayerId) : undefined) ?? p.watched,
+    [watchOverrides]
+  );
+
+  function toggleWatch(p: ProjectionRow) {
+    const id = p.fantraxPlayerId;
+    if (!id) return;
+    const next = !isWatched(p);
+    const set = (value: boolean) => setWatchOverrides((m) => new Map(m).set(id, value));
+    set(next);
+    watchAction(id, next).catch(() => set(!next));
+  }
+
+  const watchedIds = players.filter(isWatched).flatMap((p) => (p.fantraxPlayerId ? [p.fantraxPlayerId] : []));
+
+  function clearWatchlist() {
+    if (!window.confirm(`Clear all ${watchedIds.length} players from your watchlist?`)) return;
+    const before = watchOverrides;
+    setWatchOverrides(new Map([...before, ...watchedIds.map((id) => [id, false] as const)]));
+    clearWatchlistAction().catch(() => setWatchOverrides(before));
+  }
 
   const teams = useMemo(
     () => [...new Set(players.map((p) => p.nhlTeamAbbrev).filter((t): t is string => !!t))].sort(),
@@ -145,7 +178,12 @@ export function ProjectionsTable({
     const fitsBucket = (position: string | null) =>
       !!position && position.split(",").some((pos) => mapPositionToBucket(pos, positionBuckets) === bucketFilter);
     return players
-      .filter((p) => (!teamFilter || p.nhlTeamAbbrev === teamFilter) && (!bucketFilter || fitsBucket(p.position)))
+      .filter(
+        (p) =>
+          (!teamFilter || p.nhlTeamAbbrev === teamFilter) &&
+          (!bucketFilter || fitsBucket(p.position)) &&
+          (!watchFilter || isWatched(p) === (watchFilter === "watched"))
+      )
       .sort((a, b) => {
         const av = a[sortKey];
         const bv = b[sortKey];
@@ -156,7 +194,7 @@ export function ProjectionsTable({
         if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
         return String(av).localeCompare(String(bv)) * dir;
       });
-  }, [players, sortKey, sortDir, teamFilter, bucketFilter, positionBuckets]);
+  }, [players, sortKey, sortDir, teamFilter, bucketFilter, watchFilter, isWatched, positionBuckets]);
 
   function onSort(col: Column) {
     if (col.key === sortKey) {
@@ -195,18 +233,39 @@ export function ProjectionsTable({
             ))}
           </select>
         </label>
+        <label className="flex items-center gap-1.5">
+          Watchlist
+          <select
+            value={watchFilter}
+            onChange={(e) => setWatchFilter(e.target.value as typeof watchFilter)}
+            className={selectClass}
+          >
+            <option value="">All</option>
+            <option value="watched">On watchlist</option>
+            <option value="unwatched">Not on watchlist</option>
+          </select>
+        </label>
         <button
           type="button"
           onClick={() => {
             setTeamFilter("");
             setBucketFilter("");
+            setWatchFilter("");
           }}
-          disabled={!teamFilter && !bucketFilter}
+          disabled={!teamFilter && !bucketFilter && !watchFilter}
           className="rounded border border-neutral-300 px-1.5 py-0.5 text-xs hover:bg-neutral-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-neutral-700 dark:hover:bg-neutral-800"
         >
           Reset
         </button>
-        {(teamFilter || bucketFilter) && (
+        <button
+          type="button"
+          onClick={clearWatchlist}
+          disabled={watchedIds.length === 0}
+          className="rounded border border-neutral-300 px-1.5 py-0.5 text-xs hover:bg-neutral-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          Clear watchlist
+        </button>
+        {(teamFilter || bucketFilter || watchFilter) && (
           <span className="text-neutral-500">
             Showing {sorted.length} of {players.length}
           </span>
@@ -221,6 +280,8 @@ export function ProjectionsTable({
         <table className="w-full text-sm text-neutral-700 dark:text-neutral-300">
           <thead className="sticky top-0 z-10 bg-neutral-100 [--divider:var(--color-neutral-300)] dark:bg-neutral-900 dark:[--divider:var(--color-neutral-700)]">
             <tr style={{ height: `${GROUP_ROW_HEIGHT_REM}rem` }}>
+              <th />
+              <th />
               {GROUP_SPANS.map((g) => (
                 <th
                   key={g.key}
@@ -234,6 +295,10 @@ export function ProjectionsTable({
               <th />
             </tr>
             <tr style={{ height: `${ROW_HEIGHT_REM}rem` }}>
+              <th className="pl-3 text-right text-xs font-medium text-neutral-500">#</th>
+              <th className="pl-2">
+                <span className="sr-only">Watchlist</span>
+              </th>
               {COLUMNS.map((c, i) => {
                 const active = c.key === sortKey;
                 return (
@@ -271,12 +336,19 @@ export function ProjectionsTable({
             </tr>
           </thead>
           <tbody>
-            {sorted.map((p) => (
+            {sorted.map((p, rowIndex) => (
               <tr
                 key={p.id}
                 style={{ height: `${ROW_HEIGHT_REM}rem` }}
                 className="border-t border-neutral-100 even:bg-neutral-50 dark:border-neutral-900 dark:even:bg-neutral-900/40"
               >
+                {/* Row number in the current filtered/sorted view - not a rank. */}
+                <td className="pl-3 text-right text-xs text-neutral-400 tabular-nums dark:text-neutral-500">{rowIndex + 1}</td>
+                <td className="pl-2">
+                  {p.fantraxPlayerId && (
+                    <WatchStar watched={isWatched(p)} onClick={() => toggleWatch(p)} />
+                  )}
+                </td>
                 {COLUMNS.map((c, i) => {
                   const v = p[c.key];
                   const text = c.render
@@ -315,7 +387,7 @@ export function ProjectionsTable({
                           type="submit"
                           className="rounded bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-700 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
                         >
-                          Remove
+                          Hide
                         </button>
                       </form>
                     </div>
@@ -327,5 +399,25 @@ export function ProjectionsTable({
         </table>
       </div>
     </div>
+  );
+}
+
+function WatchStar({ watched, onClick }: { watched: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={watched}
+      title={watched ? "Remove from watchlist" : "Add to watchlist"}
+      className={`flex items-center ${watched ? "text-amber-400" : "text-neutral-400 hover:text-amber-400 dark:text-neutral-600"}`}
+    >
+      <svg viewBox="0 0 24 24" className="size-4" fill={watched ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2}>
+        <path
+          strokeLinejoin="round"
+          d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.49l-5.87 3.09 1.12-6.54L2.5 9.41l6.56-.95L12 2.5z"
+        />
+      </svg>
+      <span className="sr-only">{watched ? "Remove from watchlist" : "Add to watchlist"}</span>
+    </button>
   );
 }

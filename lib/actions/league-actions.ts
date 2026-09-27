@@ -15,6 +15,7 @@ import { addDraftTarget, clearDraftTargets, removeDraftTarget } from "@/lib/fant
 import { setKeeperOverride } from "@/lib/fantrax/keeper-overrides";
 import { removePlayer, restoreAllPlayers, restorePlayer } from "@/lib/fantrax/removed-players";
 import { syncDraftPicks, type DraftSyncResult } from "@/lib/fantrax/draft-sync";
+import { clearWatched, setWatched } from "@/lib/fantrax/watched-players";
 import { importNhlSeasonSchedule } from "@/lib/nhl/import-schedule";
 import { parseProjectionsSpreadsheet } from "@/lib/import/spreadsheet";
 import { importSpreadsheetForUser } from "@/lib/import/projections";
@@ -173,6 +174,21 @@ export async function restorePlayerAction(userLeagueId: string, formData: FormDa
 
   await restorePlayer(userLeagueId, fantraxPlayerId);
   revalidatePath(`/leagues/${userLeagueId}/analysis`);
+}
+
+/**
+ * Stars or unstars a player in Available players. The table updates its own star optimistically,
+ * so there's no revalidation - re-rendering the whole Draft Day Helper per click would be slow.
+ */
+export async function setWatchedAction(userLeagueId: string, fantraxPlayerId: string, watched: boolean): Promise<void> {
+  await requireUserId();
+  await setWatched(userLeagueId, fantraxPlayerId, watched);
+}
+
+/** Unstars everyone - also optimistic on the table's side, so no revalidation. */
+export async function clearWatchlistAction(userLeagueId: string): Promise<void> {
+  await requireUserId();
+  await clearWatched(userLeagueId);
 }
 
 export async function restoreAllPlayersAction(userLeagueId: string): Promise<void> {

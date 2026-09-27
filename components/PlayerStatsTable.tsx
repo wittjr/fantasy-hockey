@@ -75,7 +75,7 @@ export function PlayerStatsTable({
    * addDraftTargetAction's (userLeagueId, formData) signature.
    */
   addAction?: (formData: FormData) => void | Promise<void>;
-  /** Same shape as addAction, for a "Remove" button (e.g. player got drafted by someone else). */
+  /** Same shape as addAction, for a "Hide" button (e.g. player got drafted by someone else). */
   removeAction?: (formData: FormData) => void | Promise<void>;
   season?: string;
 }) {
@@ -228,7 +228,7 @@ export function PlayerStatsTable({
                     type="submit"
                     className="rounded bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-700 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
                   >
-                    Remove
+                    Hide
                   </button>
                 </form>
               ) : null,
