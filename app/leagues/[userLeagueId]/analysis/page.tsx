@@ -435,6 +435,7 @@ export default async function AnalysisPage({
             removeAction={boundRemovePlayer}
             season={season}
             players={availablePlayers}
+            positionBuckets={Object.keys(slotConstraints)}
           />
         )}
       </section>

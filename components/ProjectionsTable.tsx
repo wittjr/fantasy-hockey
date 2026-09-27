@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatOffNights } from "@/lib/analysis/off-nights";
+import { mapPositionToBucket } from "@/lib/fantrax/position-mapping";
 
 export interface ProjectionRow {
   id: string;
@@ -118,29 +119,44 @@ export function ProjectionsTable({
   addAction,
   removeAction,
   season,
+  positionBuckets,
 }: {
   players: ProjectionRow[];
   /** Same (formData) shape as PlayerStatsTable's addAction/removeAction - fantraxPlayerId + season as hidden fields. */
   addAction: FormAction;
   removeAction: FormAction;
   season: string;
+  /** The league's roster slots (e.g. F/D/G) - the position filter's options. */
+  positionBuckets: string[];
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [teamFilter, setTeamFilter] = useState("");
+  const [bucketFilter, setBucketFilter] = useState("");
+
+  const teams = useMemo(
+    () => [...new Set(players.map((p) => p.nhlTeamAbbrev).filter((t): t is string => !!t))].sort(),
+    [players],
+  );
 
   const sorted = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
-    return [...players].sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
-      // Blanks always sink to the bottom, whichever direction is active.
-      if (av == null && bv == null) return 0;
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
-      return String(av).localeCompare(String(bv)) * dir;
-    });
-  }, [players, sortKey, sortDir]);
+    // A player fits a slot if any of their positions maps to it - C, LW, RW, F or "C,LW" all fill F.
+    const fitsBucket = (position: string | null) =>
+      !!position && position.split(",").some((pos) => mapPositionToBucket(pos, positionBuckets) === bucketFilter);
+    return players
+      .filter((p) => (!teamFilter || p.nhlTeamAbbrev === teamFilter) && (!bucketFilter || fitsBucket(p.position)))
+      .sort((a, b) => {
+        const av = a[sortKey];
+        const bv = b[sortKey];
+        // Blanks always sink to the bottom, whichever direction is active.
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+        return String(av).localeCompare(String(bv)) * dir;
+      });
+  }, [players, sortKey, sortDir, teamFilter, bucketFilter, positionBuckets]);
 
   function onSort(col: Column) {
     if (col.key === sortKey) {
@@ -151,120 +167,165 @@ export function ProjectionsTable({
     }
   }
 
+  const selectClass =
+    "rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900";
+
   return (
-    // relative + isolate: without its own positioning/stacking context, Safari doesn't clip the
-    // table (with its sticky header) to this rounded scroll box, so rows spill out over the page.
-    <div
-      className="relative isolate overflow-auto rounded-md border border-neutral-200 dark:border-neutral-800"
-      style={{ maxHeight: `${GROUP_ROW_HEIGHT_REM + (VISIBLE_ROWS + 1) * ROW_HEIGHT_REM}rem` }}
-    >
-      <table className="w-full text-sm text-neutral-700 dark:text-neutral-300">
-        <thead className="sticky top-0 z-10 bg-neutral-100 [--divider:var(--color-neutral-300)] dark:bg-neutral-900 dark:[--divider:var(--color-neutral-700)]">
-          <tr style={{ height: `${GROUP_ROW_HEIGHT_REM}rem` }}>
-            {GROUP_SPANS.map((g) => (
-              <th
-                key={g.key}
-                colSpan={g.span}
-                style={g.group ? headerLines(true, true) : undefined}
-                className="px-3 text-center text-xs font-semibold whitespace-nowrap text-neutral-600 dark:text-neutral-400"
-              >
-                {g.group}
-              </th>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <label className="flex items-center gap-1.5">
+          Position
+          <select value={bucketFilter} onChange={(e) => setBucketFilter(e.target.value)} className={selectClass}>
+            <option value="">All</option>
+            {positionBuckets.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
             ))}
-            <th />
-          </tr>
-          <tr style={{ height: `${ROW_HEIGHT_REM}rem` }}>
-            {COLUMNS.map((c, i) => {
-              const active = c.key === sortKey;
-              return (
+          </select>
+        </label>
+        <label className="flex items-center gap-1.5">
+          Team
+          <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} className={selectClass}>
+            <option value="">All</option>
+            {teams.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => {
+            setTeamFilter("");
+            setBucketFilter("");
+          }}
+          disabled={!teamFilter && !bucketFilter}
+          className="rounded border border-neutral-300 px-1.5 py-0.5 text-xs hover:bg-neutral-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          Reset
+        </button>
+        {(teamFilter || bucketFilter) && (
+          <span className="text-neutral-500">
+            Showing {sorted.length} of {players.length}
+          </span>
+        )}
+      </div>
+      {/* relative + isolate: without its own positioning/stacking context, Safari doesn't clip the
+          table (with its sticky header) to this rounded scroll box, so rows spill out over the page. */}
+      <div
+        className="relative isolate overflow-auto rounded-md border border-neutral-200 dark:border-neutral-800"
+        style={{ maxHeight: `${GROUP_ROW_HEIGHT_REM + (VISIBLE_ROWS + 1) * ROW_HEIGHT_REM}rem` }}
+      >
+        <table className="w-full text-sm text-neutral-700 dark:text-neutral-300">
+          <thead className="sticky top-0 z-10 bg-neutral-100 [--divider:var(--color-neutral-300)] dark:bg-neutral-900 dark:[--divider:var(--color-neutral-700)]">
+            <tr style={{ height: `${GROUP_ROW_HEIGHT_REM}rem` }}>
+              {GROUP_SPANS.map((g) => (
                 <th
-                  key={c.key}
-                  aria-sort={
-                    c.unsortable ? undefined : active ? (sortDir === "asc" ? "ascending" : "descending") : "none"
-                  }
-                  title={c.title}
-                  style={headerLines(EDGES[i].start, EDGES[i].end)}
-                  className={`px-3 text-xs font-medium whitespace-nowrap ${c.numeric ? "text-right" : "text-left"}`}
+                  key={g.key}
+                  colSpan={g.span}
+                  style={g.group ? headerLines(true, true) : undefined}
+                  className="px-3 text-center text-xs font-semibold whitespace-nowrap text-neutral-600 dark:text-neutral-400"
                 >
-                  {c.unsortable ? (
-                    <span className="text-neutral-500">{c.header}</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onSort(c)}
-                      className={`inline-flex items-center gap-1 hover:text-neutral-900 dark:hover:text-neutral-100 ${
-                        active ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-500"
-                      }`}
-                    >
-                      {c.header}
-                      <span aria-hidden className={active ? "" : "invisible"}>
-                        {sortDir === "asc" ? "▲" : "▼"}
-                      </span>
-                    </button>
-                  )}
+                  {g.group}
                 </th>
-              );
-            })}
-            <th className="px-3">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((p) => (
-            <tr
-              key={p.id}
-              style={{ height: `${ROW_HEIGHT_REM}rem` }}
-              className="border-t border-neutral-100 even:bg-neutral-50 dark:border-neutral-900 dark:even:bg-neutral-900/40"
-            >
+              ))}
+              <th />
+            </tr>
+            <tr style={{ height: `${ROW_HEIGHT_REM}rem` }}>
               {COLUMNS.map((c, i) => {
-                const v = p[c.key];
-                const text = c.render
-                  ? c.render(p)
-                  : v == null
-                    ? "—"
-                    : typeof v === "number" && c.format
-                      ? c.format(v)
-                      : String(v);
+                const active = c.key === sortKey;
                 return (
-                  <td
+                  <th
                     key={c.key}
-                    className={`px-3 whitespace-nowrap ${c.numeric ? "text-right tabular-nums" : "text-left"} ${bodyDivider(EDGES[i])}`}
+                    aria-sort={
+                      c.unsortable ? undefined : active ? (sortDir === "asc" ? "ascending" : "descending") : "none"
+                    }
+                    title={c.title}
+                    style={headerLines(EDGES[i].start, EDGES[i].end)}
+                    className={`px-3 text-xs font-medium whitespace-nowrap ${c.numeric ? "text-right" : "text-left"}`}
                   >
-                    {text}
-                  </td>
+                    {c.unsortable ? (
+                      <span className="text-neutral-500">{c.header}</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onSort(c)}
+                        className={`inline-flex items-center gap-1 hover:text-neutral-900 dark:hover:text-neutral-100 ${
+                          active ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-500"
+                        }`}
+                      >
+                        {c.header}
+                        <span aria-hidden className={active ? "" : "invisible"}>
+                          {sortDir === "asc" ? "▲" : "▼"}
+                        </span>
+                      </button>
+                    )}
+                  </th>
                 );
               })}
-              <td className="px-3 text-right whitespace-nowrap">
-                {p.fantraxPlayerId && (
-                  <div className="inline-flex gap-1.5">
-                    <form action={addAction}>
-                      <input type="hidden" name="fantraxPlayerId" value={p.fantraxPlayerId} />
-                      <input type="hidden" name="season" value={season} />
-                      <button
-                        type="submit"
-                        className="rounded bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-emerald-700"
-                      >
-                        Add
-                      </button>
-                    </form>
-                    <form action={removeAction}>
-                      <input type="hidden" name="fantraxPlayerId" value={p.fantraxPlayerId} />
-                      <input type="hidden" name="season" value={season} />
-                      <button
-                        type="submit"
-                        className="rounded bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-700 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                      >
-                        Remove
-                      </button>
-                    </form>
-                  </div>
-                )}
-              </td>
+              <th className="px-3">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sorted.map((p) => (
+              <tr
+                key={p.id}
+                style={{ height: `${ROW_HEIGHT_REM}rem` }}
+                className="border-t border-neutral-100 even:bg-neutral-50 dark:border-neutral-900 dark:even:bg-neutral-900/40"
+              >
+                {COLUMNS.map((c, i) => {
+                  const v = p[c.key];
+                  const text = c.render
+                    ? c.render(p)
+                    : v == null
+                      ? "—"
+                      : typeof v === "number" && c.format
+                        ? c.format(v)
+                        : String(v);
+                  return (
+                    <td
+                      key={c.key}
+                      className={`px-3 whitespace-nowrap ${c.numeric ? "text-right tabular-nums" : "text-left"} ${bodyDivider(EDGES[i])}`}
+                    >
+                      {text}
+                    </td>
+                  );
+                })}
+                <td className="px-3 text-right whitespace-nowrap">
+                  {p.fantraxPlayerId && (
+                    <div className="inline-flex gap-1.5">
+                      <form action={addAction}>
+                        <input type="hidden" name="fantraxPlayerId" value={p.fantraxPlayerId} />
+                        <input type="hidden" name="season" value={season} />
+                        <button
+                          type="submit"
+                          className="rounded bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-emerald-700"
+                        >
+                          Add
+                        </button>
+                      </form>
+                      <form action={removeAction}>
+                        <input type="hidden" name="fantraxPlayerId" value={p.fantraxPlayerId} />
+                        <input type="hidden" name="season" value={season} />
+                        <button
+                          type="submit"
+                          className="rounded bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-700 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                        >
+                          Remove
+                        </button>
+                      </form>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
