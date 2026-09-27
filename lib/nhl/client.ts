@@ -70,3 +70,13 @@ export async function getCurrentRoster(team: NhlTeamAbbrev): Promise<NhlRosterPl
   const data = await nhlGet<RosterResponse>(`roster/${team}/current`);
   return [...data.forwards, ...data.defensemen, ...data.goalies];
 }
+
+interface ScheduleWeekResponse {
+  gameWeek: Array<{ date: string; games: NhlGame[] }>;
+}
+
+/** The 7 days of games starting at `date` ("YYYY-MM-DD"), keyed by Eastern date. Includes all game types. */
+export async function getScheduleWeek(date: string): Promise<Array<{ date: string; games: NhlGame[] }>> {
+  const data = await nhlGet<ScheduleWeekResponse>(`schedule/${date}`);
+  return data.gameWeek;
+}

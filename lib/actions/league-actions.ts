@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import {
@@ -19,6 +19,7 @@ import { parseProjectionsSpreadsheet } from "@/lib/import/spreadsheet";
 import { importSpreadsheetForUser } from "@/lib/import/projections";
 import { importYahooLeague } from "@/lib/yahoo/import-league";
 import { disconnectYahoo } from "@/lib/yahoo/oauth";
+import { FANTRAX_PROJECTIONS_TAG } from "@/lib/fantrax/cached-projections";
 
 async function requireUserId(): Promise<string> {
   const session = await auth();
@@ -201,4 +202,15 @@ export async function importScheduleAction(userLeagueId: string, formData: FormD
   await importNhlSeasonSchedule(season);
   revalidatePath(`/leagues/${userLeagueId}/analysis`);
   redirect(`/leagues/${userLeagueId}/analysis?season=${season}`);
+}
+
+/**
+ * Drops the cached Fantrax projections (normally kept up to 24 hours) so the planner refetches
+ * them now - e.g. right after a new scoring period starts. Clears them for every league; the
+ * cache holds only a few small entries, so that's cheap. week is the planner week to return to.
+ */
+export async function refreshProjectionsAction(userLeagueId: string, week: number | null): Promise<void> {
+  await requireUserId();
+  updateTag(FANTRAX_PROJECTIONS_TAG);
+  redirect(week === null ? `/leagues/${userLeagueId}/planner` : `/leagues/${userLeagueId}/planner?week=${week}`);
 }

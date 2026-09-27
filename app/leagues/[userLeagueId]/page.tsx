@@ -75,11 +75,16 @@ export default async function LeaguePage({
         <Link href="/" className="text-sm text-neutral-500 hover:underline">
           ← All leagues
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold">{league.name}</h1>
-          <p className="text-sm text-neutral-500">
-            Yahoo league · {league.seasonYear} · your team: {myTeam?.name ?? "—"}
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{league.name}</h1>
+            <p className="text-sm text-neutral-500">
+              Yahoo league · {league.seasonYear} · your team: {myTeam?.name ?? "—"}
+            </p>
+          </div>
+          <Link href={`/leagues/${userLeagueId}/planner`} className="text-sm font-medium underline">
+            Weekly planner →
+          </Link>
         </div>
         <section className="rounded-md border border-neutral-200 p-4 text-sm dark:border-neutral-800">
           <h2 className="mb-2 font-medium">Roster slots</h2>
@@ -124,6 +129,9 @@ export default async function LeaguePage({
               Re-sync roster
             </button>
           </form>
+          <Link href={`/leagues/${userLeagueId}/planner`} className="text-sm font-medium underline">
+            Weekly planner →
+          </Link>
           <Link href={`/leagues/${userLeagueId}/analysis`} className="text-sm font-medium underline">
             Open Draft Day Helper →
           </Link>
