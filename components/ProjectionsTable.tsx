@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatOffNights } from "@/lib/analysis/off-nights";
 
 export interface ProjectionRow {
   id: string;
@@ -13,17 +14,24 @@ export interface ProjectionRow {
   fantasyPointsPerGp: number | null;
   vorp: number | null;
   adp: number | null;
+  /** NHL games in the league's fantasy playoff weeks; null when the league has no playoffs or the team is unknown. */
+  playoffGames: number | null;
+  /** Games on nights with fewer than 8 NHL games in the fantasy regular season / playoffs; null when unknown or no playoffs. */
+  offNightsRegular: number | null;
+  offNightsPlayoff: number | null;
   /** Null when the spreadsheet row couldn't be matched to a Fantrax player - no Add/Remove then. */
   fantraxPlayerId: string | null;
 }
 
-type SortKey = Exclude<keyof ProjectionRow, "id" | "fantraxPlayerId">;
+type SortKey = Exclude<keyof ProjectionRow, "id" | "fantraxPlayerId" | "offNightsPlayoff">;
 
 interface Column {
   key: SortKey;
   header: string;
   numeric?: boolean;
   format?: (v: number) => string;
+  /** Overrides the cell text; the column still sorts by `key`. */
+  render?: (p: ProjectionRow) => string;
   /** Direction used on first click - "higher is better" stats start descending. */
   defaultDir?: "asc" | "desc";
 }
@@ -38,6 +46,14 @@ const COLUMNS: Column[] = [
   { key: "fantasyPointsPerGp", header: "/GP", numeric: true, format: (v) => v.toFixed(2), defaultDir: "desc" },
   { key: "vorp", header: "VORP", numeric: true, format: (v) => v.toFixed(0), defaultDir: "desc" },
   { key: "adp", header: "ADP", numeric: true, format: (v) => v.toFixed(1) },
+  { key: "playoffGames", header: "PO GP", numeric: true, defaultDir: "desc" },
+  {
+    key: "offNightsRegular",
+    header: "Off Nights",
+    numeric: true,
+    defaultDir: "desc",
+    render: (p) => formatOffNights(p.offNightsRegular, p.offNightsPlayoff),
+  },
 ];
 
 const VISIBLE_ROWS = 25;
@@ -130,7 +146,13 @@ export function ProjectionsTable({
             >
               {COLUMNS.map((c) => {
                 const v = p[c.key];
-                const text = v == null ? "—" : typeof v === "number" && c.format ? c.format(v) : String(v);
+                const text = c.render
+                  ? c.render(p)
+                  : v == null
+                    ? "—"
+                    : typeof v === "number" && c.format
+                      ? c.format(v)
+                      : String(v);
                 return (
                   <td
                     key={c.key}

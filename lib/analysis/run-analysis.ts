@@ -1,8 +1,11 @@
 import { getTeamRosterRows, getUserLeagueWithLeague } from "@/lib/fantrax/import-league";
 import { getDraftTargetRows } from "@/lib/fantrax/draft-targets";
+import { getLeagueInfo } from "@/lib/fantrax/client";
 import { getSeasonSchedule } from "@/lib/nhl/import-schedule";
 import { computeCoverageHistogram, computeRosterGaps, computeRosterSurplus } from "./gap-analysis";
 import { scoreTeamsForGaps } from "./team-fit";
+import { countGamesByTeam, fantasySeasonDays } from "./playoff-games";
+import { countOffNightGamesByTeam } from "./off-nights";
 import type {
   ConsideredPlayer,
   CoverageHistogramRow,
@@ -116,5 +119,33 @@ export async function runGapAnalysis(userLeagueId: string, season: string): Prom
     surplus,
     coverageHistogram,
     teamFit,
+  };
+}
+
+export interface FantasySeasonGames {
+  /** NHL team abbrev -> games on off nights during the fantasy regular season. */
+  regularOffNightsByTeam: Map<string, number>;
+  /** Null when the league has no playoffs. */
+  playoffs: {
+    startDate: string;
+    endDate: string;
+    gamesByTeam: Map<string, number>;
+    offNightsByTeam: Map<string, number>;
+  } | null;
+}
+
+/** Per-team game counts over the league's fantasy season, split at the playoffs - read live from Fantrax's league settings. */
+export async function getFantasySeasonGames(fantraxLeagueId: string, season: string): Promise<FantasySeasonGames> {
+  const info = await getLeagueInfo(fantraxLeagueId);
+  const days = fantasySeasonDays(info.playoffs, info.scoringPeriods ?? []);
+  const games = await getSeasonSchedule(season);
+  return {
+    regularOffNightsByTeam: countOffNightGamesByTeam(games, days.regular),
+    playoffs: days.playoffs && {
+      startDate: days.playoffs[0],
+      endDate: days.playoffs[days.playoffs.length - 1],
+      gamesByTeam: countGamesByTeam(games, days.playoffs),
+      offNightsByTeam: countOffNightGamesByTeam(games, days.playoffs),
+    },
   };
 }

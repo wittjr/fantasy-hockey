@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { formatOffNights } from "@/lib/analysis/off-nights";
 import { PlayerFlagToggle } from "./PlayerFlagToggle";
 
 export interface PlayerStatsRow {
@@ -7,6 +8,9 @@ export interface PlayerStatsRow {
   nhlTeamAbbrev?: string | null;
   position?: string;
   gamesAvailable?: number;
+  playoffGames?: number | null;
+  offNightsRegular?: number | null;
+  offNightsPlayoff?: number | null;
   rank: number | null;
   fantasyPoints: number | null;
   fantasyPointsPerGp: number | null;
@@ -32,6 +36,8 @@ export function PlayerStatsTable({
   showPosition,
   showConsider,
   showGamesAvailable,
+  showPlayoffGames,
+  showOffNightGames,
   showFantraxAdp,
   addAction,
   removeAction,
@@ -43,6 +49,10 @@ export function PlayerStatsTable({
   /** Adds a "Consider" checkbox column - each row needs isConsidered/considerAction set. */
   showConsider?: boolean;
   showGamesAvailable?: boolean;
+  /** NHL games in the league's fantasy playoff weeks - each row needs playoffGames set. */
+  showPlayoffGames?: boolean;
+  /** Games on nights with fewer than 8 NHL games, as regular/playoff - each row needs offNightsRegular/offNightsPlayoff set. */
+  showOffNightGames?: boolean;
   showFantraxAdp?: boolean;
   /**
    * When provided, adds an "Add" button per row (skipped for rows with no fantraxPlayerId).
@@ -116,6 +126,26 @@ export function PlayerStatsTable({
             header: "Games Available",
             align: "right" as const,
             render: (p: PlayerStatsRow) => p.gamesAvailable ?? "—",
+          },
+        ]
+      : []),
+    ...(showPlayoffGames
+      ? [
+          {
+            key: "playoffGames",
+            header: "PO GP",
+            align: "right" as const,
+            render: (p: PlayerStatsRow) => p.playoffGames ?? "—",
+          },
+        ]
+      : []),
+    ...(showOffNightGames
+      ? [
+          {
+            key: "offNightGames",
+            header: "Off Nights",
+            align: "right" as const,
+            render: (p: PlayerStatsRow) => formatOffNights(p.offNightsRegular, p.offNightsPlayoff),
           },
         ]
       : []),

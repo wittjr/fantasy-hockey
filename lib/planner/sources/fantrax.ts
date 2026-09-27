@@ -1,29 +1,9 @@
-import { getAdp, getLeagueInfo, getPlayerIds, getTeamRosters, type FantraxPeriod } from "@/lib/fantrax/client";
+import { getAdp, getLeagueInfo, getPlayerIds, getTeamRosters } from "@/lib/fantrax/client";
 import { getCachedPeriodProjections, getCachedRosterDayProjections } from "@/lib/fantrax/cached-projections";
+import { fantraxDate, toPlanningWeek } from "@/lib/fantrax/periods";
 import { getGamesByTeam } from "../schedule";
-import type { AvailablePlayer, DailySlot, PlannerData, PlannerRosterPlayer, PlanningWeek } from "../types";
-import { datesBetween, daysToLoad, pickNextWeek, pickupHorizon, todayEastern } from "../weeks";
-
-/** The Eastern calendar date a Fantrax timestamp falls on - it's already Eastern, so just the prefix. */
-function fantraxDate(ts: string): string {
-  return ts.slice(0, 10);
-}
-
-function dayBefore(date: string): string {
-  const d = new Date(`${date}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
-/**
- * A scoring period's lineup days: its start date up to the day before the next period
- * starts. Fantrax ends each period just before that day's first puck drop (e.g. period 1
- * ends "10-05T18:59"), and the 10-05 games belong to period 2.
- */
-function toPlanningWeek(period: FantraxPeriod): PlanningWeek {
-  const days = datesBetween(fantraxDate(period.startDate), dayBefore(fantraxDate(period.endDate)));
-  return { number: period.number, startDate: days[0], endDate: days[days.length - 1], days };
-}
+import type { AvailablePlayer, DailySlot, PlannerData, PlannerRosterPlayer } from "../types";
+import { daysToLoad, pickNextWeek, pickupHorizon, todayEastern } from "../weeks";
 
 function toDailySlot(position: string, status: string): DailySlot {
   if (status === "ACTIVE") return { slot: position, status: "active" };

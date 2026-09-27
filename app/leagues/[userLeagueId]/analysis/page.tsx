@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getUserLeagueWithLeague } from "@/lib/fantrax/import-league";
 import { searchPlayerPool } from "@/lib/fantrax/draft-targets";
 import { seasonHasSchedule } from "@/lib/nhl/import-schedule";
-import { runGapAnalysis } from "@/lib/analysis/run-analysis";
+import { getFantasySeasonGames, runGapAnalysis } from "@/lib/analysis/run-analysis";
 import { getProjectionsForUser } from "@/lib/import/projections";
 import { getOpponentRosters } from "@/lib/analysis/opponent-rosters";
 import { matchProjectionsToFantraxIds } from "@/lib/analysis/match-projections";
@@ -139,6 +139,12 @@ export default async function AnalysisPage({
   );
   const boundToggleKeeper = (fantraxPlayerId: string) => toggleKeeperOverrideAction.bind(null, userLeagueId, fantraxPlayerId);
   const removedPlayerIds = await getRemovedPlayerIds(userLeagueId);
+  const { regularOffNightsByTeam, playoffs } = await getFantasySeasonGames(league.fantraxLeagueId, season);
+  const scheduleCounts = (team: string | null) => ({
+    playoffGames: playoffs && team ? (playoffs.gamesByTeam.get(team) ?? 0) : null,
+    offNightsRegular: team ? (regularOffNightsByTeam.get(team) ?? 0) : null,
+    offNightsPlayoff: playoffs && team ? (playoffs.offNightsByTeam.get(team) ?? 0) : null,
+  });
 
   // Exclude the SPECIFIC players already on your team (roster + draft targets), anyone
   // currently considered kept by another team, and anyone manually removed (e.g. drafted by
@@ -319,6 +325,11 @@ export default async function AnalysisPage({
             removed. &quot;Add&quot; puts them on your team above; &quot;Remove&quot; drops them from the pool (e.g.
             drafted by someone else). Click a column header to sort; click again to reverse.
           </p>
+          <p className="text-sm text-neutral-500">
+            {playoffs
+              ? `PO GP: NHL games each player's team plays during your fantasy playoffs (${playoffs.startDate} to ${playoffs.endDate}). Off Nights: games on nights with fewer than 8 NHL games, as fantasy regular season/playoffs.`
+              : "PO GP is blank: this league has no fantasy playoffs in its Fantrax settings. Off Nights: games on nights with fewer than 8 NHL games during the fantasy season."}
+          </p>
         </div>
         {projections.length === 0 ? (
           <p className="text-sm text-neutral-500">Import your projections spreadsheet below to see players here.</p>
@@ -338,6 +349,7 @@ export default async function AnalysisPage({
               fantasyPointsPerGp: p.fantasyPointsPerGp,
               vorp: p.vorp,
               adp: p.adp,
+              ...scheduleCounts(p.nhlTeamAbbrev),
               fantraxPlayerId: rowIdToPlayerId.get(p.id) ?? null,
             }))}
           />
@@ -496,6 +508,9 @@ export default async function AnalysisPage({
             plays on) first, then by projected rank (RK). Players from teams already fully represented on your own
             roster, and anyone marked &quot;Consider&quot; in Opponent rosters above, are excluded. Hit
             &quot;Remove&quot; during the draft once a player is taken so they drop off this list.
+            {playoffs
+              ? " PO GP is the number of games their team plays during your fantasy playoffs. Off Nights is their team's games on nights with fewer than 8 NHL games, as fantasy regular season/playoffs."
+              : " Off Nights is their team's games on nights with fewer than 8 NHL games during the fantasy season."}
           </p>
         </div>
 
@@ -553,6 +568,8 @@ export default async function AnalysisPage({
                   <PlayerStatsTable
                     showTeam
                     showGamesAvailable
+                    showPlayoffGames={playoffs !== null}
+                    showOffNightGames
                     season={season}
                     addAction={boundAddDraftTarget}
                     removeAction={boundRemovePlayer}
@@ -561,6 +578,7 @@ export default async function AnalysisPage({
                       name: p.name,
                       nhlTeamAbbrev: p.nhlTeamAbbrev,
                       gamesAvailable: p.gapDaysCovered,
+                      ...scheduleCounts(p.nhlTeamAbbrev),
                       rank: p.rank,
                       fantasyPoints: p.fantasyPoints,
                       fantasyPointsPerGp: p.fantasyPointsPerGp,

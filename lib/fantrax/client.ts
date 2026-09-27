@@ -47,6 +47,8 @@ export interface FantraxLeagueInfo {
   scoringPeriods?: FantraxPeriod[];
   /** Lineup-lock periods - one per game day in daily-lineup leagues. Same timestamp format. */
   rosterPeriods?: FantraxPeriod[];
+  /** Verified 2026-09-27: {"lastRegularSeasonPeriod":23,"numPlayoffTeams":6,"firstPlayoffPeriod":24,"mergePlayoffPeriods":false,"used":true}. */
+  playoffs?: { used: boolean; firstPlayoffPeriod: number; lastRegularSeasonPeriod: number; numPlayoffTeams: number };
   /** Every player in the pool: league-specific eligible roster slots ("F", "F,D", ...) and "FA" / "W" / "T" (taken). */
   playerInfo?: Record<string, { eligiblePos: string; status: string }>;
   [key: string]: unknown;
