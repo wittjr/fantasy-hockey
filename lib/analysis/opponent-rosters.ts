@@ -2,8 +2,6 @@ import { getAdp, getPlayerIds } from "@/lib/fantrax/client";
 import { fetchAllTeamRosters, getTeamsForLeague } from "@/lib/fantrax/import-league";
 import { getKeeperOverrides } from "@/lib/fantrax/keeper-overrides";
 import type { MatchableRow } from "@/lib/import/match-players";
-import { computeLikelyKeptPlayers } from "./likely-keepers";
-import { computeKeeperStatuses } from "./keeper-status";
 
 export interface OpponentRosterPlayer {
   fantraxPlayerId: string;
@@ -11,7 +9,6 @@ export interface OpponentRosterPlayer {
   nhlTeamAbbrev: string | null;
   rosterPosition: string;
   isConsidered: boolean;
-  isProgrammatic: boolean;
   rank: number | null;
   fantasyPoints: number | null;
   fantasyPointsPerGp: number | null;
@@ -37,8 +34,8 @@ interface ProjectionRowWithId extends MatchableRow {
 
 /**
  * Every other team's full roster, each player flagged with whether they're currently
- * considered "kept" (default: top 6 by live Fantrax ADP per team, overridable by the user
- * once real keeper lists are known - see keeper-status.ts) and enriched with the user's
+ * considered "kept" (only what the user saved - by hand or with "Select likely keepers";
+ * nothing is guessed on load) and enriched with the user's
  * spreadsheet projections where a match exists. Player name/team come straight from
  * Fantrax's live player pool rather than the DB fantrax_player table, so this doesn't need
  * to write ~200 rows on every page load just to look up names.
@@ -78,33 +75,25 @@ export async function getOpponentRosters<Row extends ProjectionRowWithId>(
     );
   }
 
-  const keptByPlayerId = computeLikelyKeptPlayers(otherTeamRosterPlayerIds, adpByPlayerId);
-
   const result: OpponentTeam[] = [];
   for (const [teamId, playerIds] of otherTeamRosterPlayerIds) {
     const roster = allRosters[teamId] ?? [];
     const rosterPositionById = new Map(roster.map((r) => [r.fantraxPlayerId, r.rosterPosition]));
-    const programmaticSet = new Set(
-      [...keptByPlayerId.entries()].filter(([, t]) => t === teamId).map(([id]) => id)
-    );
-    const statuses = computeKeeperStatuses(playerIds, programmaticSet, overrides);
-
-    const players: OpponentRosterPlayer[] = statuses.map((s) => {
-      const poolPlayer = pool[s.fantraxPlayerId];
-      const projection = projectionByPlayerId.get(s.fantraxPlayerId);
+    const players: OpponentRosterPlayer[] = playerIds.map((id) => {
+      const poolPlayer = pool[id];
+      const projection = projectionByPlayerId.get(id);
       return {
-        fantraxPlayerId: s.fantraxPlayerId,
-        name: poolPlayer?.name ?? projection?.name ?? `Unknown player (${s.fantraxPlayerId})`,
+        fantraxPlayerId: id,
+        name: poolPlayer?.name ?? projection?.name ?? `Unknown player (${id})`,
         nhlTeamAbbrev: poolPlayer?.team ?? projection?.nhlTeamAbbrev ?? null,
-        rosterPosition: rosterPositionById.get(s.fantraxPlayerId) ?? "?",
-        isConsidered: s.isConsidered,
-        isProgrammatic: s.isProgrammatic,
+        rosterPosition: rosterPositionById.get(id) ?? "?",
+        isConsidered: overrides.get(id) ?? false,
         rank: projection?.rank ?? null,
         fantasyPoints: projection?.fantasyPoints ?? null,
         fantasyPointsPerGp: projection?.fantasyPointsPerGp ?? null,
         vorp: projection?.vorp ?? null,
         adp: projection?.adp ?? null,
-        fantraxAdp: adpByPlayerId.get(s.fantraxPlayerId) ?? null,
+        fantraxAdp: adpByPlayerId.get(id) ?? null,
       };
     });
 

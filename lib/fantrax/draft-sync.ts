@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { draftTargets } from "@/lib/db/schema";
+import { draftTargets, userLeagues } from "@/lib/db/schema";
 import { fantraxNameToFirstLast } from "@/lib/import/match-players";
 import { getDraftResults, getPlayerIds } from "./client";
 import { planDraftSync } from "./draft-plan";
@@ -11,6 +11,7 @@ import { getRemovedPlayerIds, removePlayer } from "./removed-players";
 export interface DraftSyncResult {
   /** Fantrax's draftState, e.g. "running" or "completed". */
   state: string;
+  draftDate: string;
   picksMade: number;
   totalPicks: number;
   /** True if this sync added or removed anything, i.e. the page needs to re-render. */
@@ -18,6 +19,11 @@ export interface DraftSyncResult {
   /** One line per pick this sync applied, in draft order, e.g. "Sandmonsters is proud to select Connor McDavid - C - EDM with pick 1 in round 1". */
   changes: string[];
   errors: string[];
+}
+
+/** Records that this completed draft is fully synced, so the page stops catching up on every load. */
+export async function markDraftSynced(userLeagueId: string, draftDate: string): Promise<void> {
+  await db.update(userLeagues).set({ draftSyncedFor: draftDate }).where(eq(userLeagues.id, userLeagueId));
 }
 
 /**
@@ -76,5 +82,5 @@ export async function syncDraftPicks(
     }
   }
 
-  return { state: draft.draftState, picksMade, totalPicks: draft.draftPicks.length, changed: applied.size > 0, changes, errors };
+  return { state: draft.draftState, draftDate: draft.draftDate, picksMade, totalPicks: draft.draftPicks.length, changed: applied.size > 0, changes, errors };
 }

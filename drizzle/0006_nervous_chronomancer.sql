@@ -1,0 +1,1 @@
+ALTER TABLE "user_league" ADD COLUMN "draft_synced_for" text;

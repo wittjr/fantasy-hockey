@@ -18,6 +18,7 @@ import { getCachedSeasonProjections } from "@/lib/fantrax/cached-projections";
 import type { FantraxSeasonProjection } from "@/lib/fantrax/projections";
 import {
   addDraftTargetAction,
+  clearKeepersAction,
   clearWatchlistAction,
   importProjectionsAction,
   importScheduleAction,
@@ -26,11 +27,14 @@ import {
   resetDraftTargetsAction,
   restoreAllPlayersAction,
   restorePlayerAction,
+  selectAllKeepersAction,
+  selectLikelyKeepersAction,
   setWatchedAction,
   syncDraftPicksAction,
   toggleKeeperOverrideAction,
 } from "@/lib/actions/league-actions";
 import { DraftPickSync } from "@/components/DraftPickSync";
+import { PendingSubmitButton } from "@/components/PendingSubmitButton";
 import { PlayerStatsTable } from "@/components/PlayerStatsTable";
 import { ProjectionsTable, type ProjectionRow } from "@/components/ProjectionsTable";
 
@@ -173,6 +177,8 @@ export default async function AnalysisPage({
     ...rosterConsidered.map((p) => p.fantraxPlayerId),
     ...draftTargets.map((p) => p.fantraxPlayerId),
   ]);
+  // Only drives the live-sync banner - the page works fine without it if Fantrax is unreachable.
+  const draft = await getDraftResults(league.fantraxLeagueId).catch(() => null);
   const keptElsewhereIds = new Set(
     opponentTeams.flatMap((t) => t.players.filter((p) => p.isConsidered).map((p) => p.fantraxPlayerId))
   );
@@ -213,8 +219,6 @@ export default async function AnalysisPage({
   const boundImportProjections = importProjectionsAction.bind(null, userLeagueId);
   const boundRemovePlayer = removePlayerAction.bind(null, userLeagueId);
   const boundRestorePlayer = restorePlayerAction.bind(null, userLeagueId);
-  // Only drives the live-sync banner - the page works fine without it if Fantrax is unreachable.
-  const draft = await getDraftResults(league.fantraxLeagueId).catch(() => null);
   // Available players: every Fantrax-listed player not excluded above - spreadsheet rows that
   // matched a Fantrax player, with the spreadsheet's numbers, then players Fantrax projects or
   // has an ADP for who aren't in the spreadsheet (spreadsheet columns blank).
@@ -329,6 +333,7 @@ export default async function AnalysisPage({
           syncAction={syncDraftPicksAction.bind(null, userLeagueId)}
           draftStartMs={fantraxTimestampMs(draft.draftDate)}
           initialState={draft.draftState}
+          alreadySynced={userLeague.draftSyncedFor === draft.draftDate}
         />
       )}
 
@@ -584,13 +589,32 @@ export default async function AnalysisPage({
           <span aria-hidden className="text-sm text-rose-700 transition-transform group-open:rotate-90 dark:text-rose-300">▸</span>
           <h2 className="text-lg font-semibold text-rose-900 dark:text-rose-200">Opponent rosters &amp; keepers</h2>
         </summary>
-        <div>
+        <div className="flex items-start justify-between gap-4">
           <p className="text-sm text-rose-800/80 dark:text-rose-200/70">
             Every other team&apos;s full roster. &quot;Consider&quot; checked means that player is treated as kept
-            and excluded from your draft targets below. It defaults to the top 6 by live Fantrax ADP per team
-            (labeled &quot;Likely&quot;) since Fantrax doesn&apos;t expose real Keeper Admin picks - check or
-            uncheck players yourself once real keeper lists are set to override the guess.
+            and excluded from your draft targets below. Fantrax doesn&apos;t expose real Keeper Admin picks, so
+            nothing is checked automatically: &quot;Select likely keepers&quot; checks each team&apos;s top 6 by
+            live Fantrax ADP, leaving out anyone with an ADP over 96 and anyone you&apos;ve already set.
+            &quot;Select all&quot; checks every opponent&apos;s player; &quot;Unselect all&quot; unchecks them all so they
+            show as available.
           </p>
+          <div className="flex shrink-0 flex-col gap-2">
+            <form action={selectLikelyKeepersAction.bind(null, userLeagueId)}>
+              <PendingSubmitButton className="w-full justify-center rounded-md border border-rose-300 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-rose-800 hover:bg-rose-100 dark:border-rose-800 dark:text-rose-200 dark:hover:bg-rose-950/40">
+                Select likely keepers
+              </PendingSubmitButton>
+            </form>
+            <form action={selectAllKeepersAction.bind(null, userLeagueId)}>
+              <PendingSubmitButton className="w-full justify-center rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900">
+                Select all
+              </PendingSubmitButton>
+            </form>
+            <form action={clearKeepersAction.bind(null, userLeagueId)}>
+              <PendingSubmitButton className="w-full justify-center rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium whitespace-nowrap text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900">
+                Unselect all
+              </PendingSubmitButton>
+            </form>
+          </div>
         </div>
         <div className="flex flex-col gap-3">
           {opponentTeams.map((team) => {
@@ -615,7 +639,6 @@ export default async function AnalysisPage({
                       name: p.name,
                       position: p.rosterPosition,
                       isConsidered: p.isConsidered,
-                      isProgrammatic: p.isProgrammatic,
                       considerAction: boundToggleKeeper(p.fantraxPlayerId),
                       rank: p.rank,
                       fantasyPoints: p.fantasyPoints,

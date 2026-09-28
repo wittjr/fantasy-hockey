@@ -14,7 +14,10 @@ export function PlayerFlagToggle({
   return (
     <form action={action}>
       <label className="flex items-center gap-1">
+        {/* Keyed on the saved value so a server-side change (e.g. "Unselect all") re-mounts the
+            box - defaultChecked alone is only read on the first render. */}
         <input
+          key={String(defaultChecked)}
           type="checkbox"
           name={name}
           defaultChecked={defaultChecked}

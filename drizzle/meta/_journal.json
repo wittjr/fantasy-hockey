@@ -43,6 +43,13 @@
       "when": 1790545644635,
       "tag": "0005_workable_the_fallen",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790603032340,
+      "tag": "0006_nervous_chronomancer",
+      "breakpoints": true
     }
   ]
 }

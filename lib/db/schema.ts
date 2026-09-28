@@ -107,6 +107,9 @@ export const userLeagues = pgTable(
       .notNull()
       .references(() => fantraxLeagues.id, { onDelete: "cascade" }),
     myFantraxTeamId: text("my_fantrax_team_id"),
+    // draftDate of the completed Fantrax draft whose picks have been fully synced, so the
+    // Draft Day Helper's catch-up sync runs once rather than on every page load.
+    draftSyncedFor: text("draft_synced_for"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
   },
   (t) => [uniqueIndex("user_league_user_league_idx").on(t.userId, t.leagueId)]
@@ -206,11 +209,11 @@ export const draftTargets = pgTable(
   (t) => [uniqueIndex("draft_target_league_player_idx").on(t.userLeagueId, t.fantraxPlayerId)]
 );
 
-// Manual override of whether a player on ANOTHER team's roster is actually being kept.
-// Fantrax doesn't expose real Keeper Admin picks via any API, so the default guess (top 6
-// by live ADP per team - see lib/analysis/likely-keepers.ts) is just a heuristic; this lets
-// the user correct it once real keeper lists are set. No FK to fantrax_player - these are
-// opponents' players, which the app doesn't otherwise need to persist.
+// Whether a player on ANOTHER team's roster is being kept - the only source of the Consider
+// checkboxes (no row = not kept). Fantrax doesn't expose real Keeper Admin picks via any API;
+// rows come from the user's clicks or the "Select likely keepers" button (top 6 by live ADP per
+// team - see lib/analysis/likely-keepers.ts). No FK to fantrax_player - these are opponents'
+// players, which the app doesn't otherwise need to persist.
 export const keeperOverrides = pgTable(
   "keeper_override",
   {

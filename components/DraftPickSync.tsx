@@ -17,10 +17,13 @@ export function DraftPickSync({
   syncAction,
   draftStartMs,
   initialState,
+  alreadySynced,
 }: {
   syncAction: () => Promise<DraftSyncResult>;
   draftStartMs: number;
   initialState: string;
+  /** True once this completed draft's catch-up sync has run. */
+  alreadySynced: boolean;
 }) {
   const [mode, setMode] = useState<Mode>(initialState === "completed" ? "stopped" : "scheduled");
   const [result, setResult] = useState<DraftSyncResult | null>(null);
@@ -58,10 +61,11 @@ export function DraftPickSync({
     }
   }, []);
 
-  // A completed draft still gets one catch-up sync, in case the page wasn't open for the end.
+  // A completed draft gets one catch-up sync, in case the page wasn't open for the end. The
+  // server records it once it succeeds, so later page loads skip this.
   useEffect(() => {
-    if (initialState === "completed") void sync();
-  }, [initialState, sync]);
+    if (initialState === "completed" && !alreadySynced) void sync();
+  }, [initialState, alreadySynced, sync]);
 
   useEffect(() => {
     if (mode !== "scheduled") return;

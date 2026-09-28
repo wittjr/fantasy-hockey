@@ -22,7 +22,6 @@ export interface PlayerStatsRow {
   fantraxAdp?: number | null;
   fantraxPlayerId?: string | null;
   isConsidered?: boolean;
-  isProgrammatic?: boolean;
   considerAction?: (formData: FormData) => void | Promise<void>;
 }
 
@@ -95,27 +94,7 @@ export function PlayerStatsTable({
     {
       key: "name",
       header: "Name",
-      render: (p) => (
-        <>
-          {p.name}
-          {showConsider && p.isConsidered && p.isProgrammatic && (
-            <span className="ml-1.5 rounded bg-neutral-200 px-1 py-0.5 text-[10px] font-medium tracking-wide text-neutral-600 uppercase dark:bg-neutral-800 dark:text-neutral-400">
-              Likely
-            </span>
-          )}
-          {showConsider && !p.isProgrammatic && (
-            <span
-              className={`ml-1.5 rounded px-1 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                p.isConsidered
-                  ? "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300"
-                  : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500"
-              }`}
-            >
-              {p.isConsidered ? "Manually kept" : "Manually excluded"}
-            </span>
-          )}
-        </>
-      ),
+      render: (p) => p.name,
     },
     ...(showPosition ? [{ key: "position", header: "Pos", render: (p: PlayerStatsRow) => p.position ?? "—" }] : []),
     ...(showTeam

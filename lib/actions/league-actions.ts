@@ -13,9 +13,9 @@ import {
   syncTeamRoster,
 } from "@/lib/fantrax/import-league";
 import { addDraftTarget, clearDraftTargets, removeDraftTarget } from "@/lib/fantrax/draft-targets";
-import { setKeeperOverride } from "@/lib/fantrax/keeper-overrides";
+import { clearKeeperOverrides, selectAllKeepers, selectLikelyKeepers, setKeeperOverride } from "@/lib/fantrax/keeper-overrides";
 import { removePlayer, restoreAllPlayers, restorePlayer } from "@/lib/fantrax/removed-players";
-import { syncDraftPicks, type DraftSyncResult } from "@/lib/fantrax/draft-sync";
+import { markDraftSynced, syncDraftPicks, type DraftSyncResult } from "@/lib/fantrax/draft-sync";
 import { clearWatched, setWatched } from "@/lib/fantrax/watched-players";
 import { importNhlSeasonSchedule } from "@/lib/nhl/import-schedule";
 import { parseProjectionsSpreadsheet } from "@/lib/import/spreadsheet";
@@ -163,6 +163,36 @@ export async function toggleKeeperOverrideAction(
   revalidatePath(`/leagues/${userLeagueId}/analysis`);
 }
 
+export async function selectLikelyKeepersAction(userLeagueId: string): Promise<void> {
+  const userId = await requireUserId();
+  const row = await getUserLeagueWithLeague(userLeagueId);
+  if (!row || row.user_league.userId !== userId) throw new Error("League not found");
+  const { user_league: userLeague, fantrax_league: league } = row;
+  if (!userLeague.myFantraxTeamId || league.provider !== "fantrax") throw new Error("Pick your Fantrax team first");
+
+  await selectLikelyKeepers(userLeagueId, league.fantraxLeagueId, userLeague.myFantraxTeamId);
+  revalidatePath(`/leagues/${userLeagueId}/analysis`);
+}
+
+export async function selectAllKeepersAction(userLeagueId: string): Promise<void> {
+  const userId = await requireUserId();
+  const row = await getUserLeagueWithLeague(userLeagueId);
+  if (!row || row.user_league.userId !== userId) throw new Error("League not found");
+  const { user_league: userLeague, fantrax_league: league } = row;
+  if (!userLeague.myFantraxTeamId || league.provider !== "fantrax") throw new Error("Pick your Fantrax team first");
+
+  await selectAllKeepers(userLeagueId, league.fantraxLeagueId, userLeague.myFantraxTeamId);
+  revalidatePath(`/leagues/${userLeagueId}/analysis`);
+}
+
+export async function clearKeepersAction(userLeagueId: string): Promise<void> {
+  const userId = await requireUserId();
+  const row = await getUserLeagueWithLeague(userLeagueId);
+  if (!row || row.user_league.userId !== userId) throw new Error("League not found");
+  await clearKeeperOverrides(userLeagueId);
+  revalidatePath(`/leagues/${userLeagueId}/analysis`);
+}
+
 export async function removePlayerAction(userLeagueId: string, formData: FormData): Promise<void> {
   await requireUserId();
   const fantraxPlayerId = String(formData.get("fantraxPlayerId") ?? "");
@@ -218,6 +248,9 @@ export async function syncDraftPicksAction(userLeagueId: string): Promise<DraftS
     userLeague.myFantraxTeamId,
     Object.keys(rosterInfo?.positionConstraints ?? {})
   );
+  if (result.state === "completed" && result.errors.length === 0 && userLeague.draftSyncedFor !== result.draftDate) {
+    await markDraftSynced(userLeagueId, result.draftDate);
+  }
   if (result.changed) revalidatePath(`/leagues/${userLeagueId}/analysis`);
   return result;
 }
