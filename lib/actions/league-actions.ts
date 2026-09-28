@@ -9,6 +9,7 @@ import {
   renamePlayer,
   setMyTeam,
   setPlayerFlags,
+  syncTeamNames,
   syncTeamRoster,
 } from "@/lib/fantrax/import-league";
 import { addDraftTarget, clearDraftTargets, removeDraftTarget } from "@/lib/fantrax/draft-targets";
@@ -76,8 +77,12 @@ export async function setMyTeamAction(userLeagueId: string, formData: FormData):
 
 export async function resyncRosterAction(userLeagueId: string): Promise<void> {
   await requireUserId();
-  if (await isFantraxLeague(userLeagueId)) await syncTeamRoster(userLeagueId);
-  revalidatePath(`/leagues/${userLeagueId}`);
+  const row = await getUserLeagueWithLeague(userLeagueId);
+  if (row?.fantrax_league.provider === "fantrax") {
+    await syncTeamNames(row.fantrax_league.id, row.fantrax_league.fantraxLeagueId);
+    await syncTeamRoster(userLeagueId);
+  }
+  revalidatePath(`/leagues/${userLeagueId}`, "layout");
 }
 
 export async function togglePlayerFlagAction(
@@ -249,5 +254,19 @@ export async function importScheduleAction(userLeagueId: string, formData: FormD
 export async function refreshProjectionsAction(userLeagueId: string, week: number | null): Promise<void> {
   await requireUserId();
   updateTag(FANTRAX_PROJECTIONS_TAG);
-  redirect(week === null ? `/leagues/${userLeagueId}/planner` : `/leagues/${userLeagueId}/planner?week=${week}`);
+  redirect(plannerUrl(userLeagueId, week));
+}
+
+/**
+ * Reloads the planner's roster for the shown week. The planner reads rosters live from the
+ * platform on every render, so this only has to drop the rendered page and load it again.
+ */
+export async function refreshPlannerRosterAction(userLeagueId: string, week: number | null): Promise<void> {
+  await requireUserId();
+  revalidatePath(`/leagues/${userLeagueId}/planner`);
+  redirect(plannerUrl(userLeagueId, week));
+}
+
+function plannerUrl(userLeagueId: string, week: number | null): string {
+  return week === null ? `/leagues/${userLeagueId}/planner` : `/leagues/${userLeagueId}/planner?week=${week}`;
 }

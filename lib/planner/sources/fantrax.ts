@@ -55,9 +55,22 @@ export async function loadFantraxPlanner(
     );
   }
 
-  const rostersByPeriod = new Map(
-    await Promise.all(distinctPeriods.map(async (n) => [n, await getTeamRosters(fantraxLeagueId, n)] as const))
-  );
+  const [current, ...periodRosters] = await Promise.all([
+    getTeamRosters(fantraxLeagueId),
+    ...distinctPeriods.map((n) => getTeamRosters(fantraxLeagueId, n)),
+  ]);
+  const rostersByPeriod = new Map(distinctPeriods.map((n, i) => [n, periodRosters[i]] as const));
+  // Fantrax only applies adds/drops to the current period - later periods keep an old copy of
+  // the roster until they start. When a future period's players don't match the current roster,
+  // it's that stale copy, so plan those days from the current roster instead.
+  const currentItems = current.rosters[myTeamId]?.rosterItems ?? [];
+  const playerSet = (items: Array<{ id: string }>) => items.map((i) => i.id).sort().join();
+  for (const [n, rosters] of rostersByPeriod) {
+    const mine = rosters.rosters[myTeamId];
+    if (n > current.period && mine && playerSet(mine.rosterItems) !== playerSet(currentItems)) {
+      mine.rosterItems = currentItems;
+    }
+  }
   // Per-day projections are cached, keyed by that day's roster so a roster change refetches.
   const [dayProjectionsByPeriod, periodProjections] = await Promise.all([
     Promise.all(

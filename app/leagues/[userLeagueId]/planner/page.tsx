@@ -6,7 +6,7 @@ import { loadPlanner } from "@/lib/planner/load-planner";
 import { getGamesByTeam } from "@/lib/planner/schedule";
 import { PendingLink } from "@/components/PendingLink";
 import { PendingSubmitButton } from "@/components/PendingSubmitButton";
-import { refreshProjectionsAction } from "@/lib/actions/league-actions";
+import { refreshPlannerRosterAction, refreshProjectionsAction } from "@/lib/actions/league-actions";
 import { PickupsTable } from "@/components/PickupsTable";
 import {
   buildDailyLineups,
@@ -147,6 +147,11 @@ export default async function PlannerPage({
               Week {nextWeek.number} →
             </PendingLink>
           ) : null}
+          <form action={refreshPlannerRosterAction.bind(null, userLeagueId, requestedWeek)}>
+            <PendingSubmitButton className="text-neutral-500 hover:underline">
+              <span title={`Reload your week ${week.number} roster and lineups from ${league.provider}`}>Refresh roster</span>
+            </PendingSubmitButton>
+          </form>
           {data.platform === "fantrax" ? (
             <form action={refreshProjectionsAction.bind(null, userLeagueId, requestedWeek)}>
               <PendingSubmitButton className="text-neutral-500 hover:underline">
@@ -373,35 +378,73 @@ function RosterGrid({
     );
   };
 
-  const dayHeader = (
-    <thead>
-      <tr className="text-xs text-neutral-400 dark:text-neutral-500">
-        <th className={`${stickyCell} py-1 text-left font-medium`}>Slot</th>
-        {days.map((d) => (
-          <th key={d} className="px-1 py-1 text-left font-medium whitespace-nowrap">
-            {formatDay(d)}
-          </th>
-        ))}
-        <th className="px-1 py-1 text-right font-medium">FP/GP</th>
-      </tr>
-    </thead>
+  const dayHeaderRow = (key: string) => (
+    <tr key={key} className="text-xs text-neutral-400 dark:text-neutral-500">
+      <th className={`${stickyCell} py-1 text-left font-medium`}>Slot</th>
+      {days.map((d) => (
+        <th key={d} className="px-1 py-1 text-left font-medium whitespace-nowrap">
+          {formatDay(d)}
+        </th>
+      ))}
+      <th className="px-1 py-1 text-right font-medium">FP/GP</th>
+    </tr>
   );
 
-  const renderSideGrid = (title: string, rowLabel: string, rows: Array<Array<PlannerRosterPlayer | null>>, emptyText: string) => (
-    <>
-      <h3 className="mt-2 font-medium">{title}</h3>
-      {rows.length === 0 ? (
-        <p className="text-sm text-neutral-500">{emptyText}</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0 text-sm">
-            {dayHeader}
-            <tbody>{rows.map((cells, r) => renderRow(rowLabel, cells, false, `${rowLabel}-${r}`, false))}</tbody>
-          </table>
-        </div>
-      )}
-    </>
-  );
+  // Bench and IR live in the roster table as extra sections so their day columns line up with the lineup's.
+  const sectionStart = (title: string, emptyText: string | null) => [
+    <tr key={`${title}-title`}>
+      <td colSpan={days.length + 2} className="pt-5 pb-1">
+        <h3 className="sticky left-0 inline-block font-medium">{title}</h3>
+      </td>
+    </tr>,
+    emptyText === null ? (
+      dayHeaderRow(`${title}-days`)
+    ) : (
+      <tr key={`${title}-empty`}>
+        <td colSpan={days.length + 2}>
+          <p className="sticky left-0 inline-block text-sm text-neutral-500">{emptyText}</p>
+        </td>
+      </tr>
+    ),
+  ];
+
+  const renderInjuredRow = ({ slot, player }: { slot: string; player: PlannerRosterPlayer }, r: number) => {
+    const border = r > 0 && injured[r - 1].slot !== slot ? "border-t border-neutral-300 dark:border-neutral-700" : cellBorder;
+    const missedDays = days.filter((d) => missesGame(player, d));
+    return (
+      <tr key={player.playerId}>
+        <td className={`${stickyCell} ${border} py-0.5 text-xs font-medium text-neutral-500`}>{slot}</td>
+        {days.map((d) => {
+          const current = player.dailySlots[d];
+          const game = gameOn(player, d);
+          const missed = missesGame(player, d);
+          return (
+            <td key={d} className={`${border} p-0.5`}>
+              {current ? (
+                <div
+                  className={`rounded px-1.5 py-0.5 text-xs leading-tight ${
+                    missed ? MISSED_GAME_TONE : "text-neutral-400 dark:text-neutral-600"
+                  }`}
+                  title={player.name}
+                >
+                  <div className="max-w-32 truncate font-medium">{player.name}</div>
+                  <div className="opacity-75">
+                    {game ? `${game.isHome ? "vs" : "@"} ${game.opponent}` : "No game"} ·{" "}
+                    {projectionOn(player, d)?.toFixed(2) ?? "—"}
+                  </div>
+                  <div className="opacity-60">Slot: {current.slot}</div>
+                  {current.status !== "out" ? <div className="font-semibold">Off IR</div> : null}
+                </div>
+              ) : null}
+            </td>
+          );
+        })}
+        <td className={`${border} px-1 text-right tabular-nums`}>
+          {missedDays.length > 0 ? sumProjections(missedDays.map((d) => [player, d]))?.toFixed(1) ?? "—" : "—"}
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <section className="flex flex-col gap-3">
@@ -420,7 +463,7 @@ function RosterGrid({
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border-separate border-spacing-0 text-sm">
-          {dayHeader}
+          <thead>{dayHeaderRow("days")}</thead>
           <tbody>
             {starterRows.map((row, r) =>
               renderRow(row.slot, row.cells, true, `starter-${r}`, r > 0 && starterRows[r - 1].slot !== row.slot)
@@ -442,62 +485,16 @@ function RosterGrid({
               </td>
             </tr>
           </tbody>
+          <tbody>
+            {sectionStart("Bench", benchRows.length === 0 ? "No one with a game is left out of the lineup this week." : null)}
+            {benchRows.map((cells, r) => renderRow("BN", cells, false, `BN-${r}`, false))}
+          </tbody>
+          <tbody>
+            {sectionStart("Injured Reserve", injured.length === 0 ? "No one on IR this week." : null)}
+            {injured.map(renderInjuredRow)}
+          </tbody>
         </table>
       </div>
-
-      {renderSideGrid("Bench", "BN", benchRows, "No one with a game is left out of the lineup this week.")}
-
-      <h3 className="mt-2 font-medium">Injured Reserve</h3>
-      {injured.length === 0 ? (
-        <p className="text-sm text-neutral-500">No one on IR this week.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0 text-sm">
-            {dayHeader}
-            <tbody>
-              {injured.map(({ slot, player }, r) => {
-                const border = r > 0 && injured[r - 1].slot !== slot ? "border-t border-neutral-300 dark:border-neutral-700" : cellBorder;
-                const missedDays = days.filter((d) => missesGame(player, d));
-                return (
-                  <tr key={player.playerId}>
-                    <td className={`${stickyCell} ${border} py-0.5 text-xs font-medium text-neutral-500`}>{slot}</td>
-                    {days.map((d) => {
-                      const current = player.dailySlots[d];
-                      const game = gameOn(player, d);
-                      const missed = missesGame(player, d);
-                      return (
-                        <td key={d} className={`${border} p-0.5`}>
-                          {current ? (
-                            <div
-                              className={`rounded px-1.5 py-0.5 text-xs leading-tight ${
-                                missed ? MISSED_GAME_TONE : "text-neutral-400 dark:text-neutral-600"
-                              }`}
-                              title={player.name}
-                            >
-                              <div className="max-w-32 truncate font-medium">{player.name}</div>
-                              <div className="opacity-75">
-                                {game ? `${game.isHome ? "vs" : "@"} ${game.opponent}` : "No game"} ·{" "}
-                                {projectionOn(player, d)?.toFixed(2) ?? "—"}
-                              </div>
-                              <div className="opacity-60">Slot: {current.slot}</div>
-                              {current.status !== "out" ? <div className="font-semibold">Off IR</div> : null}
-                            </div>
-                          ) : null}
-                        </td>
-                      );
-                    })}
-                    <td className={`${border} px-1 text-right tabular-nums`}>
-                      {missedDays.length > 0
-                        ? sumProjections(missedDays.map((d) => [player, d]))?.toFixed(1) ?? "—"
-                        : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       <div className="flex flex-col gap-1 text-xs text-neutral-500">
         <p className="flex flex-wrap gap-3">

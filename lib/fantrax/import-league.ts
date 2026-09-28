@@ -45,15 +45,7 @@ export async function importFantraxLeague(userId: string, leagueUrlOrId: string)
     .returning();
 
   const teamEntries = Object.values(info.teamInfo);
-  for (const team of teamEntries) {
-    await db
-      .insert(fantraxTeams)
-      .values({ leagueId: league.id, fantraxTeamId: team.id, name: team.name })
-      .onConflictDoUpdate({
-        target: [fantraxTeams.leagueId, fantraxTeams.fantraxTeamId],
-        set: { name: team.name },
-      });
-  }
+  await upsertTeams(league.id, teamEntries);
 
   const existingUserLeague = await db
     .select()
@@ -70,6 +62,24 @@ export async function importFantraxLeague(userId: string, leagueUrlOrId: string)
     leagueName: info.leagueName,
     teams: teamEntries.map((t) => ({ fantraxTeamId: t.id, name: t.name })),
   };
+}
+
+async function upsertTeams(leagueId: string, teams: Array<{ id: string; name: string }>): Promise<void> {
+  for (const team of teams) {
+    await db
+      .insert(fantraxTeams)
+      .values({ leagueId, fantraxTeamId: team.id, name: team.name })
+      .onConflictDoUpdate({
+        target: [fantraxTeams.leagueId, fantraxTeams.fantraxTeamId],
+        set: { name: team.name },
+      });
+  }
+}
+
+/** Refreshes team names from Fantrax - managers rename teams after the league was imported. */
+export async function syncTeamNames(leagueId: string, fantraxLeagueId: string): Promise<void> {
+  const info = await getLeagueInfo(fantraxLeagueId);
+  await upsertTeams(leagueId, Object.values(info.teamInfo));
 }
 
 export async function setMyTeam(userLeagueId: string, fantraxTeamId: string): Promise<void> {
