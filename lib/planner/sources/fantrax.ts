@@ -84,15 +84,29 @@ export async function loadFantraxPlanner(
   ]);
 
   // Per-game rate for players without a per-day projection (free agents): the current
-  // period's projected FPts over their team's games that period. Fantrax's own FP/G column
-  // divides by expected starts instead, which blows up for backup goalies.
+  // period's projected FPts for its remaining games over their team's remaining games that
+  // period. Fantrax's period total counts games already played at their actual points, so
+  // those are taken out. Once the team's games are all played, falls back to the whole
+  // period's average. Fantrax's own FP/G column divides by expected starts instead, which
+  // blows up for backup goalies.
   const projectionWeek = periodProjections instanceof Error ? undefined : weeks.find((w) => w.number === periodProjections.period);
   const projectionWeekGames = projectionWeek ? await getGamesByTeam(projectionWeek.days) : new Map();
+  // A team's games played so far this period: the most any of its skaters has played.
+  const teamGamesPlayed = new Map<string, number>();
+  if (!(periodProjections instanceof Error)) {
+    for (const [id, gp] of Object.entries(periodProjections.gamesPlayedById)) {
+      const team = pool[id]?.team;
+      if (team && gp > (teamGamesPlayed.get(team) ?? 0)) teamGamesPlayed.set(team, gp);
+    }
+  }
   const perGameRate = (id: string, team: string | null | undefined): number | null => {
     if (periodProjections instanceof Error || !team) return null;
     const fpts = periodProjections.fptsById[id];
     const games = projectionWeekGames.get(team)?.size ?? 0;
-    return fpts !== undefined && games > 0 ? fpts / games : null;
+    if (fpts === undefined || games === 0) return null;
+    const remainingGames = games - (teamGamesPlayed.get(team) ?? 0);
+    if (remainingGames <= 0) return fpts / games;
+    return (fpts - (periodProjections.actualFptsById[id] ?? 0)) / remainingGames;
   };
 
   const playerInfo = info.playerInfo ?? {};
@@ -149,7 +163,7 @@ export async function loadFantraxPlanner(
   } else {
     notices.push(
       `Projections are Fantrax's own, in this league's scoring. Your roster uses Fantrax's projection for each day's ` +
-        `game; available players use their week ${periodProjections.period} per-game average (the only week Fantrax ` +
+        `game; available players use their projected average over week ${periodProjections.period}'s remaining games (the only week Fantrax ` +
         "projects for players not on a roster) on every day."
     );
     const missingDays = rosterDays.filter((d) => {

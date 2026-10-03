@@ -11,7 +11,7 @@ export const FANTRAX_PROJECTIONS_TAG = "fantrax-projections";
 const TAG = FANTRAX_PROJECTIONS_TAG;
 
 /** Cached getPeriodProjections, keyed by league. */
-export const getCachedPeriodProjections = unstable_cache(getPeriodProjections, ["fantrax-period-projections"], {
+export const getCachedPeriodProjections = unstable_cache(getPeriodProjections, ["fantrax-period-projections-v2"], {
   revalidate: ONE_DAY,
   tags: [TAG],
 });

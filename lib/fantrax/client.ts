@@ -191,13 +191,16 @@ export interface FxpaTeamRosterInfo {
   /** [skaters, goalies]. Each row's columns follow that table's header. */
   tables: Array<{ header: { cells: Array<{ shortName: string }> }; rows: FxpaRow[] }>;
   displayedSelections: { displayedPeriod: number; displayedSeasonOrProjection?: FxpaSeasonOrProjection };
+  displayedLists?: { seasonOrProjections?: FxpaSeasonOrProjection[] };
 }
 
 /**
  * A team's lineup for one roster (lineup-lock) period - one day in daily leagues. With the
  * default per-game projection view, FPts is the projection for that day's game (0 if none),
- * matchup-specific: e.g. Necas 5.19 vs LAK one day, 5.09 vs STL another.
+ * matchup-specific: e.g. Necas 5.19 vs LAK one day, 5.09 vs STL another. Once the season
+ * starts the default view is YTD stats instead (seen 2026-10-03); pass seasonOrProjection and
+ * timeframeTypeCode (both needed) to ask for another view.
  */
-export function getTeamRosterInfo(leagueId: string, teamId: string, period: number) {
-  return fxpaReq<FxpaTeamRosterInfo>(leagueId, "getTeamRosterInfo", { teamId, period: String(period) });
+export function getTeamRosterInfo(leagueId: string, teamId: string, period: number, params: Record<string, string> = {}) {
+  return fxpaReq<FxpaTeamRosterInfo>(leagueId, "getTeamRosterInfo", { teamId, period: String(period), ...params });
 }

@@ -15,25 +15,47 @@ export function columnByPlayer(header: Array<{ shortName: string }>, rows: FxpaR
 }
 
 const isPerGame = (p: FxpaSeasonOrProjection | undefined) => p?.timeframeTypeCode === PER_GAME;
+const BY_PERIOD = "BY_PERIOD";
+
+export interface PeriodProjections {
+  period: number;
+  /** Projected FPts for the whole period. Once games are played, those games count their actual points. */
+  fptsById: Record<string, number>;
+  /** Actual FPts so far this period. */
+  actualFptsById: Record<string, number>;
+  /** Skaters' actual games played so far this period. */
+  gamesPlayedById: Record<string, number>;
+}
 
 /**
  * Every player's projected fantasy points for the current scoring period (skaters and
  * goalies), from Fantrax's "Projected - Per Game" view: each is the sum of that player's
- * per-game projections for the period. Only players with a projection above 0. Plain
- * objects rather than Maps so results can go in Next's JSON data cache.
+ * per-game values for the period - actual points for games already played, projections for
+ * the rest - plus actual points and games so far from the "Period" stats view, so callers can
+ * split the two. Only players with a projection above 0. Plain objects rather than Maps so
+ * results can go in Next's JSON data cache.
  */
-export async function getPeriodProjections(leagueId: string): Promise<{ period: number; fptsById: Record<string, number> }> {
-  const fetchGroup = async (positionOrGroup: string) => {
+export async function getPeriodProjections(leagueId: string): Promise<PeriodProjections> {
+  const fetchGroup = async (positionOrGroup: string, timeframeTypeCode: string) => {
     const params = { statusOrTeamFilter: "ALL", positionOrGroup, sortType: "SCORE", pageNumber: "1", maxResultsPerPage: "1000" };
-    let data = await getPlayerStats(leagueId, params);
-    if (!isPerGame(data.displayedSeasonOrProjection)) {
-      const perGame = data.seasonOrProjections.find(isPerGame);
-      if (!perGame) throw new Error("Fantrax no longer offers a per-game projection view");
-      data = await getPlayerStats(leagueId, { ...params, seasonOrProjection: perGame.code, timeframeTypeCode: PER_GAME });
-    }
-    return data;
+    const data = await getPlayerStats(leagueId, params);
+    if (data.displayedSeasonOrProjection.timeframeTypeCode === timeframeTypeCode) return data;
+    const view = data.seasonOrProjections.find((p) => p.timeframeTypeCode === timeframeTypeCode);
+    // No per-period stats view (e.g. before the season) just means no games played yet.
+    return view ? getPlayerStats(leagueId, { ...params, seasonOrProjection: view.code, timeframeTypeCode }) : null;
   };
-  const [skaters, goalies] = await Promise.all([fetchGroup("HOCKEY_SKATING"), fetchGroup("POS_201")]);
+  const [skaters, goalies, skaterActuals, goalieActuals] = await Promise.all([
+    fetchGroup("HOCKEY_SKATING", PER_GAME),
+    fetchGroup("POS_201", PER_GAME),
+    fetchGroup("HOCKEY_SKATING", BY_PERIOD),
+    fetchGroup("POS_201", BY_PERIOD),
+  ]);
+  if (!skaters || !goalies) throw new Error("Fantrax no longer offers a per-game projection view");
+  for (const actuals of [skaterActuals, goalieActuals]) {
+    if (actuals && actuals.displayedPeriod !== skaters.displayedPeriod) {
+      throw new Error(`Fantrax returned period ${actuals.displayedPeriod} stats for period ${skaters.displayedPeriod} projections`);
+    }
+  }
 
   const fptsById: Record<string, number> = {};
   for (const data of [skaters, goalies]) {
@@ -41,7 +63,15 @@ export async function getPeriodProjections(leagueId: string): Promise<{ period: 
       if (fpts > 0) fptsById[id] = fpts;
     }
   }
-  return { period: skaters.displayedPeriod, fptsById };
+  const actualFptsById: Record<string, number> = {};
+  for (const data of [skaterActuals, goalieActuals]) {
+    if (!data) continue;
+    for (const [id, fpts] of columnByPlayer(data.tableHeader.cells, data.statsTable, "FPts")) actualFptsById[id] = fpts;
+  }
+  const gamesPlayedById: Record<string, number> = skaterActuals
+    ? Object.fromEntries(columnByPlayer(skaterActuals.tableHeader.cells, skaterActuals.statsTable, "GP"))
+    : {};
+  return { period: skaters.displayedPeriod, fptsById, actualFptsById, gamesPlayedById };
 }
 
 /**
@@ -50,7 +80,13 @@ export async function getPeriodProjections(leagueId: string): Promise<{ period: 
  * nothing gets cached) if Fantrax didn't return the per-game projection view.
  */
 export async function getRosterDayProjections(leagueId: string, teamId: string, period: number): Promise<Record<string, number>> {
-  const data = await getTeamRosterInfo(leagueId, teamId, period);
+  let data = await getTeamRosterInfo(leagueId, teamId, period);
+  if (!isPerGame(data.displayedSelections.displayedSeasonOrProjection)) {
+    const perGame = data.displayedLists?.seasonOrProjections?.find(isPerGame);
+    if (perGame) {
+      data = await getTeamRosterInfo(leagueId, teamId, period, { seasonOrProjection: perGame.code, timeframeTypeCode: PER_GAME });
+    }
+  }
   if (!isPerGame(data.displayedSelections.displayedSeasonOrProjection)) {
     throw new Error(`Fantrax returned ${data.displayedSelections.displayedSeasonOrProjection?.name ?? "no"} projections for period ${period}`);
   }
