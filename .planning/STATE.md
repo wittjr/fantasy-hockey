@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 1
+current_phase: 01
 current_phase_name: Ice-Time Trends Table
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-10-11T20:51:49.147Z"
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-10-11T22:56:40.623Z"
 last_activity: 2026-10-11
-last_activity_desc: Phase 1 execution started
-state_head: 1af9757daf3bd4f7847c97f9982fcabda3225b40
+last_activity_desc: Phase 01 execution started
+state_head: 89fcf222de9c3e3be02e71dad91fec7f5b55c031
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-11)
 
 **Core value:** At a glance, show which players on a team are moving up or down in deployment, so pickup/drop decisions can be made before the rest of the league notices.
-**Current focus:** Phase 1 — Ice-Time Trends Table
+**Current focus:** Phase 01 — Ice-Time Trends Table
 
 ## Current Position
 
-Phase: 1 (Ice-Time Trends Table) — READY TO EXECUTE
-Plan: 4 of 4
+Phase: 01 (Ice-Time Trends Table) — EXECUTING
+Plan: 6 of 7
 Status: Ready to execute
-Last activity: 2026-10-11 — Phase 1 execution started
+Last activity: 2026-10-11 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 4 min | 2 tasks | 5 files |
 | Phase 01 P03 | 4 min | 2 tasks | 5 files |
 | Phase 01 P04 | 4 min | 2 tasks | 5 files |
+| Phase 01 P05 | 2 min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Recent part of a delta is the team's last 2 games by index regardless of whether the player played both; mixed-sign movers are not tinted (D-19)
 - [Phase 01]: 01-04: new sort key starts descending, active key flips; sort/dir validated by parseSort allowlist
 - [Phase 01]: 01-04: URL keeps the requested sort in a 1-game window; effectiveSort overrides at render time only
+- [Phase 01]: 01-05: uniqueShifts de-duplicates verbatim shift rows inside analyzeGameLines and regulationSeconds (not in loadGame) so the pure function is testable and Phase 2/3 reuse is safe
+- [Phase 01]: 01-05: WR-02 fixed by one uncached re-request only when the cached shift chart is empty; a short revalidate on every chart rejected (extra NHL load, DATA-01 429 risk)
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-11T20:14:56.411Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-10-11T22:56:40.603Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
