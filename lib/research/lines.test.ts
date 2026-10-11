@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeGameLines, parseClock, trendSlope, type PositionGroup, type ShiftInput } from "./lines";
+import {
+  analyzeGameLines,
+  parseClock,
+  regulationSeconds,
+  trendSlope,
+  type PositionGroup,
+  type ShiftInput,
+} from "./lines";
 
 // BUF: forwards 1-6, D 11-14, G 20. OPP: skaters 101-105, G 120.
 const positions = new Map<number, PositionGroup>([
@@ -83,4 +90,26 @@ test("trendSlope weights points and drops zero-weight ones", () => {
   ])!;
   assert.ok(Math.abs(slope) < 1e-9);
   assert.equal(trendSlope([{ x: 0, y: 0, w: 0 }, { x: 1, y: 50, w: 100 }]), null);
+});
+
+test("regulationSeconds sums periods 1-3 for the team only, skipping OT and empty shifts", () => {
+  const input = [
+    ...shifts("BUF", [1, 2], 0, 60),
+    ...shifts("BUF", [1], 100, 160, 3),
+    ...shifts("BUF", [1], 0, 30, 4), // overtime
+    ...shifts("BUF", [2], 50, 50, 2), // zero length
+    ...shifts("OPP", [101], 0, 60),
+  ];
+  assert.deepEqual(
+    regulationSeconds("BUF", input),
+    new Map([
+      [1, 120],
+      [2, 60],
+    ]),
+  );
+});
+
+test("regulationSeconds counts a verbatim duplicate shift row once", () => {
+  const input = [...shifts("BUF", [1], 0, 60), ...shifts("BUF", [1], 0, 60), ...shifts("BUF", [1], 100, 130)];
+  assert.equal(regulationSeconds("BUF", input).get(1), 90);
 });
