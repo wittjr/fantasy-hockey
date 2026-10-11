@@ -45,7 +45,7 @@ const headers = (html: string) =>
 
 test("renders headers in order, forwards before defense, no goalies", () => {
   const html = render(research(threeGames()));
-  assert.deepEqual(headers(html), ["Player", "Pos", "Avg TOI", "PP share", "SH", "Per game", "TOI trend"]);
+  assert.deepEqual(headers(html), ["Player", "Pos", "Avg TOI", "TOI Δ", "PP share", "PP share Δ", "SH", "Per game", "TOI trend"]);
   assert.ok(html.includes("Ice-time trends"));
   assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Charlie Defense"));
   assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Bravo Forward"));
@@ -85,6 +85,45 @@ test("a window with games but no skaters shows the empty message and no table", 
 test("a one-game window has no TOI trend column", () => {
   const html = render(research([fixtureGame("2026-10-01", { 1: 1200, 3: 1300 })]));
   assert.ok(!headers(html).includes("TOI trend"));
+});
+
+test("a one-game window has no delta or trend columns and shows the explanatory note", () => {
+  const html = render(research([fixtureGame("2026-10-01", { 1: 1200, 3: 1300 })]));
+  const h = headers(html);
+  assert.ok(!h.includes("TOI Δ") && !h.includes("PP share Δ") && !h.includes("TOI trend"));
+  assert.ok(html.includes("Deltas and trends need 2 or more games."));
+  assert.ok(!html.includes("whole-window trend"));
+});
+
+test("a multi-game window shows legend line 2 and not the one-game note", () => {
+  const html = render(research(threeGames()));
+  assert.ok(html.includes("Δ compares the team&#x27;s last 2 games with the player&#x27;s earlier games"));
+  assert.ok(html.includes("can disagree with Δ."));
+  assert.ok(!html.includes("Deltas and trends need 2 or more games."));
+});
+
+test("a player with 2 included games shows a dash in both delta cells", () => {
+  const games = threeGames();
+  games[0].toi.delete(2);
+  const row = rowHtml(render(research(games)), "Bravo Forward");
+  const cellsHtml = [...row.matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].map((m) => m[0]);
+  assert.ok(cellsHtml[3].includes("—"), cellsHtml[3]);
+  assert.ok(cellsHtml[5].includes("—"), cellsHtml[5]);
+});
+
+test("a rising TOI slope shows a muted up arrow with screen-reader text and no green or red", () => {
+  const games = [
+    fixtureGame("2026-10-01", { 1: 1000, 2: 900, 3: 1300 }),
+    fixtureGame("2026-10-03", { 1: 1030, 2: 900, 3: 1300 }),
+    fixtureGame("2026-10-05", { 1: 1060, 2: 900, 3: 1300 }),
+  ];
+  const row = rowHtml(render(research(games)), "Alpha Forward");
+  const toiDeltaCell = [...row.matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].map((m) => m[0])[3];
+  assert.ok(toiDeltaCell.includes("▲"), toiDeltaCell);
+  assert.ok(toiDeltaCell.includes("trend up"));
+  assert.ok(toiDeltaCell.includes("text-neutral-600"));
+  const arrowSlot = toiDeltaCell.match(/<span[^>]*>▲[\s\S]*?<\/span>/)?.[0] ?? "";
+  assert.ok(!/green|red/.test(arrowSlot), arrowSlot);
 });
 
 // Game 1 regulation (player 2 missed it), game 2 OT with shift data, game 3 OT with no shift data.

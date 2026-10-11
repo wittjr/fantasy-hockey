@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildTrendRows, type TrendGame } from "./toi-trends";
+import { buildTrendRows, recentDelta, slopeDirection, type TrendGame } from "./toi-trends";
+import { formatSignedClock, formatSignedPoints } from "./format";
 import type { ResearchPlayer } from "./team-games";
 
 const player = (id: number, group: "F" | "D" | "G", name = `P${id}`): ResearchPlayer => ({
@@ -137,4 +138,83 @@ test("toiSlope is positive for rising regulation TOI and null with one included 
 test("empty players or empty games give no rows", () => {
   assert.deepEqual(buildTrendRows([], [game({ 1: 900 })]), []);
   assert.deepEqual(buildTrendRows([player(1, "F")], []), []);
+});
+
+test("recentDelta compares the team's last 2 games with the earlier games", () => {
+  const pts = [100, 100, 100, 200, 200].map((y, x) => ({ x, y }));
+  assert.equal(recentDelta(pts, 5, 5), 100);
+});
+
+test("recentDelta uses only the recent games the player played", () => {
+  const pts = [{ x: 0, y: 100 }, { x: 1, y: 100 }, { x: 2, y: 100 }, { x: 4, y: 220 }];
+  assert.equal(recentDelta(pts, 5, 4), 120);
+});
+
+test("recentDelta needs 3 included games: 3 shows a delta, 2 does not", () => {
+  assert.equal(recentDelta([{ x: 0, y: 100 }, { x: 3, y: 200 }, { x: 4, y: 200 }], 5, 3), 100);
+  assert.equal(recentDelta([{ x: 3, y: 100 }, { x: 4, y: 200 }], 5, 2), null);
+});
+
+test("recentDelta is null when either part has no included game", () => {
+  assert.equal(recentDelta([{ x: 0, y: 100 }, { x: 1, y: 100 }, { x: 2, y: 100 }], 5, 3), null);
+  assert.equal(recentDelta([{ x: 3, y: 100 }, { x: 4, y: 100 }, { x: 4, y: 100 }], 5, 3), null);
+});
+
+test("recentDelta is null in a window of 2 or 1 because the earlier part is empty", () => {
+  assert.equal(recentDelta([{ x: 0, y: 1 }, { x: 1, y: 2 }, { x: 1, y: 3 }], 2, 3), null);
+  assert.equal(recentDelta([{ x: 0, y: 1 }, { x: 0, y: 2 }, { x: 0, y: 3 }], 1, 3), null);
+});
+
+test("recentDelta weights each part by w so PP share matches the pooled share", () => {
+  const pts = [
+    { x: 0, y: 10, w: 200 },
+    { x: 1, y: 10, w: 200 },
+    { x: 2, y: 10, w: 200 },
+    { x: 3, y: 50, w: 100 },
+    { x: 4, y: 20, w: 300 },
+  ];
+  const d = recentDelta(pts, 5, 5);
+  assert.ok(d !== null && Math.abs(d - 17.5) < 1e-9, String(d));
+});
+
+test("slopeDirection is inclusive of the threshold and null below it or without a slope", () => {
+  assert.equal(slopeDirection(15, 15), "up");
+  assert.equal(slopeDirection(14.9, 15), null);
+  assert.equal(slopeDirection(-15, 15), "down");
+  assert.equal(slopeDirection(null, 15), null);
+  assert.equal(slopeDirection(3, 3), "up");
+  assert.equal(slopeDirection(2.9, 3), null);
+});
+
+test("formatSignedClock signs by rounded magnitude and shows zero unsigned", () => {
+  assert.equal(formatSignedClock(72), "+1:12");
+  assert.equal(formatSignedClock(-48), "\u22120:48");
+  assert.equal(formatSignedClock(0.4), "0:00");
+  assert.equal(formatSignedClock(-0.4), "0:00");
+  assert.equal(formatSignedClock(119.6), "+2:00");
+  assert.equal(formatSignedClock(-119.5), "\u22122:00");
+});
+
+test("formatSignedPoints signs by rounded magnitude and shows zero unsigned", () => {
+  assert.equal(formatSignedPoints(18.2), "+18");
+  assert.equal(formatSignedPoints(-6.5), "\u22127");
+  assert.equal(formatSignedPoints(0.3), "0");
+  assert.equal(formatSignedPoints(14.5), "+15");
+});
+
+test("buildTrendRows sets toiDelta and ppShareDelta for a 5-game window", () => {
+  const tois = [1000, 1000, 1000, 1100, 1100];
+  const pps = [10, 10, 10, 50, 20];
+  const teamPp = [200, 200, 200, 100, 300];
+  const games = tois.map((t, i) => game({ 1: t }, { teamPp: teamPp[i], secs: { 1: { pp: (pps[i] / 100) * teamPp[i] } } }));
+  const [row] = buildTrendRows([player(1, "F")], games);
+  assert.equal(row.toiDelta, 100);
+  assert.ok(row.ppShareDelta !== null && Math.abs(row.ppShareDelta - 17.5) < 1e-9, String(row.ppShareDelta));
+});
+
+test("a player with 2 included games has no deltas", () => {
+  const [row] = buildTrendRows([player(1, "F")], [game({ 2: 900 }), game({ 1: 900 }), game({ 1: 1100 })]);
+  assert.equal(row.includedGames, 2);
+  assert.equal(row.toiDelta, null);
+  assert.equal(row.ppShareDelta, null);
 });
