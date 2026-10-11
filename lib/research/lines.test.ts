@@ -5,6 +5,7 @@ import {
   parseClock,
   regulationSeconds,
   trendSlope,
+  uniqueShifts,
   type PositionGroup,
   type ShiftInput,
 } from "./lines";
@@ -112,4 +113,66 @@ test("regulationSeconds sums periods 1-3 for the team only, skipping OT and empt
 test("regulationSeconds counts a verbatim duplicate shift row once", () => {
   const input = [...shifts("BUF", [1], 0, 60), ...shifts("BUF", [1], 0, 60), ...shifts("BUF", [1], 100, 130)];
   assert.equal(regulationSeconds("BUF", input).get(1), 90);
+});
+
+// Same fixture as the EV/PP/SH test; used by the duplicate-row tests below.
+function ppFixture(): ShiftInput[] {
+  return [
+    ...shifts("BUF", [1, 2, 3, 11, 12, 20], 0, 60),
+    ...shifts("OPP", [101, 102, 103, 104, 105, 120], 0, 60),
+    ...shifts("BUF", [4, 5, 6, 1, 13, 20], 60, 90),
+    ...shifts("OPP", [101, 102, 103, 104, 120], 60, 90),
+    ...shifts("BUF", [4, 5, 13, 14, 20], 90, 120),
+    ...shifts("OPP", [101, 102, 103, 104, 105, 120], 90, 120),
+  ];
+}
+
+test("analyzeGameLines counts a verbatim duplicate shift row once", () => {
+  const original = ppFixture();
+  const withDuplicate = [...original, ...shifts("BUF", [4], 60, 90)];
+  const expected = analyzeGameLines("BUF", original, positions);
+  const actual = analyzeGameLines("BUF", withDuplicate, positions);
+
+  assert.deepEqual(actual.situationSeconds, { ev: 60, pp: 30, sh: 30 });
+  assert.deepEqual(actual, expected);
+});
+
+test("a duplicated skater row does not turn even strength into a power play", () => {
+  const input = [
+    ...shifts("BUF", [1, 2, 3, 11, 12, 20], 0, 60),
+    ...shifts("BUF", [1], 0, 60), // would read as 6 skaters
+    ...shifts("OPP", [101, 102, 103, 104, 105, 120], 0, 60),
+  ];
+  const lines = analyzeGameLines("BUF", input, positions);
+  assert.deepEqual(lines.situationSeconds, { ev: 60, pp: 0, sh: 0 });
+  assert.deepEqual(lines.playerSeconds.get(1), { ev: 60, pp: 0, sh: 0 });
+});
+
+test("uniqueShifts keeps the first occurrence in input order", () => {
+  const [a] = shifts("BUF", [1], 0, 60);
+  const [b] = shifts("BUF", [2], 0, 60);
+  assert.deepEqual(uniqueShifts([a, a, b]), [a, b]);
+  assert.deepEqual(uniqueShifts([b, a, b, a]), [b, a]);
+  assert.deepEqual(uniqueShifts([]), []);
+});
+
+test("uniqueShifts only collapses exact (team, player, period, start, end) repeats", () => {
+  const [a] = shifts("BUF", [1], 0, 60);
+  const rows: ShiftInput[] = [
+    a,
+    { ...a, endSec: a.endSec + 1 },
+    { ...a, startSec: a.startSec - 1 },
+    { ...a, period: 2 },
+    { ...a, team: "OPP" },
+  ];
+  assert.deepEqual(uniqueShifts(rows), rows);
+});
+
+test("with duplicates, no player's PP or SH seconds exceed the team's", () => {
+  const input = [...ppFixture(), ...shifts("BUF", [4, 5], 60, 90), ...shifts("BUF", [13], 90, 120)];
+  const lines = analyzeGameLines("BUF", input, positions);
+  for (const rec of lines.playerSeconds.values()) {
+    assert.ok(rec.pp <= lines.situationSeconds.pp);
+    assert.ok(rec.sh <= lines.situationSeconds.sh);
+  }
 });
