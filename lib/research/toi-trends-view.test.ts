@@ -131,3 +131,27 @@ test("a one-game window still shows the Per game column with one cell per row", 
 test("the legend explains the strip", () => {
   assert.ok(render(research(threeGames())).includes("Squares are team games, oldest to newest."));
 });
+
+test("every strip cell is focusable, role img, and carries the full detail as its aria-label", () => {
+  const html = render(research(threeGames()));
+  const tags = cells(html);
+  assert.equal(tags.length, 9);
+  for (const c of tags) {
+    assert.ok(c.tag.includes('tabindex="0"'), c.tag);
+    assert.ok(c.tag.includes('role="img"'), c.tag);
+    assert.ok(/aria-label="[^"]+"/.test(c.tag), c.tag);
+  }
+  assert.ok(html.includes('aria-label="Oct 1 vs BOS · W 3–2 · TOI 20:00 · PP 1:00 (50% of team PP) · SH 0:10"'));
+});
+
+test("the popover holds the same values and is hidden from assistive tech", () => {
+  const html = rowHtml(render(research(threeGames())), "Alpha Forward");
+  const popovers = [...html.matchAll(/<span[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/span><\/span>/g)].map((m) => m[0]);
+  assert.ok(popovers.length >= 3);
+  assert.ok(popovers[0].includes("Oct 1") && popovers[0].includes("20:00") && popovers[0].includes("1:00"));
+});
+
+test("a missed game's strip cell says Did not play", () => {
+  const html = render(research(stripGames()));
+  assert.ok(rowHtml(html, "Bravo Forward").includes("Did not play"));
+});
