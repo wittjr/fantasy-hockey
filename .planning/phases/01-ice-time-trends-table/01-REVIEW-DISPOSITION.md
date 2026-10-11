@@ -1,6 +1,6 @@
 # Phase 1 — Code Review Disposition
 
-Source: `01-REVIEW.md` (standard depth, 13 files; 1 critical, 4 warning, 4 info). Every finding starts `open`; update the disposition when it is fixed, deferred, or accepted.
+Source: `01-REVIEW.md`. First review: standard depth, 13 files; 1 critical, 4 warning, 4 info. Re-review after gap plans 01-05..01-07 (90195c6): standard depth, 11 files; 0 critical, 2 warning, 6 info, confirming CR-01 and WR-01..WR-04 fixed. The re-review's two new warnings were renumbered WR-05/WR-06 so they do not collide with the fixed WR-01/WR-02. Every finding starts `open`; update the disposition when it is fixed, deferred, or accepted.
 
 | ID | Severity | Finding | Disposition |
 |----|----------|---------|-------------|
@@ -9,7 +9,11 @@ Source: `01-REVIEW.md` (standard depth, 13 files; 1 critical, 4 warning, 4 info)
 | WR-02 | warning | Empty not-yet-published shift chart cached for an hour | fixed in 01-05 (1991867) |
 | WR-03 | warning | One failed boxscore/shift request blanks the page and shows the raw error | fixed in 01-06 (d0ce098, 8e74774) |
 | WR-04 | warning | `toiDelta`/`ppShare` comment vs behaviour mismatch; Δ columns always "—" at exactly 2 games with no hint | fixed in 01-07 (4146f6e) |
+| WR-05 | warning | A failed shift-chart request is reported as "the NHL hasn't published shift charts"; for an OT/SO game every skater silently drops out of that game's averages | open |
+| WR-06 | warning | When the newest game(s) fail to load, "Last game" and the "last 2 games" Δ silently re-anchor to older games | open |
 | IN-01 | info | `if (secs)` conflates a 0:00 clock with a malformed one | open |
-| IN-02 | info | Non-null assertion inside a closure (`page.tsx:127`) | open |
+| IN-02 | info | Non-null assertion inside a closure (`page.tsx:134`) | open |
 | IN-03 | info | Negative "OT excluded" time rendered as positive | open |
 | IN-04 | info | `getShiftCharts` assumes the response envelope | open |
+| IN-05 | info | Popover headroom (`pb-28 -mb-24`) is a fixed magic number; worst-case last-row popover may clip (not browser-checked) | open |
+| IN-06 | info | Intro copy hard-codes 2:00 / 15 pts instead of the mover constants; empty state says "regular-season" though playoff games are included | open |
