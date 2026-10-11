@@ -185,7 +185,9 @@ test("every strip cell is focusable, role img, and carries the full detail as it
 
 test("the popover holds the same values and is hidden from assistive tech", () => {
   const html = rowHtml(render(research(threeGames())), "Alpha Forward");
-  const popovers = [...html.matchAll(/<span[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/span><\/span>/g)].map((m) => m[0]);
+  const popovers = [...html.matchAll(/<span[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/span><\/span>/g)]
+    .map((m) => m[0])
+    .filter((p) => p.includes("Oct"));
   assert.ok(popovers.length >= 3);
   assert.ok(popovers[0].includes("Oct 1") && popovers[0].includes("20:00") && popovers[0].includes("1:00"));
 });

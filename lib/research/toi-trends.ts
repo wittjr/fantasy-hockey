@@ -5,6 +5,11 @@ import type { ResearchGame, ResearchPlayer } from "./team-games";
 export const TOI_TREND_THRESHOLD_SECONDS = 15;
 export const PP_SHARE_TREND_THRESHOLD_POINTS = 3;
 
+/** "Recent" is the team's last 2 games in the window (D-05). */
+export const RECENT_GAMES = 2;
+/** A delta needs at least this many included games (D-06). */
+export const MIN_GAMES_FOR_DELTA = 3;
+
 /** The slice of a ResearchGame the trend rows read; structural so tests can pass plain objects. */
 export type TrendGame = Pick<ResearchGame, "toi" | "regulationToi"> & {
   lines: Pick<GameLines, "situationSeconds" | "playerSeconds"> | null;
@@ -41,6 +46,42 @@ export interface TrendRow {
   toiSlope: number | null;
   /** Percentage points of PP share per game, weighted by each game's team PP time. */
   ppShareSlope: number | null;
+  /** Mean TOI over the team's last 2 games he played minus his mean over his earlier games; seconds. */
+  toiDelta: number | null;
+  /** Same split for PP share, each part weighted by team PP time; percentage points. */
+  ppShareDelta: number | null;
+}
+
+export interface DeltaPoint {
+  /** Game index in the window, oldest first. */
+  x: number;
+  y: number;
+  w?: number;
+}
+
+function weightedMean(points: readonly DeltaPoint[]): number | null {
+  const total = points.reduce((s, p) => s + (p.w ?? 1), 0);
+  return total > 0 ? points.reduce((s, p) => s + (p.w ?? 1) * p.y, 0) / total : null;
+}
+
+/**
+ * Recent-part mean minus earlier-part mean. Recent = the team's last RECENT_GAMES games by index, whether or not the
+ * player played both. Null below MIN_GAMES_FOR_DELTA included games or when either part has no weight; windows of 1 or 2
+ * have an empty earlier part, so they are null too.
+ */
+export function recentDelta(points: readonly DeltaPoint[], windowSize: number, includedGames: number): number | null {
+  if (includedGames < MIN_GAMES_FOR_DELTA) return null;
+  const recent = weightedMean(points.filter((p) => p.x >= windowSize - RECENT_GAMES));
+  const earlier = weightedMean(points.filter((p) => p.x < windowSize - RECENT_GAMES));
+  return recent === null || earlier === null ? null : recent - earlier;
+}
+
+/** Direction of the whole-window slope once it reaches the threshold (inclusive); null otherwise. */
+export function slopeDirection(slope: number | null, threshold: number): "up" | "down" | null {
+  if (slope === null) return null;
+  if (slope >= threshold) return "up";
+  if (slope <= -threshold) return "down";
+  return null;
 }
 
 function mean(values: number[]): number | null {
@@ -85,6 +126,8 @@ export function buildTrendRows(players: Iterable<ResearchPlayer>, games: readonl
       shAvg: mean(included.flatMap((c) => (c.sh !== null ? [c.sh] : []))),
       toiSlope: trendSlope(included.map((c) => ({ x: c.x, y: c.toi }))),
       ppShareSlope: trendSlope(withPp.map((c) => ({ x: c.x, y: c.ppShare!, w: c.teamPp }))),
+      toiDelta: recentDelta(included.map((c) => ({ x: c.x, y: c.toi })), games.length, included.length),
+      ppShareDelta: recentDelta(withPp.map((c) => ({ x: c.x, y: c.ppShare!, w: c.teamPp })), games.length, included.length),
     });
   }
   const groupOrder = { F: 0, D: 1, G: 2 };

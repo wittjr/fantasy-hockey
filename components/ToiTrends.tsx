@@ -1,7 +1,12 @@
 import { ToiGameStrip } from "@/components/ToiGameStrip";
-import { formatClock, formatDate } from "@/lib/research/format";
+import { formatClock, formatDate, formatSignedClock, formatSignedPoints } from "@/lib/research/format";
 import type { TeamResearch } from "@/lib/research/team-games";
-import { buildTrendRows } from "@/lib/research/toi-trends";
+import {
+  buildTrendRows,
+  PP_SHARE_TREND_THRESHOLD_POINTS,
+  slopeDirection,
+  TOI_TREND_THRESHOLD_SECONDS,
+} from "@/lib/research/toi-trends";
 
 // Sparklines span at least this much TOI so small wobbles don't look like big swings.
 const SPARKLINE_MIN_RANGE_SECONDS = 240;
@@ -27,7 +32,9 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Player</th>
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Pos</th>
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">Avg TOI</th>
+                {showTrend && <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">TOI Δ</th>}
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">PP share</th>
+                {showTrend && <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">PP share Δ</th>}
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">SH</th>
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Per game</th>
                 {showTrend && <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">TOI trend</th>}
@@ -51,9 +58,25 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
                   <td className="py-1 pr-3 text-right font-medium tabular-nums whitespace-nowrap">
                     {row.avgToi !== null ? formatClock(row.avgToi) : <span className={muted}>—</span>}
                   </td>
+                  {showTrend && (
+                    <DeltaCell
+                      delta={row.toiDelta}
+                      format={formatSignedClock}
+                      slope={row.toiSlope}
+                      slopeThreshold={TOI_TREND_THRESHOLD_SECONDS}
+                    />
+                  )}
                   <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">
                     {row.ppShare !== null ? `${Math.round(row.ppShare)}%` : <span className={muted}>—</span>}
                   </td>
+                  {showTrend && (
+                    <DeltaCell
+                      delta={row.ppShareDelta}
+                      format={formatSignedPoints}
+                      slope={row.ppShareSlope}
+                      slopeThreshold={PP_SHARE_TREND_THRESHOLD_POINTS}
+                    />
+                  )}
                   <td className="py-1 pr-3 text-right text-xs tabular-nums whitespace-nowrap text-neutral-600 dark:text-neutral-400">
                     {row.shAvg !== null ? formatClock(row.shAvg) : <span className={muted}>—</span>}
                   </td>
@@ -74,6 +97,16 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
           Squares are team games, oldest to newest. Darker means more ice time than that player&apos;s own average. Dashed
           means did not play (or overtime with no shift data). Outlined means overtime; OT minutes are excluded.
         </p>
+        <p>
+          {showTrend ? (
+            <>
+              Δ compares the team&apos;s last 2 games with the player&apos;s earlier games and needs 3 or more games played. ▲ ▼
+              show the direction of the whole-window trend and can disagree with Δ.
+            </>
+          ) : (
+            "Deltas and trends need 2 or more games. Choose Last 3 or more."
+          )}
+        </p>
         {noChartDates.length > 0 && (
           <p className="text-amber-600 dark:text-amber-400">
             No PP/SH data for {noChartDates.join(", ")}: the NHL hasn&apos;t published shift charts for those games yet.
@@ -81,6 +114,40 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
         )}
       </div>
     </section>
+  );
+}
+
+/** Muted whole-window slope direction; always renders its slot so the delta digits stay aligned. Never green or red. */
+function TrendArrow({ direction }: { direction: "up" | "down" | null }) {
+  return (
+    <span className="ml-1 inline-block w-4 text-center text-xs text-neutral-600 dark:text-neutral-400">
+      {direction && (
+        <>
+          <span aria-hidden>{direction === "up" ? "▲" : "▼"}</span>
+          <span className="sr-only">{direction === "up" ? "trend up" : "trend down"}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
+/** A signed recent-vs-window change followed by the muted slope arrow; "—" when the minimum-games gate fails. */
+function DeltaCell({
+  delta,
+  format,
+  slope,
+  slopeThreshold,
+}: {
+  delta: number | null;
+  format: (value: number) => string;
+  slope: number | null;
+  slopeThreshold: number;
+}) {
+  return (
+    <td className="py-1 pr-3 text-right whitespace-nowrap tabular-nums">
+      {delta !== null ? format(delta) : <span className="text-neutral-400 dark:text-neutral-500">—</span>}
+      <TrendArrow direction={slopeDirection(slope, slopeThreshold)} />
+    </td>
   );
 }
 
