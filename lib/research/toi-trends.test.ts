@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildTrendRows, recentDelta, slopeDirection, type TrendGame } from "./toi-trends";
+import { buildTrendRows, deltaCrossing, moverDirection, recentDelta, slopeDirection, type TrendGame } from "./toi-trends";
 import { formatSignedClock, formatSignedPoints } from "./format";
 import type { ResearchPlayer } from "./team-games";
 
@@ -217,4 +217,49 @@ test("a player with 2 included games has no deltas", () => {
   assert.equal(row.includedGames, 2);
   assert.equal(row.toiDelta, null);
   assert.equal(row.ppShareDelta, null);
+});
+
+test("deltaCrossing compares the rounded magnitude with the threshold, inclusive", () => {
+  assert.equal(deltaCrossing(120, 120), 1);
+  assert.equal(deltaCrossing(119.4, 120), 0);
+  assert.equal(deltaCrossing(119.5, 120), 1);
+  assert.equal(deltaCrossing(-120, 120), -1);
+  assert.equal(deltaCrossing(null, 120), 0);
+  assert.equal(deltaCrossing(15, 15), 1);
+  assert.equal(deltaCrossing(14.4, 15), 0);
+  assert.equal(deltaCrossing(-14.5, 15), -1);
+});
+
+test("moverDirection follows the crossing deltas and ignores mixed signs", () => {
+  assert.equal(moverDirection(150, null), "up");
+  assert.equal(moverDirection(130, 10), "up");
+  assert.equal(moverDirection(150, 20), "up");
+  assert.equal(moverDirection(-130, -16), "down");
+  assert.equal(moverDirection(150, -20), null);
+  assert.equal(moverDirection(100, 10), null);
+  assert.equal(moverDirection(null, null), null);
+});
+
+test("a player absent from the team's last 2 games in a 5-game window is dnpLast2 with no deltas or mover", () => {
+  const games = [1000, 1000, 1000, 0, 0].map((t, i) => (i < 3 ? game({ 1: t, 2: 900 }) : game({ 2: 900 })));
+  const row = buildTrendRows([player(1, "F")], games)[0];
+  assert.equal(row.dnpLast2, true);
+  assert.equal(row.toiDelta, null);
+  assert.equal(row.ppShareDelta, null);
+  assert.equal(row.mover, null);
+});
+
+test("missing only the latest game, or playing in a window of 2, is not dnpLast2", () => {
+  const missedLast = buildTrendRows([player(1, "F")], [game({ 1: 900 }), game({ 1: 900 }), game({ 1: 900 }), game({ 1: 900 }), game({ 2: 900 })]);
+  assert.equal(missedLast[0].dnpLast2, false);
+  const short = buildTrendRows([player(1, "F")], [game({ 1: 900 }), game({ 2: 900 })]);
+  assert.equal(short[0].dnpLast2, false);
+  assert.deepEqual(buildTrendRows([player(1, "F")], [game({ 2: 900 }), game({ 2: 900 })]), []);
+});
+
+test("buildTrendRows marks an up mover and leaves a flat player unmarked", () => {
+  const games = [1000, 1000, 1000, 1200, 1200].map((t) => game({ 1: t, 2: 1000 }));
+  const rows = buildTrendRows([player(1, "F"), player(2, "F")], games);
+  assert.equal(rows.find((r) => r.player.id === 1)?.mover, "up");
+  assert.equal(rows.find((r) => r.player.id === 2)?.mover, null);
 });

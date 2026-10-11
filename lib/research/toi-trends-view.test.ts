@@ -196,3 +196,82 @@ test("a missed game's strip cell says Did not play", () => {
   const html = render(research(stripGames()));
   assert.ok(rowHtml(html, "Bravo Forward").includes("Did not play"));
 });
+
+// Five games, 100 s of team PP each; `pp[id]` is that player's PP seconds per game (oldest first).
+function moverGames(toi: Record<number, number[]>, pp: Record<number, number[]> = {}): ResearchGame[] {
+  return [0, 1, 2, 3, 4].map((i) => {
+    const toiNow = Object.fromEntries(
+      Object.entries(toi).flatMap(([id, vals]) => (vals[i] === undefined ? [] : [[id, vals[i]]])),
+    ) as Record<number, number>;
+    const g = fixtureGame(`2026-10-0${i + 1}`, toiNow);
+    g.lines = {
+      situationSeconds: { ev: 3000, pp: 100, sh: 60 },
+      units: { ev: { F: [], D: [] }, pp: { F: [], D: [] }, sh: { F: [], D: [] } },
+      playerSeconds: new Map(Object.entries(pp).map(([id, vals]) => [Number(id), { ev: 1000, pp: vals[i] ?? 0, sh: 0 }])),
+    };
+    return g;
+  });
+}
+const tds = (row: string) => [...row.matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].map((m) => m[0]);
+
+test("an up-mover row is tinted green and announced; a down-mover row is tinted red", () => {
+  const html = render(
+    research(
+      moverGames({
+        1: [1000, 1000, 1000, 1200, 1200],
+        2: [1000, 1000, 1000, 1000, 1000],
+        3: [1300, 1300, 1300, 1100, 1100],
+      }),
+    ),
+  );
+  const up = rowHtml(html, "Alpha Forward");
+  const down = rowHtml(html, "Charlie Defense");
+  const flat = rowHtml(html, "Bravo Forward");
+  assert.ok(up.includes("bg-green-50") && up.includes("Moving up"));
+  assert.ok(down.includes("bg-red-50") && down.includes("Moving down"));
+  assert.ok(!flat.includes("bg-green-50") && !flat.includes("bg-red-50") && !flat.includes("Moving"));
+  assert.ok(tds(up)[3].includes("text-green-700") && tds(up)[3].includes("font-medium"));
+  assert.ok(tds(down)[3].includes("text-red-700") && tds(down)[3].includes("font-medium"));
+});
+
+test("a mixed-sign mover has no tint but each delta is coloured on its own", () => {
+  const html = render(
+    research(
+      moverGames(
+        { 1: [1000, 1000, 1000, 1200, 1200], 2: [1000, 1000, 1000, 1000, 1000], 3: [1000, 1000, 1000, 1000, 1000] },
+        { 1: [50, 50, 50, 20, 20] },
+      ),
+    ),
+  );
+  const row = rowHtml(html, "Alpha Forward");
+  assert.ok(!row.includes("bg-green-50") && !row.includes("bg-red-50") && !row.includes("Moving"));
+  assert.ok(tds(row)[3].includes("text-green-700"), tds(row)[3]);
+  assert.ok(tds(row)[5].includes("text-red-700"), tds(row)[5]);
+});
+
+test("a delta below the mover threshold has no weight or colour", () => {
+  const html = render(research(moverGames({ 1: [1000, 1000, 1000, 1050, 1050], 2: [1000, 1000, 1000, 1000, 1000] })));
+  const cell = tds(rowHtml(html, "Alpha Forward"))[3];
+  assert.ok(cell.includes("+0:50"), cell);
+  assert.ok(!cell.includes("font-medium") && !/text-(green|red)-/.test(cell), cell);
+});
+
+test("the delta that rounds to exactly 2:00 is coloured and 1:59 is not", () => {
+  const html = render(research(moverGames({ 1: [1000, 1000, 1000, 1120, 1120], 2: [1000, 1000, 1000, 1119, 1119] })));
+  assert.ok(tds(rowHtml(html, "Alpha Forward"))[3].includes("text-green-700"));
+  assert.ok(!/text-(green|red)-/.test(tds(rowHtml(html, "Bravo Forward"))[3]));
+});
+
+test("a player who sat out the team's last 2 games shows the DNP badge after his name and dashes for deltas", () => {
+  const html = render(research(moverGames({ 1: [1000, 1000, 1000], 2: [1000, 1000, 1000, 1000, 1000] })));
+  const row = rowHtml(html, "Alpha Forward");
+  assert.ok(row.indexOf("Alpha Forward") < row.indexOf("DNP last 2"));
+  assert.ok(tds(row)[3].includes("—") && tds(row)[5].includes("—"));
+  assert.ok(!rowHtml(html, "Bravo Forward").includes("DNP last 2"));
+  assert.ok(!row.includes("bg-green-50") && !row.includes("bg-red-50"));
+});
+
+test("a one-game window never tints or shows the DNP badge", () => {
+  const html = render(research([fixtureGame("2026-10-01", { 1: 1200, 3: 1300 })]));
+  assert.ok(!html.includes("bg-green-50") && !html.includes("bg-red-50") && !html.includes("DNP last 2"));
+});
