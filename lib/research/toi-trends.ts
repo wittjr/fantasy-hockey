@@ -44,14 +44,21 @@ export interface TrendRow {
   /** Games that count toward Avg TOI, slope and delta (dressed, regulation TOI known). */
   includedGames: number;
   avgToi: number | null;
-  /** Pooled player PP time over team PP time across the window, 0-100. */
+  /**
+   * His PP seconds over the team's PP seconds, pooled over the included games he played that have a shift chart with team PP time; 0-100.
+   * Games he missed or that lack a shift chart are not in the denominator, so this is his share while dressed, not of the whole window's team PP (D-02).
+   */
   ppShare: number | null;
   /** Average SH seconds per game. */
   shAvg: number | null;
   toiSlope: number | null;
   /** Percentage points of PP share per game, weighted by each game's team PP time. */
   ppShareSlope: number | null;
-  /** Mean TOI over the team's last 2 games he played minus his mean over his earlier games; seconds. */
+  /**
+   * His mean regulation TOI in the team's last 2 games of the window (by game index, D-05; only the ones he played count)
+   * minus his mean over his included earlier games; seconds. This is not his own last 2 games played.
+   * Null under the D-06 gates (fewer than 3 included games, or no included game in either part).
+   */
   toiDelta: number | null;
   /** Same split for PP share, each part weighted by team PP time; percentage points. */
   ppShareDelta: number | null;

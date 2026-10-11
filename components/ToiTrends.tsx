@@ -6,6 +6,7 @@ import {
   buildTrendRows,
   deltaCrossing,
   effectiveSort,
+  MIN_GAMES_FOR_DELTA,
   nextSort,
   PP_MOVER_POINTS,
   PP_SHARE_TREND_THRESHOLD_POINTS,
@@ -60,7 +61,7 @@ export function ToiTrends({
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Pos</th>
                 <SortHeader label="Avg TOI" title="Average regulation ice time per game played" sortKey="avgToi" {...sortProps} />
                 {showTrend && <SortHeader label="TOI Δ" title="Average of the team's last 2 games minus the player's earlier games in the window" sortKey="toiDelta" {...sortProps} />}
-                <SortHeader label="PP share" title="Player's share of the team's power-play time over the window" sortKey="ppShare" {...sortProps} />
+                <SortHeader label="PP share" title="Player's share of the team's power-play time in the games he played" sortKey="ppShare" {...sortProps} />
                 {showTrend && <SortHeader label="PP share Δ" title="Same comparison, in percentage points" sortKey="ppDelta" {...sortProps} />}
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">SH</th>
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Per game</th>
@@ -135,13 +136,18 @@ export function ToiTrends({
           means did not play (or overtime with no shift data). Outlined means overtime; OT minutes are excluded.
         </p>
         <p>
-          {showTrend ? (
+          {!showTrend ? (
+            "Deltas and trends need 2 or more games. Choose Last 3 or more."
+          ) : research.games.length < MIN_GAMES_FOR_DELTA ? (
+            <>
+              Δ needs 3 or more games, and this window has only 2, so every Δ shows —. ▲ ▼ show the direction of the whole-window
+              trend.
+            </>
+          ) : (
             <>
               Δ compares the team&apos;s last 2 games with the player&apos;s earlier games and needs 3 or more games played. ▲ ▼
               show the direction of the whole-window trend and can disagree with Δ.
             </>
-          ) : (
-            "Deltas and trends need 2 or more games. Choose Last 3 or more."
           )}
         </p>
         {noChartDates.length > 0 && (
