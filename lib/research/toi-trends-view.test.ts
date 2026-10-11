@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ToiTrends } from "@/components/ToiTrends";
 import type { ResearchGame, ResearchPlayer, TeamResearch } from "./team-games";
+import { DEFAULT_SORT, researchHref, type SortSpec } from "./toi-trends";
 
 const players = new Map<number, ResearchPlayer>([
   [1, { id: 1, name: "Alpha Forward", position: "C", group: "F" }],
@@ -34,7 +35,8 @@ function fixtureGame(date: string, toi: Record<number, number>, withLines = true
 }
 
 const research = (games: ResearchGame[], p = players): TeamResearch => ({ players: p, games });
-const render = (r: TeamResearch) => renderToStaticMarkup(createElement(ToiTrends, { research: r }));
+const render = (r: TeamResearch, sort: SortSpec = DEFAULT_SORT, team = "MTL", gameCount = 5) =>
+  renderToStaticMarkup(createElement(ToiTrends, { research: r, sort, team, gameCount }));
 const threeGames = () => [
   fixtureGame("2026-10-01", { 1: 1200, 2: 900, 3: 1300 }),
   fixtureGame("2026-10-03", { 1: 1250, 2: 950, 3: 1350 }),
@@ -45,7 +47,7 @@ const headers = (html: string) =>
 
 test("renders headers in order, forwards before defense, no goalies", () => {
   const html = render(research(threeGames()));
-  assert.deepEqual(headers(html), ["Player", "Pos", "Avg TOI", "TOI Δ", "PP share", "PP share Δ", "SH", "Per game", "TOI trend"]);
+  assert.deepEqual(headers(html), ["Player", "Pos", "Avg TOI ↓", "TOI Δ", "PP share", "PP share Δ", "SH", "Per game", "TOI trend"]);
   assert.ok(html.includes("Ice-time trends"));
   assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Charlie Defense"));
   assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Bravo Forward"));
@@ -274,4 +276,53 @@ test("a player who sat out the team's last 2 games shows the DNP badge after his
 test("a one-game window never tints or shows the DNP badge", () => {
   const html = render(research([fixtureGame("2026-10-01", { 1: 1200, 3: 1300 })]));
   assert.ok(!html.includes("bg-green-50") && !html.includes("bg-red-50") && !html.includes("DNP last 2"));
+});
+
+// Sorting (TRND-05)
+const headerCell = (html: string, label: string) =>
+  [...html.matchAll(/<th[^>]*>[\s\S]*?<\/th>/g)].map((m) => m[0]).find((h) => h.replace(/<[^>]*>/g, "").trim().startsWith(label)) ?? "";
+const hrefOf = (cell: string) => cell.match(/href="([^"]*)"/)?.[1]?.replaceAll("&amp;", "&");
+
+test("the active sort header carries aria-sort and an arrow; no other header does", () => {
+  const html = render(research(threeGames()), { key: "toiDelta", dir: "desc" });
+  const active = headerCell(html, "TOI Δ");
+  assert.ok(active.includes('aria-sort="descending"'), active);
+  assert.ok(active.replace(/<[^>]*>/g, "").trim().endsWith("↓"), active);
+  assert.equal((html.match(/aria-sort=/g) ?? []).length, 1);
+  const asc = render(research(threeGames()), { key: "toiDelta", dir: "asc" });
+  assert.ok(headerCell(asc, "TOI Δ").includes('aria-sort="ascending"'));
+  assert.ok(headerCell(asc, "TOI Δ").replace(/<[^>]*>/g, "").trim().endsWith("↑"));
+});
+
+test("sort header links toggle the sort and keep team and window", () => {
+  const html = render(research(threeGames()), { key: "toiDelta", dir: "desc" }, "MTL", 10);
+  assert.equal(hrefOf(headerCell(html, "TOI Δ")), researchHref("MTL", 10, { key: "toiDelta", dir: "asc" }));
+  assert.equal(hrefOf(headerCell(html, "Avg TOI")), researchHref("MTL", 10, { key: "avgToi", dir: "desc" }));
+  assert.equal(hrefOf(headerCell(html, "PP share Δ")), researchHref("MTL", 10, { key: "ppDelta", dir: "desc" }));
+  assert.equal(hrefOf(headerCell(html, "PP share")), researchHref("MTL", 10, { key: "ppShare", dir: "desc" }));
+});
+
+test("Player, Pos, SH, Per game and TOI trend headers are not links", () => {
+  const html = render(research(threeGames()));
+  for (const label of ["Player", "Pos", "SH", "Per game", "TOI trend"]) {
+    assert.ok(!headerCell(html, label).includes("<a"), label);
+  }
+  assert.ok(headerCell(html, "Avg TOI").includes("<a"));
+});
+
+test("rows follow the chosen sort within the forwards and defense blocks", () => {
+  const html = render(
+    research(
+      moverGames({
+        1: [1000, 1000, 1000, 1000, 1000],
+        2: [1000, 1000, 1000, 1200, 1200],
+        3: [1300, 1300, 1300, 1100, 1100],
+      }),
+    ),
+    { key: "toiDelta", dir: "desc" },
+  );
+  assert.ok(html.indexOf("Bravo Forward") < html.indexOf("Alpha Forward"));
+  assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Charlie Defense"));
+  const asc = render(research(moverGames({ 1: [1000, 1000, 1000, 1000, 1000], 2: [1000, 1000, 1000, 1200, 1200] })), { key: "toiDelta", dir: "asc" });
+  assert.ok(asc.indexOf("Alpha Forward") < asc.indexOf("Bravo Forward"));
 });

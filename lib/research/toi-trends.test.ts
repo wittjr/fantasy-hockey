@@ -1,6 +1,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildTrendRows, deltaCrossing, moverDirection, recentDelta, slopeDirection, type TrendGame } from "./toi-trends";
+import {
+  buildTrendRows,
+  DEFAULT_SORT,
+  deltaCrossing,
+  moverDirection,
+  nextSort,
+  parseSort,
+  recentDelta,
+  researchHref,
+  slopeDirection,
+  sortRows,
+  SORT_KEYS,
+  type SortKey,
+  type TrendGame,
+  type TrendRow,
+} from "./toi-trends";
 import { formatSignedClock, formatSignedPoints } from "./format";
 import type { ResearchPlayer } from "./team-games";
 
@@ -262,4 +277,151 @@ test("buildTrendRows marks an up mover and leaves a flat player unmarked", () =>
   const rows = buildTrendRows([player(1, "F"), player(2, "F")], games);
   assert.equal(rows.find((r) => r.player.id === 1)?.mover, "up");
   assert.equal(rows.find((r) => r.player.id === 2)?.mover, null);
+});
+
+test("parseSort defaults when params are missing", () => {
+  assert.deepEqual(parseSort(undefined, undefined), { key: "avgToi", dir: "desc" });
+});
+
+test("parseSort accepts an allowlisted key and exactly asc", () => {
+  assert.deepEqual(parseSort("toiDelta", "asc"), { key: "toiDelta", dir: "asc" });
+  assert.deepEqual(parseSort("ppDelta", "desc"), { key: "ppDelta", dir: "desc" });
+});
+
+test("parseSort treats an unknown dir as desc", () => {
+  assert.deepEqual(parseSort("ppShare", "bogus"), { key: "ppShare", dir: "desc" });
+  assert.deepEqual(parseSort("toiDelta", ["asc"]), { key: "toiDelta", dir: "desc" });
+});
+
+test("parseSort falls back to the default for an unknown or array key", () => {
+  assert.deepEqual(parseSort("evil", "asc"), DEFAULT_SORT);
+  assert.deepEqual(parseSort(["toiDelta", "ppDelta"], "asc"), DEFAULT_SORT);
+  assert.deepEqual(parseSort("__proto__", "asc"), DEFAULT_SORT);
+});
+
+test("SORT_KEYS holds the four sortable columns", () => {
+  assert.deepEqual([...SORT_KEYS], ["avgToi", "toiDelta", "ppShare", "ppDelta"]);
+});
+
+test("nextSort starts a new key descending and flips the active key", () => {
+  assert.deepEqual(nextSort({ key: "avgToi", dir: "desc" }, "toiDelta"), { key: "toiDelta", dir: "desc" });
+  assert.deepEqual(nextSort({ key: "toiDelta", dir: "desc" }, "toiDelta"), { key: "toiDelta", dir: "asc" });
+  assert.deepEqual(nextSort({ key: "toiDelta", dir: "asc" }, "toiDelta"), { key: "toiDelta", dir: "desc" });
+  assert.deepEqual(nextSort({ key: "toiDelta", dir: "asc" }, "avgToi"), { key: "avgToi", dir: "desc" });
+});
+
+test("researchHref omits sort and dir for the default and dir for desc", () => {
+  assert.equal(researchHref("MTL", 10, DEFAULT_SORT), "/research?team=MTL&games=10");
+  assert.equal(researchHref("MTL", 10, { key: "toiDelta", dir: "asc" }), "/research?team=MTL&games=10&sort=toiDelta&dir=asc");
+  assert.equal(researchHref("MTL", 10, { key: "ppShare", dir: "desc" }), "/research?team=MTL&games=10&sort=ppShare");
+  assert.equal(researchHref("MTL", 10, { key: "avgToi", dir: "asc" }), "/research?team=MTL&games=10&sort=avgToi&dir=asc");
+});
+
+function sortRow(id: number, group: "F" | "D", v: Partial<Pick<TrendRow, "avgToi" | "ppShare" | "toiDelta" | "ppShareDelta">>, name = `P${id}`): TrendRow {
+  return {
+    player: player(id, group, name),
+    perGame: [],
+    gamesPlayed: 5,
+    includedGames: 5,
+    avgToi: null,
+    ppShare: null,
+    shAvg: null,
+    toiSlope: null,
+    ppShareSlope: null,
+    toiDelta: null,
+    ppShareDelta: null,
+    dnpLast2: false,
+    mover: null,
+    ...v,
+  };
+}
+const ids = (rows: TrendRow[]) => rows.map((r) => r.player.id);
+
+test("sortRows keeps every forward before every defenseman for each key and direction", () => {
+  const rows = [
+    sortRow(1, "D", { avgToi: 1500, ppShare: 90, toiDelta: 300, ppShareDelta: 30 }),
+    sortRow(2, "F", { avgToi: 600, ppShare: 5, toiDelta: -300, ppShareDelta: -30 }),
+    sortRow(3, "D", { avgToi: 1400, ppShare: 80, toiDelta: 200, ppShareDelta: 20 }),
+    sortRow(4, "F", { avgToi: 700, ppShare: 6, toiDelta: -200, ppShareDelta: -20 }),
+  ];
+  for (const key of SORT_KEYS as readonly SortKey[]) {
+    for (const dir of ["asc", "desc"] as const) {
+      const out = sortRows(rows, { key, dir });
+      assert.deepEqual(out.map((r) => r.player.group), ["F", "F", "D", "D"], `${key} ${dir}`);
+    }
+  }
+});
+
+test("sortRows by toiDelta desc puts the biggest riser first and asc the biggest faller", () => {
+  const rows = [
+    sortRow(1, "F", { toiDelta: 30 }),
+    sortRow(2, "F", { toiDelta: 200 }),
+    sortRow(3, "F", { toiDelta: -150 }),
+  ];
+  assert.deepEqual(ids(sortRows(rows, { key: "toiDelta", dir: "desc" })), [2, 1, 3]);
+  assert.deepEqual(ids(sortRows(rows, { key: "toiDelta", dir: "asc" })), [3, 1, 2]);
+});
+
+test("sortRows ppDelta reads ppShareDelta and ppShare reads ppShare", () => {
+  const rows = [
+    sortRow(1, "F", { ppShare: 10, ppShareDelta: 40 }),
+    sortRow(2, "F", { ppShare: 70, ppShareDelta: -5 }),
+  ];
+  assert.deepEqual(ids(sortRows(rows, { key: "ppDelta", dir: "desc" })), [1, 2]);
+  assert.deepEqual(ids(sortRows(rows, { key: "ppShare", dir: "desc" })), [2, 1]);
+});
+
+test("sortRows sinks null values to the bottom of their group in both directions", () => {
+  const rows = [
+    sortRow(1, "F", { toiDelta: null, avgToi: 1200 }),
+    sortRow(2, "F", { toiDelta: 10 }),
+    sortRow(3, "D", { toiDelta: null, avgToi: 1300 }),
+    sortRow(4, "D", { toiDelta: -10 }),
+    sortRow(5, "F", { toiDelta: -20 }),
+  ];
+  assert.deepEqual(ids(sortRows(rows, { key: "toiDelta", dir: "desc" })), [2, 5, 1, 4, 3]);
+  assert.deepEqual(ids(sortRows(rows, { key: "toiDelta", dir: "asc" })), [5, 2, 1, 4, 3]);
+});
+
+test("sortRows keeps equal-value rows separate and breaks ties by avgToi desc, then name, then id", () => {
+  const rows = [
+    sortRow(9, "F", { toiDelta: 60, avgToi: 900 }, "Zed"),
+    sortRow(8, "F", { toiDelta: 60, avgToi: 1000 }, "Mid"),
+    sortRow(7, "F", { toiDelta: 60, avgToi: 900 }, "Abe"),
+    sortRow(5, "F", { toiDelta: 60, avgToi: 900 }, "Abe"),
+  ];
+  const out = sortRows(rows, { key: "toiDelta", dir: "desc" });
+  assert.equal(out.length, 4);
+  assert.deepEqual(ids(out), [8, 5, 7, 9]);
+  assert.deepEqual(ids(sortRows(rows, { key: "toiDelta", dir: "asc" })), [8, 5, 7, 9]);
+});
+
+test("sortRows is deterministic whatever the input order", () => {
+  const rows = [
+    sortRow(1, "F", { toiDelta: 60, avgToi: 900 }, "B"),
+    sortRow(2, "F", { toiDelta: 60, avgToi: 900 }, "A"),
+    sortRow(3, "D", { toiDelta: 10, avgToi: 1200 }, "C"),
+    sortRow(4, "F", { toiDelta: null }, "D"),
+  ];
+  const spec = { key: "toiDelta", dir: "desc" } as const;
+  assert.deepEqual(ids(sortRows([...rows].reverse(), spec)), ids(sortRows(rows, spec)));
+});
+
+test("sortRows handles an empty list and a single row without mutating its input", () => {
+  assert.deepEqual(sortRows([], DEFAULT_SORT), []);
+  const one = sortRow(1, "F", { avgToi: 900 });
+  assert.deepEqual(sortRows([one], { key: "ppDelta", dir: "asc" }), [one]);
+  const input = [sortRow(1, "F", { avgToi: 900 }), sortRow(2, "F", { avgToi: 1000 })];
+  const before = ids(input);
+  const out = sortRows(input, DEFAULT_SORT);
+  assert.deepEqual(ids(input), before);
+  assert.notEqual(out, input);
+});
+
+test("buildTrendRows orders by the default sort: forwards then defense, Avg TOI descending", () => {
+  const rows = buildTrendRows(
+    [player(1, "F"), player(2, "D"), player(3, "F")],
+    [game({ 1: 800, 2: 1500, 3: 1100 })],
+  );
+  assert.deepEqual(ids(rows), [3, 1, 2]);
 });
