@@ -29,7 +29,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Each row shows a recent-vs-window delta for TOI and for PP share, so a player whose deployment jumped in the latest games stands out even while the window slope is still flat
   4. A player below the minimum games played in the window shows no trend, with the games-played count visible, and games the player missed are left out of averages and trends instead of being counted as 0
   5. User can sort the table by trend, average TOI, or PP share; the sort is in the URL, survives reload, and keeps the F/D grouping
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Tracer: regulation-TOI trends table (OT/SO via boxscore gameOutcome, loader regulationToi, tested buildTrendRows, components/ToiTrends.tsx; per-game grid removed)
+- [ ] 01-02-PLAN.md — Per-game strip with OT/missed/excluded states and CSS-only hover/focus popover of exact TOI/PP/SH
+- [ ] 01-03-PLAN.md — Recent-vs-window TOI Δ / PP share Δ, muted slope arrows, mover colour/tint (±2:00 / ±15), DNP last 2, 1-game window
+- [ ] 01-04-PLAN.md — URL-persisted sorting by Avg TOI, TOI Δ, PP share, PP share Δ with F/D grouping kept
 **UI hint**: yes
 
 ### Phase 2: Player Linemate Detail
@@ -69,6 +75,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Ice-Time Trends Table | 0/TBD | Not started | - |
+| 1. Ice-Time Trends Table | 0/4 | Planned | - |
 | 2. Player Linemate Detail | 0/TBD | Not started | - |
 | 3. Unit Event Stats | 0/TBD | Not started | - |
