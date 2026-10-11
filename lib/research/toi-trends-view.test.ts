@@ -34,7 +34,7 @@ function fixtureGame(date: string, toi: Record<number, number>, withLines = true
   };
 }
 
-const research = (games: ResearchGame[], p = players): TeamResearch => ({ players: p, games });
+const research = (games: ResearchGame[], p = players): TeamResearch => ({ players: p, games, unavailableDates: [] });
 const render = (r: TeamResearch, sort: SortSpec = DEFAULT_SORT, team = "MTL", gameCount = 5) =>
   renderToStaticMarkup(createElement(ToiTrends, { research: r, sort, team, gameCount }));
 const threeGames = () => [

@@ -95,6 +95,11 @@ export default async function ResearchPage({
         <p className="text-neutral-500">{team} hasn&apos;t finished a regular-season game yet this season.</p>
       ) : (
         <>
+          {research.unavailableDates.length > 0 && (
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              Couldn&apos;t load NHL data for {research.unavailableDates.map(formatDate).join(", ")}, so those games are left out of this window. Reload to try again.
+            </p>
+          )}
           <LastGameLines research={research} />
           <ToiTrends research={research} sort={sort} team={team} gameCount={gameCount} />
         </>

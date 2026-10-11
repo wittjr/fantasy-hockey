@@ -48,6 +48,8 @@ export interface ResearchGame {
 export interface TeamResearch {
   players: Map<number, ResearchPlayer>;
   games: ResearchGame[]; // oldest first
+  /** Dates ("YYYY-MM-DD") of window games whose data could not be loaded; they are left out of `games`. */
+  unavailableDates: string[];
 }
 
 function addPlayers(stats: NhlBoxscoreTeamStats, into: Map<number, ResearchPlayer>, positions: Map<number, PositionGroup>) {
@@ -120,11 +122,25 @@ export async function loadTeamResearch(team: NhlTeamAbbrev, count: number): Prom
     .sort((a, b) => a.gameDate.localeCompare(b.gameDate))
     .slice(-count);
 
-  const loaded = await Promise.all(recent.map((g) => loadGame(team, g.id)));
+  // One failed game must not blank the page: keep the games that loaded and name the ones that did not.
+  const settled = await Promise.allSettled(recent.map((g) => loadGame(team, g.id)));
   // Merge oldest-first so the latest game's name/position wins.
   const players = new Map<number, ResearchPlayer>();
-  for (const l of loaded) for (const [id, p] of l.players) players.set(id, p);
-  return { players, games: loaded.map((l) => l.game) };
+  const games: ResearchGame[] = [];
+  const unavailableDates: string[] = [];
+  settled.forEach((result, i) => {
+    if (result.status === "fulfilled") {
+      for (const [id, p] of result.value.players) players.set(id, p);
+      games.push(result.value.game);
+    } else {
+      console.error(`Loading game ${recent[i].id} for ${team} failed`, result.reason);
+      unavailableDates.push(recent[i].gameDate);
+    }
+  });
+  if (recent.length > 0 && games.length === 0) {
+    throw new Error(`Could not load any of ${team}'s last ${recent.length} games`);
+  }
+  return { players, games, unavailableDates };
 }
 
 export function situationSeconds(game: ResearchGame, playerId: number, situation: Situation): number | null {
