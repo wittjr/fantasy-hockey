@@ -40,9 +40,14 @@ Not in this phase: player detail / row click (Phase 2), unit-table event stats a
 - **D-15:** Sort via **clickable column headers** that set `?sort=` (keep `team` and `games` params). Sortable: Avg TOI, TOI Δ, PP share Δ.
 - **D-16:** Big movers get a **subtle row tint** (green up / red down) when **either** TOI Δ or PP share Δ crosses its mover threshold; the same threshold colors the delta numbers.
 
+### Follow-up decisions (after phase research, 2026-10-11)
+- **D-17:** Sortable columns are **Avg TOI, TOI Δ, PP share, PP share Δ** (four keys). Supersedes the sort list in D-15; satisfies TRND-05's "PP share".
+- **D-18:** Mover thresholds: **TOI Δ ±2:00 (120 s)** and **PP share Δ ±15 percentage points**. (Research measured ±1:00/±10 as mostly noise and suggested ±3:00/±25; user chose the middle ground.) Existing slope thresholds (`TOI_TREND_THRESHOLD_SECONDS = 15`, `PP_SHARE_TREND_THRESHOLD_POINTS = 3`) still drive only the muted arrow.
+- **D-19:** Mixed-sign movers (one delta crosses up, the other crosses down): **no row tint**; each delta is still colored on its own. Tint when only one crosses, or both cross in the same direction.
+- **D-20:** The muted slope arrow is a small glyph **right after each Δ** (TOI Δ and PP share Δ) — no separate arrow column.
+
 ### Claude's Discretion
 - Row density / padding / type size — pick what reads cleanest (one line per player preferred).
-- Mover thresholds for TOI Δ and PP share Δ — tune against real team data (research suggested ~±1:00 TOI, ~±10 PP-share points as a starting point). Existing slope thresholds (`TOI_TREND_THRESHOLD_SECONDS = 15`, `PP_SHARE_TREND_THRESHOLD_POINTS = 3`) still drive the muted arrow.
 - Sort direction toggling, header affordances, and how null deltas sort (should sink to the bottom of their group).
 - How OT is detected (boxscore/game metadata vs periods in shift charts).
 
