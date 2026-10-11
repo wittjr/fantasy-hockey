@@ -354,3 +354,29 @@ test("the section intro is the approved copy", () => {
     ),
   );
 });
+
+// WR-01: the popover anchors to the hovered square, not the strip's <td>.
+const classTokens = (tag: string) => (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+
+test("every strip square is the popover's containing block", () => {
+  const squares = cells(render(research(threeGames())));
+  assert.equal(squares.length, 9);
+  for (const c of squares) assert.ok(classTokens(c.tag).includes("relative"), c.tag);
+});
+
+test("every popover opens below and to the left of its square, never at the strip's left edge", () => {
+  const html = render(research(threeGames()));
+  const popovers = [...html.matchAll(/<span aria-hidden="true" class="([^"]*group-hover\/cell:block[^"]*)"/g)].map((m) => m[1].split(/\s+/));
+  assert.equal(popovers.length, 9);
+  for (const tokens of popovers) {
+    assert.ok(tokens.includes("absolute") && tokens.includes("right-0") && tokens.includes("top-full"), tokens.join(" "));
+    assert.ok(!tokens.includes("left-0"), tokens.join(" "));
+  }
+});
+
+test("the strip cell is not positioned", () => {
+  const html = render(research(threeGames()));
+  const stripTds = [...html.matchAll(/<td class="([^"]*)"><div role="group"/g)].map((m) => m[1].split(/\s+/));
+  assert.equal(stripTds.length, 3);
+  for (const tokens of stripTds) assert.ok(!tokens.includes("relative"), tokens.join(" "));
+});
