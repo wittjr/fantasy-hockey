@@ -3,8 +3,11 @@ import { formatClock, formatDate, formatSignedClock, formatSignedPoints } from "
 import type { TeamResearch } from "@/lib/research/team-games";
 import {
   buildTrendRows,
+  deltaCrossing,
+  PP_MOVER_POINTS,
   PP_SHARE_TREND_THRESHOLD_POINTS,
   slopeDirection,
+  TOI_MOVER_SECONDS,
   TOI_TREND_THRESHOLD_SECONDS,
 } from "@/lib/research/toi-trends";
 
@@ -46,9 +49,17 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
                   key={row.player.id}
                   className={`border-b border-neutral-100 align-top dark:border-neutral-900 ${
                     i > 0 && rows[i - 1].player.group !== row.player.group ? "border-t-2 border-t-neutral-300 dark:border-t-neutral-700" : ""
-                  }`}
+                  } ${row.mover === "up" ? "bg-green-50 dark:bg-green-950/30" : row.mover === "down" ? "bg-red-50 dark:bg-red-950/30" : ""}`}
                 >
-                  <td className="py-1 pr-3 whitespace-nowrap">{row.player.name}</td>
+                  <td className="py-1 pr-3 whitespace-nowrap">
+                    {row.player.name}
+                    {row.mover && <span className="sr-only">{row.mover === "up" ? "Moving up" : "Moving down"}</span>}
+                    {row.dnpLast2 && (
+                      <span className="ml-2 rounded border border-neutral-300 px-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-400">
+                        DNP last 2
+                      </span>
+                    )}
+                  </td>
                   <td className="py-1 pr-3 whitespace-nowrap text-neutral-500">
                     {row.player.position}
                     <span className="ml-1 text-xs tabular-nums text-neutral-600 dark:text-neutral-400">
@@ -64,6 +75,7 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
                       format={formatSignedClock}
                       slope={row.toiSlope}
                       slopeThreshold={TOI_TREND_THRESHOLD_SECONDS}
+                      moverThreshold={TOI_MOVER_SECONDS}
                     />
                   )}
                   <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">
@@ -75,6 +87,7 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
                       format={formatSignedPoints}
                       slope={row.ppShareSlope}
                       slopeThreshold={PP_SHARE_TREND_THRESHOLD_POINTS}
+                      moverThreshold={PP_MOVER_POINTS}
                     />
                   )}
                   <td className="py-1 pr-3 text-right text-xs tabular-nums whitespace-nowrap text-neutral-600 dark:text-neutral-400">
@@ -131,20 +144,29 @@ function TrendArrow({ direction }: { direction: "up" | "down" | null }) {
   );
 }
 
-/** A signed recent-vs-window change followed by the muted slope arrow; "—" when the minimum-games gate fails. */
+/** A signed recent-vs-window change followed by the muted slope arrow; "—" when the minimum-games gate fails. Colour follows the delta alone, never the arrow (D-09). */
 function DeltaCell({
   delta,
   format,
   slope,
   slopeThreshold,
+  moverThreshold,
 }: {
   delta: number | null;
   format: (value: number) => string;
   slope: number | null;
   slopeThreshold: number;
+  moverThreshold: number;
 }) {
+  const crossing = deltaCrossing(delta, moverThreshold);
+  const tone =
+    crossing === 1
+      ? "font-medium text-green-700 dark:text-green-400"
+      : crossing === -1
+        ? "font-medium text-red-700 dark:text-red-400"
+        : "";
   return (
-    <td className="py-1 pr-3 text-right whitespace-nowrap tabular-nums">
+    <td className={`py-1 pr-3 text-right whitespace-nowrap tabular-nums ${tone}`}>
       {delta !== null ? format(delta) : <span className="text-neutral-400 dark:text-neutral-500">—</span>}
       <TrendArrow direction={slopeDirection(slope, slopeThreshold)} />
     </td>

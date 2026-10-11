@@ -5,6 +5,11 @@ import type { ResearchGame, ResearchPlayer } from "./team-games";
 export const TOI_TREND_THRESHOLD_SECONDS = 15;
 export const PP_SHARE_TREND_THRESHOLD_POINTS = 3;
 
+// Mover thresholds are the user's choice (D-18, superseding RESEARCH's 180 s / 25 points). A Δ crossing one is coloured and
+// tints its row; the slope thresholds above still drive only the muted arrow.
+export const TOI_MOVER_SECONDS = 120;
+export const PP_MOVER_POINTS = 15;
+
 /** "Recent" is the team's last 2 games in the window (D-05). */
 export const RECENT_GAMES = 2;
 /** A delta needs at least this many included games (D-06). */
@@ -50,6 +55,10 @@ export interface TrendRow {
   toiDelta: number | null;
   /** Same split for PP share, each part weighted by team PP time; percentage points. */
   ppShareDelta: number | null;
+  /** Missed both of the team's last 2 games in a window larger than 2. */
+  dnpLast2: boolean;
+  /** Direction of a big recent change in TOI or PP share; null when none or the two disagree. */
+  mover: "up" | "down" | null;
 }
 
 export interface DeltaPoint {
@@ -57,6 +66,20 @@ export interface DeltaPoint {
   x: number;
   y: number;
   w?: number;
+}
+
+/** 1 or -1 when the delta's rounded (displayed) magnitude reaches the threshold, else 0. */
+export function deltaCrossing(delta: number | null, threshold: number): -1 | 0 | 1 {
+  if (delta === null || Math.round(Math.abs(delta)) < threshold) return 0;
+  return delta > 0 ? 1 : -1;
+}
+
+/** "up" or "down" when at least one delta crosses its mover threshold and none crosses the other way (D-16, D-19). */
+export function moverDirection(toiDelta: number | null, ppShareDelta: number | null): "up" | "down" | null {
+  const crossings = [deltaCrossing(toiDelta, TOI_MOVER_SECONDS), deltaCrossing(ppShareDelta, PP_MOVER_POINTS)];
+  if (crossings.includes(1) && !crossings.includes(-1)) return "up";
+  if (crossings.includes(-1) && !crossings.includes(1)) return "down";
+  return null;
 }
 
 function weightedMean(points: readonly DeltaPoint[]): number | null {
@@ -116,6 +139,8 @@ export function buildTrendRows(players: Iterable<ResearchPlayer>, games: readonl
     const included = perGame.flatMap((c, x) => (c && c.toi !== null ? [{ x, ...c, toi: c.toi }] : []));
     const withPp = included.filter((c) => c.ppShare !== null);
     const teamPpTotal = withPp.reduce((s, c) => s + c.teamPp, 0);
+    const toiDelta = recentDelta(included.map((c) => ({ x: c.x, y: c.toi })), games.length, included.length);
+    const ppShareDelta = recentDelta(withPp.map((c) => ({ x: c.x, y: c.ppShare!, w: c.teamPp })), games.length, included.length);
     rows.push({
       player,
       perGame,
@@ -126,8 +151,10 @@ export function buildTrendRows(players: Iterable<ResearchPlayer>, games: readonl
       shAvg: mean(included.flatMap((c) => (c.sh !== null ? [c.sh] : []))),
       toiSlope: trendSlope(included.map((c) => ({ x: c.x, y: c.toi }))),
       ppShareSlope: trendSlope(withPp.map((c) => ({ x: c.x, y: c.ppShare!, w: c.teamPp }))),
-      toiDelta: recentDelta(included.map((c) => ({ x: c.x, y: c.toi })), games.length, included.length),
-      ppShareDelta: recentDelta(withPp.map((c) => ({ x: c.x, y: c.ppShare!, w: c.teamPp })), games.length, included.length),
+      toiDelta,
+      ppShareDelta,
+      dnpLast2: games.length > RECENT_GAMES && perGame.slice(-RECENT_GAMES).every((c) => c === null),
+      mover: moverDirection(toiDelta, ppShareDelta),
     });
   }
   const groupOrder = { F: 0, D: 1, G: 2 };
