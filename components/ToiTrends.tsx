@@ -1,3 +1,4 @@
+import { ToiGameStrip } from "@/components/ToiGameStrip";
 import { formatClock, formatDate } from "@/lib/research/format";
 import type { TeamResearch } from "@/lib/research/team-games";
 import { buildTrendRows } from "@/lib/research/toi-trends";
@@ -9,6 +10,7 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
   const rows = buildTrendRows(research.players.values(), research.games);
   const showTrend = research.games.length > 1;
   const muted = "text-neutral-400 dark:text-neutral-500";
+  const overtime = research.games.map((g) => g.overtime !== null);
   const noChartDates = research.games.filter((g) => !g.lines).map((g) => formatDate(g.date));
 
   return (
@@ -18,7 +20,7 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
       {rows.length === 0 ? (
         <p className="text-sm text-neutral-500">No skaters played in this window.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto pb-28 -mb-24">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
@@ -27,6 +29,7 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">Avg TOI</th>
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">PP share</th>
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">SH</th>
+                <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Per game</th>
                 {showTrend && <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">TOI trend</th>}
               </tr>
             </thead>
@@ -54,9 +57,10 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
                   <td className="py-1 pr-3 text-right text-xs tabular-nums whitespace-nowrap text-neutral-600 dark:text-neutral-400">
                     {row.shAvg !== null ? formatClock(row.shAvg) : <span className={muted}>—</span>}
                   </td>
+                  <ToiGameStrip row={row} games={research.games} />
                   {showTrend && (
                     <td className="py-1 pr-3 whitespace-nowrap">
-                      <Sparkline values={row.perGame.map((cell) => cell?.toi ?? null)} />
+                      <Sparkline values={row.perGame.map((cell) => cell?.toi ?? null)} overtime={overtime} />
                     </td>
                   )}
                 </tr>
@@ -65,19 +69,23 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
           </table>
         </div>
       )}
-      {noChartDates.length > 0 && (
-        <div className="flex flex-col gap-1 text-xs text-neutral-500">
+      <div className="flex flex-col gap-1 text-xs text-neutral-500">
+        <p>
+          Squares are team games, oldest to newest. Darker means more ice time than that player&apos;s own average. Dashed
+          means did not play (or overtime with no shift data). Outlined means overtime; OT minutes are excluded.
+        </p>
+        {noChartDates.length > 0 && (
           <p className="text-amber-600 dark:text-amber-400">
             No PP/SH data for {noChartDates.join(", ")}: the NHL hasn&apos;t published shift charts for those games yet.
           </p>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
 
-/** TOI per game as a small line; games the player missed are skipped. */
-function Sparkline({ values }: { values: Array<number | null> }) {
+/** TOI per game as a small line; games the player missed are skipped and OT/SO games get a hollow sky dot. */
+function Sparkline({ values, overtime }: { values: Array<number | null>; overtime: boolean[] }) {
   const width = 80;
   const height = 20;
   const played = values.flatMap((v, i) => (v === null ? [] : [{ i, v }]));
@@ -93,7 +101,12 @@ function Sparkline({ values }: { values: Array<number | null> }) {
   return (
     <svg width={width} height={height} className="text-neutral-500" aria-hidden>
       <polyline points={pointsAttr} fill="none" stroke="currentColor" strokeWidth={1.5} />
-      <circle cx={x(last.i)} cy={y(last.v)} r={2} fill="currentColor" />
+      {played.map((p) =>
+        overtime[p.i] ? (
+          <circle key={p.i} cx={x(p.i)} cy={y(p.v)} r={3} strokeWidth={1.5} className="fill-background stroke-sky-500" />
+        ) : null,
+      )}
+      {!overtime[last.i] && <circle cx={x(last.i)} cy={y(last.v)} r={2} fill="currentColor" />}
     </svg>
   );
 }

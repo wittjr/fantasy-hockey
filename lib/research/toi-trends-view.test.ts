@@ -99,7 +99,7 @@ const stripGames = (): ResearchGame[] => {
   return [g1, g2, g3];
 };
 const rowHtml = (html: string, name: string) =>
-  [...html.matchAll(/<tr[^>]*>.*?<\/tr>/gs)].map((m) => m[0]).find((r) => r.includes(name)) ?? "";
+  [...html.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/g)].map((m) => m[0]).find((r) => r.includes(name)) ?? "";
 const cells = (row: string) => [...row.matchAll(/<span[^>]*data-state="([^"]*)"[^>]*>/g)].map((m) => ({ tag: m[0], state: m[1] }));
 
 test("every row has one strip cell per team game, oldest first, with played / dnp / excluded states", () => {
