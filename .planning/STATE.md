@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ice-Time Trends Table
 status: executing
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-10-11T22:56:40.623Z"
+stopped_at: Completed 01-06-PLAN.md
+last_updated: "2026-10-11T23:00:14.533Z"
 last_activity: 2026-10-11
 last_activity_desc: Phase 01 execution started
-state_head: 89fcf222de9c3e3be02e71dad91fec7f5b55c031
+state_head: 1c339bbb4203465f9444211d114bc55a1f9db79c
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-11)
 ## Current Position
 
 Phase: 01 (Ice-Time Trends Table) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-10-11 — Phase 01 execution started
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P03 | 4 min | 2 tasks | 5 files |
 | Phase 01 P04 | 4 min | 2 tasks | 5 files |
 | Phase 01 P05 | 2 min | 2 tasks | 6 files |
+| Phase 01 P06 | 3 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-04: URL keeps the requested sort in a 1-game window; effectiveSort overrides at render time only
 - [Phase 01]: 01-05: uniqueShifts de-duplicates verbatim shift rows inside analyzeGameLines and regulationSeconds (not in loadGame) so the pure function is testable and Phase 2/3 reuse is safe
 - [Phase 01]: 01-05: WR-02 fixed by one uncached re-request only when the cached shift chart is empty; a short revalidate on every chart rejected (extra NHL load, DATA-01 429 risk)
+- [Phase 01]: 01-06: failed boxscore leaves the game out of the window and names its date (never all-DNP or zeros); failed shift chart behaves like an unpublished one — TRND-04: unknown data must not become DNP badges or zeros; no backfill or retry (DATA-01, Phase 3)
+- [Phase 01]: 01-06: research page load-error banner shows fixed copy; error detail goes to server log only — T-01-11: no API path or status in markup
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-11T22:56:40.603Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-10-11T23:00:14.513Z
+Stopped at: Completed 01-06-PLAN.md
 Resume file: None
