@@ -1,12 +1,18 @@
+import { PendingLink } from "@/components/PendingLink";
 import { ToiGameStrip } from "@/components/ToiGameStrip";
 import { formatClock, formatDate, formatSignedClock, formatSignedPoints } from "@/lib/research/format";
 import type { TeamResearch } from "@/lib/research/team-games";
 import {
   buildTrendRows,
   deltaCrossing,
+  nextSort,
   PP_MOVER_POINTS,
   PP_SHARE_TREND_THRESHOLD_POINTS,
+  researchHref,
   slopeDirection,
+  sortRows,
+  type SortKey,
+  type SortSpec,
   TOI_MOVER_SECONDS,
   TOI_TREND_THRESHOLD_SECONDS,
 } from "@/lib/research/toi-trends";
@@ -14,11 +20,23 @@ import {
 // Sparklines span at least this much TOI so small wobbles don't look like big swings.
 const SPARKLINE_MIN_RANGE_SECONDS = 240;
 
-export function ToiTrends({ research }: { research: TeamResearch }) {
-  const rows = buildTrendRows(research.players.values(), research.games);
+export function ToiTrends({
+  research,
+  sort,
+  team,
+  gameCount,
+}: {
+  research: TeamResearch;
+  sort: SortSpec;
+  /** The requested team and window, kept in the sort links. */
+  team: string;
+  gameCount: number;
+}) {
+  const rows = sortRows(buildTrendRows(research.players.values(), research.games), sort);
   const showTrend = research.games.length > 1;
   const muted = "text-neutral-400 dark:text-neutral-500";
   const overtime = research.games.map((g) => g.overtime !== null);
+  const sortProps = { sort, team, gameCount };
   const noChartDates = research.games.filter((g) => !g.lines).map((g) => formatDate(g.date));
 
   return (
@@ -34,10 +52,10 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
               <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Player</th>
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Pos</th>
-                <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">Avg TOI</th>
-                {showTrend && <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">TOI Δ</th>}
-                <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">PP share</th>
-                {showTrend && <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">PP share Δ</th>}
+                <SortHeader label="Avg TOI" sortKey="avgToi" {...sortProps} />
+                {showTrend && <SortHeader label="TOI Δ" sortKey="toiDelta" {...sortProps} />}
+                <SortHeader label="PP share" sortKey="ppShare" {...sortProps} />
+                {showTrend && <SortHeader label="PP share Δ" sortKey="ppDelta" {...sortProps} />}
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">SH</th>
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Per game</th>
                 {showTrend && <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">TOI trend</th>}
@@ -127,6 +145,39 @@ export function ToiTrends({ research }: { research: TeamResearch }) {
         )}
       </div>
     </section>
+  );
+}
+
+/** A right-aligned column header that links to its own sort: the active key flips direction, any other starts descending. */
+function SortHeader({
+  label,
+  sortKey,
+  sort,
+  team,
+  gameCount,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortSpec;
+  team: string;
+  gameCount: number;
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
+      className="py-1 pr-3 text-right font-medium whitespace-nowrap"
+    >
+      <PendingLink
+        href={researchHref(team, gameCount, nextSort(sort, sortKey))}
+        scroll={false}
+        className={`justify-end ${active ? "font-medium text-neutral-900 dark:text-neutral-100" : "hover:underline"}`}
+      >
+        {label}
+        {active && ` ${sort.dir === "asc" ? "↑" : "↓"}`}
+      </PendingLink>
+    </th>
   );
 }
 

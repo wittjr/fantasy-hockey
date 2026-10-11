@@ -127,7 +127,58 @@ function buildCell(playerId: number, game: TrendGame): PerGameCell | null {
   };
 }
 
-/** One row per skater who dressed in the window: forwards, then defense, by Avg TOI descending. */
+export const SORT_KEYS = ["avgToi", "toiDelta", "ppShare", "ppDelta"] as const;
+export type SortKey = (typeof SORT_KEYS)[number];
+export type SortDir = "asc" | "desc";
+export interface SortSpec {
+  key: SortKey;
+  dir: SortDir;
+}
+export const DEFAULT_SORT: SortSpec = { key: "avgToi", dir: "desc" };
+
+/** Validates raw search params (strings, arrays or absent) against the allowlist; anything else is the default. */
+export function parseSort(sort: unknown, dir: unknown): SortSpec {
+  if (typeof sort !== "string" || !(SORT_KEYS as readonly string[]).includes(sort)) return DEFAULT_SORT;
+  return { key: sort as SortKey, dir: dir === "asc" ? "asc" : "desc" };
+}
+
+/** Clicking the active key flips the direction; a new key starts descending (biggest risers first). */
+export function nextSort(current: SortSpec, key: SortKey): SortSpec {
+  return { key, dir: current.key === key && current.dir === "desc" ? "asc" : "desc" };
+}
+
+const GROUP_ORDER = { F: 0, D: 1, G: 2 };
+const SORT_VALUE: Record<SortKey, (row: TrendRow) => number | null> = {
+  avgToi: (r) => r.avgToi,
+  toiDelta: (r) => r.toiDelta,
+  ppShare: (r) => r.ppShare,
+  ppDelta: (r) => r.ppShareDelta,
+};
+
+/** Forwards before defense, then the key in the chosen direction with nulls last; ties by Avg TOI desc, name, id. */
+export function sortRows(rows: readonly TrendRow[], spec: SortSpec): TrendRow[] {
+  const value = SORT_VALUE[spec.key];
+  const sign = spec.dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const group = GROUP_ORDER[a.player.group] - GROUP_ORDER[b.player.group];
+    if (group) return group;
+    const [va, vb] = [value(a), value(b)];
+    if ((va === null) !== (vb === null)) return va === null ? 1 : -1;
+    if (va !== null && vb !== null && va !== vb) return sign * (va - vb);
+    if ((a.avgToi === null) !== (b.avgToi === null)) return a.avgToi === null ? 1 : -1;
+    return (b.avgToi ?? 0) - (a.avgToi ?? 0) || a.player.name.localeCompare(b.player.name) || a.player.id - b.player.id;
+  });
+}
+
+/** Built only from validated values, so a request's raw params never reach a link. */
+export function researchHref(team: string, games: number, sort: SortSpec): string {
+  const params = new URLSearchParams({ team, games: String(games) });
+  if (sort.key !== DEFAULT_SORT.key || sort.dir !== DEFAULT_SORT.dir) params.set("sort", sort.key);
+  if (sort.dir === "asc") params.set("dir", "asc");
+  return `/research?${params}`;
+}
+
+/** One row per skater who dressed in the window, in the default order (forwards, then defense, by Avg TOI descending). */
 export function buildTrendRows(players: Iterable<ResearchPlayer>, games: readonly TrendGame[]): TrendRow[] {
   const rows: TrendRow[] = [];
   for (const player of players) {
@@ -157,11 +208,5 @@ export function buildTrendRows(players: Iterable<ResearchPlayer>, games: readonl
       mover: moverDirection(toiDelta, ppShareDelta),
     });
   }
-  const groupOrder = { F: 0, D: 1, G: 2 };
-  return rows.sort(
-    (a, b) =>
-      groupOrder[a.player.group] - groupOrder[b.player.group] ||
-      (a.avgToi === null ? 1 : 0) - (b.avgToi === null ? 1 : 0) ||
-      (b.avgToi ?? 0) - (a.avgToi ?? 0),
-  );
+  return sortRows(rows, DEFAULT_SORT);
 }
