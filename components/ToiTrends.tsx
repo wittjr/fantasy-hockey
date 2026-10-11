@@ -5,6 +5,7 @@ import type { TeamResearch } from "@/lib/research/team-games";
 import {
   buildTrendRows,
   deltaCrossing,
+  effectiveSort,
   nextSort,
   PP_MOVER_POINTS,
   PP_SHARE_TREND_THRESHOLD_POINTS,
@@ -22,7 +23,7 @@ const SPARKLINE_MIN_RANGE_SECONDS = 240;
 
 export function ToiTrends({
   research,
-  sort,
+  sort: requestedSort,
   team,
   gameCount,
 }: {
@@ -32,6 +33,7 @@ export function ToiTrends({
   team: string;
   gameCount: number;
 }) {
+  const sort = effectiveSort(requestedSort, research.games.length);
   const rows = sortRows(buildTrendRows(research.players.values(), research.games), sort);
   const showTrend = research.games.length > 1;
   const muted = "text-neutral-400 dark:text-neutral-500";
@@ -42,7 +44,11 @@ export function ToiTrends({
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-medium">Ice-time trends</h2>
-      <p className="text-sm text-neutral-500">Average regulation ice time per game played (overtime minutes excluded).</p>
+      <p className="text-sm text-neutral-500">
+        Average regulation ice time per game played, and how each player&apos;s last 2 games compare with his earlier games in the window.
+        Rows tinted green or red moved by 2:00 or more of TOI or 15 or more points of power-play share.
+        Click Avg TOI, TOI Δ, PP share or PP share Δ to sort; hover or focus a square for exact per-game times.
+      </p>
       {rows.length === 0 ? (
         <p className="text-sm text-neutral-500">No skaters played in this window.</p>
       ) : (
@@ -52,10 +58,10 @@ export function ToiTrends({
               <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Player</th>
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Pos</th>
-                <SortHeader label="Avg TOI" sortKey="avgToi" {...sortProps} />
-                {showTrend && <SortHeader label="TOI Δ" sortKey="toiDelta" {...sortProps} />}
-                <SortHeader label="PP share" sortKey="ppShare" {...sortProps} />
-                {showTrend && <SortHeader label="PP share Δ" sortKey="ppDelta" {...sortProps} />}
+                <SortHeader label="Avg TOI" title="Average regulation ice time per game played" sortKey="avgToi" {...sortProps} />
+                {showTrend && <SortHeader label="TOI Δ" title="Average of the team's last 2 games minus the player's earlier games in the window" sortKey="toiDelta" {...sortProps} />}
+                <SortHeader label="PP share" title="Player's share of the team's power-play time over the window" sortKey="ppShare" {...sortProps} />
+                {showTrend && <SortHeader label="PP share Δ" title="Same comparison, in percentage points" sortKey="ppDelta" {...sortProps} />}
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">SH</th>
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Per game</th>
                 {showTrend && <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">TOI trend</th>}
@@ -151,12 +157,14 @@ export function ToiTrends({
 /** A right-aligned column header that links to its own sort: the active key flips direction, any other starts descending. */
 function SortHeader({
   label,
+  title,
   sortKey,
   sort,
   team,
   gameCount,
 }: {
   label: string;
+  title: string;
   sortKey: SortKey;
   sort: SortSpec;
   team: string;
@@ -171,6 +179,7 @@ function SortHeader({
     >
       <PendingLink
         href={researchHref(team, gameCount, nextSort(sort, sortKey))}
+        title={title}
         scroll={false}
         className={`justify-end ${active ? "font-medium text-neutral-900 dark:text-neutral-100" : "hover:underline"}`}
       >

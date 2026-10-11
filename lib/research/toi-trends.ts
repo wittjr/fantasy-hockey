@@ -147,6 +147,11 @@ export function nextSort(current: SortSpec, key: SortKey): SortSpec {
   return { key, dir: current.key === key && current.dir === "desc" ? "asc" : "desc" };
 }
 
+/** A 1-game window hides the Δ columns, so a requested Δ sort falls back to the default there (the URL keeps the request). */
+export function effectiveSort(spec: SortSpec, windowSize: number): SortSpec {
+  return windowSize === 1 && (spec.key === "toiDelta" || spec.key === "ppDelta") ? DEFAULT_SORT : spec;
+}
+
 const GROUP_ORDER = { F: 0, D: 1, G: 2 };
 const SORT_VALUE: Record<SortKey, (row: TrendRow) => number | null> = {
   avgToi: (r) => r.avgToi,
