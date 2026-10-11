@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 1
 current_phase_name: Ice-Time Trends Table
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-10-11T20:01:35.530Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-10-11T20:06:24.581Z"
 last_activity: 2026-10-11
 last_activity_desc: Phase 1 execution started
-state_head: c524e1d2adef05327b18b59c64b0cf148e9e1590
+state_head: dbad487fe5b71f79b0f8da1e10c4a38c0827defe
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-11)
 ## Current Position
 
 Phase: 1 (Ice-Time Trends Table) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-10-11 — Phase 1 execution started
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 1 P01 | 11 min | 3 tasks | 10 files |
+| Phase 01 P02 | 4 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,7 @@ Recent decisions affecting current work:
 - [Roadmap]: Phase 3 event columns are gated on fixture tests reproducing boxscore SOG and per-skater plus-minus
 - [Phase 1]: regulationSeconds counts verbatim-duplicate NHL shift rows once — Feed repeats rows (22 vs 19 boxscore shifts in game 2026020075); plain sum over-counted regulation TOI
 - [Phase 1]: Unknown regulation TOI (OT/SO game with no shift chart) is null and excluded from Avg TOI, never 0 — TRND-04: unknown values must not pull down averages
+- [Phase 01]: 01-02: strip popover is a hidden wrapper span with an inner grid span; cell and aria-label share one GameDetail model so they cannot drift
 
 ### Pending Todos
 
@@ -92,6 +94,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-11T20:01:35.511Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-10-11T20:06:24.561Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
