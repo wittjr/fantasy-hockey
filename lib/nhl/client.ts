@@ -110,6 +110,7 @@ export interface NhlBoxscore {
   awayTeam: { abbrev: string; score?: number };
   homeTeam: { abbrev: string; score?: number };
   playerByGameStats: { awayTeam: NhlBoxscoreTeamStats; homeTeam: NhlBoxscoreTeamStats };
+  gameOutcome?: { lastPeriodType: "REG" | "OT" | "SO" };
 }
 
 // Finished games only change for stat corrections; an hour keeps them fresh enough.

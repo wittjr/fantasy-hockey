@@ -12,6 +12,26 @@ export interface ShiftInput {
   endSec: number;
 }
 
+export const REGULATION_PERIODS = 3;
+
+/**
+ * Seconds each of `team`'s players was on ice in periods 1-3.
+ * Equals boxscore TOI minus OT for a complete shift chart. The NHL feed sometimes repeats a
+ * shift row verbatim (e.g. 2026020075), so identical rows count once.
+ */
+export function regulationSeconds(team: string, shifts: ShiftInput[]): Map<number, number> {
+  const seconds = new Map<number, number>();
+  const seen = new Set<string>();
+  for (const shift of shifts) {
+    if (shift.team !== team || shift.period > REGULATION_PERIODS || shift.endSec <= shift.startSec) continue;
+    const key = `${shift.playerId}:${shift.period}:${shift.startSec}:${shift.endSec}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    seconds.set(shift.playerId, (seconds.get(shift.playerId) ?? 0) + shift.endSec - shift.startSec);
+  }
+  return seconds;
+}
+
 export interface Unit {
   playerIds: number[];
   seconds: number;

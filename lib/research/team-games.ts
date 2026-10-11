@@ -5,7 +5,14 @@ import {
   type NhlBoxscoreTeamStats,
   type NhlTeamAbbrev,
 } from "@/lib/nhl/client";
-import { analyzeGameLines, parseClock, type GameLines, type PositionGroup, type Situation } from "./lines";
+import {
+  analyzeGameLines,
+  parseClock,
+  regulationSeconds,
+  type GameLines,
+  type PositionGroup,
+  type Situation,
+} from "./lines";
 
 // Regular season and playoffs; preseason deployment isn't representative.
 const RESEARCH_GAME_TYPES = new Set([2, 3]);
@@ -26,6 +33,14 @@ export interface ResearchGame {
   score: { for: number; against: number } | null;
   /** Total TOI from the boxscore, seconds, for every skater who dressed. */
   toi: Map<number, number>;
+  /** How the game went past regulation; a shootout counts because it includes a real 5-minute OT period. Null for a regulation finish. */
+  overtime: "OT" | "SO" | null;
+  /**
+   * Per-skater seconds in periods 1-3. The same Map instance as `toi` for a regulation finish;
+   * null (unknown) for an OT/SO game with no shift data. PP/SH still come from whole-game `lines`,
+   * including OT (deliberate).
+   */
+  regulationToi: Map<number, number> | null;
   /** Null when the league hasn't published shift charts for the game yet. */
   lines: GameLines | null;
 }
@@ -77,6 +92,10 @@ async function loadGame(
       : [{ playerId: s.playerId, team: s.teamAbbrev, period: s.period, startSec, endSec }];
   });
 
+  const outcome = box.gameOutcome?.lastPeriodType;
+  const overtime = outcome === "OT" || outcome === "SO" ? outcome : null;
+  const regulationToi = !overtime ? toi : shiftInputs.length > 0 ? regulationSeconds(team, shiftInputs) : null;
+
   const us = home ? box.homeTeam : box.awayTeam;
   const them = home ? box.awayTeam : box.homeTeam;
   const game: ResearchGame = {
@@ -86,6 +105,8 @@ async function loadGame(
     home,
     score: us.score !== undefined && them.score !== undefined ? { for: us.score, against: them.score } : null,
     toi,
+    overtime,
+    regulationToi,
     lines: shiftInputs.length > 0 ? analyzeGameLines(team, shiftInputs, positions) : null,
   };
   return { game, players: gamePlayers };
