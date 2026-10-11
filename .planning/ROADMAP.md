@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A player below the minimum games played in the window shows no trend, with the games-played count visible, and games the player missed are left out of averages and trends instead of being counted as 0
   5. User can sort the table by trend, average TOI, or PP share; the sort is in the URL, survives reload, and keeps the F/D grouping
 
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans executed
 
 Plans:
 **Wave 1**
@@ -53,7 +53,7 @@ Plans:
 - [x] 01-06-PLAN.md — WR-03: per-game failure isolation (failed boxscore left out and named, failed shift chart = no PP/SH data), friendly error instead of the raw API error
 
 **Wave 7** *(gap closure, blocked on Wave 6 completion)*
-- [ ] 01-07-PLAN.md — WR-01: popover under the hovered square; WR-04: toiDelta/ppShare docs and PP share title match the code, 2-game Δ explanation
+- [x] 01-07-PLAN.md — WR-01: popover under the hovered square; WR-04: toiDelta/ppShare docs and PP share title match the code, 2-game Δ explanation
 
 **UI hint**: yes
 
@@ -98,6 +98,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Ice-Time Trends Table | 6/7 | In Progress | - |
+| 1. Ice-Time Trends Table | 7/7 | In Progress | - |
 | 2. Player Linemate Detail | 0/TBD | Not started | - |
 | 3. Unit Event Stats | 0/TBD | Not started | - |

@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ice-Time Trends Table
-status: executing
-stopped_at: Completed 01-06-PLAN.md
-last_updated: "2026-10-11T23:00:14.533Z"
+status: verifying
+stopped_at: Completed 01-07-PLAN.md
+last_updated: "2026-10-11T23:03:29.090Z"
 last_activity: 2026-10-11
 last_activity_desc: Phase 01 execution started
-state_head: 1c339bbb4203465f9444211d114bc55a1f9db79c
+state_head: 5e21e1180515c0b3ae525545b951653b0ea469f2
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-11)
 
 Phase: 01 (Ice-Time Trends Table) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-11 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P04 | 4 min | 2 tasks | 5 files |
 | Phase 01 P05 | 2 min | 2 tasks | 6 files |
 | Phase 01 P06 | 3 min | 2 tasks | 5 files |
+| Phase 01 P07 | 3 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-05: WR-02 fixed by one uncached re-request only when the cached shift chart is empty; a short revalidate on every chart rejected (extra NHL load, DATA-01 429 risk)
 - [Phase 01]: 01-06: failed boxscore leaves the game out of the window and names its date (never all-DNP or zeros); failed shift chart behaves like an unpublished one — TRND-04: unknown data must not become DNP badges or zeros; no backfill or retry (DATA-01, Phase 3)
 - [Phase 01]: 01-06: research page load-error banner shows fixed copy; error detail goes to server log only — T-01-11: no API path or status in markup
+- [Phase 01]: 01-07: strip popover is right-aligned to the hovered square (absolute right-0 top-full, square is relative) so the newest squares never clip at the table's right edge; still CSS only
+- [Phase 01]: 01-07: at exactly 2 games the Δ columns stay visible as dashes and the legend says why (WR-04); PP share title and toiDelta/ppShare docs now describe the computation, no value changed
 
 ### Pending Todos
 
@@ -106,6 +109,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-11T23:00:14.513Z
-Stopped at: Completed 01-06-PLAN.md
+Last session: 2026-10-11T23:03:29.069Z
+Stopped at: Completed 01-07-PLAN.md
 Resume file: None
