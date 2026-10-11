@@ -342,7 +342,7 @@ test("the sortable headers carry their hover titles", () => {
   const html = render(research(threeGames())).replaceAll("&#x27;", "'");
   assert.ok(headerCell(html, "Avg TOI").includes('title="Average regulation ice time per game played"'));
   assert.ok(headerCell(html, "TOI Δ").includes(`title="Average of the team's last 2 games minus the player's earlier games in the window"`));
-  assert.ok(headerCell(html, "PP share").includes(`title="Player's share of the team's power-play time over the window"`));
+  assert.ok(headerCell(html, "PP share").includes(`title="Player's share of the team's power-play time in the games he played"`));
   assert.ok(headerCell(html, "PP share Δ").includes('title="Same comparison, in percentage points"'));
 });
 
@@ -379,4 +379,33 @@ test("the strip cell is not positioned", () => {
   const stripTds = [...html.matchAll(/<td class="([^"]*)"><div role="group"/g)].map((m) => m[1].split(/\s+/));
   assert.equal(stripTds.length, 3);
   for (const tokens of stripTds) assert.ok(!tokens.includes("relative"), tokens.join(" "));
+});
+
+// WR-04: at exactly 2 games every Δ is "—"; the legend says why.
+const twoGames = () => threeGames().slice(0, 2);
+const twoGameLegend = "Δ needs 3 or more games, and this window has only 2, so every Δ shows —. ▲ ▼ show the direction of the whole-window trend.";
+
+test("a 2-game window keeps the Δ columns, shows a dash in every Δ cell and explains why", () => {
+  const html = render(research(twoGames())).replaceAll("&#x27;", "'");
+  const h = headers(html);
+  assert.ok(h.includes("TOI Δ") && h.includes("PP share Δ"));
+  for (const name of ["Alpha Forward", "Bravo Forward", "Charlie Defense"]) {
+    const t = tds(rowHtml(html, name));
+    assert.ok(t[3].includes("—") && t[5].includes("—"), name);
+  }
+  assert.ok(html.includes(twoGameLegend));
+  assert.ok(!html.includes("needs 3 or more games played"));
+});
+
+test("a 3-game window keeps the standard legend and not the 2-game explanation", () => {
+  const html = render(research(threeGames())).replaceAll("&#x27;", "'");
+  assert.ok(html.includes("needs 3 or more games played"));
+  assert.ok(html.includes("can disagree with Δ."));
+  assert.ok(!html.includes("this window has only 2"));
+});
+
+test("a 1-game window keeps its note and not the 2-game explanation", () => {
+  const html = render(research([fixtureGame("2026-10-01", { 1: 1200 })]));
+  assert.ok(html.includes("Deltas and trends need 2 or more games."));
+  assert.ok(!html.includes("this window has only 2"));
 });
