@@ -15,18 +15,28 @@ export interface ShiftInput {
 export const REGULATION_PERIODS = 3;
 
 /**
+ * Drops verbatim-repeated shift rows, keeping the first occurrence in input order. The NHL feed
+ * sometimes repeats a row (e.g. game 2026020075 has 3), so a repeat is the same shift. Only exact
+ * (team, playerId, period, startSec, endSec) repeats collapse; overlapping rows that differ are left alone.
+ */
+export function uniqueShifts(shifts: readonly ShiftInput[]): ShiftInput[] {
+  const seen = new Set<string>();
+  return shifts.filter((s) => {
+    const key = `${s.team}:${s.playerId}:${s.period}:${s.startSec}:${s.endSec}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
  * Seconds each of `team`'s players was on ice in periods 1-3.
- * Equals boxscore TOI minus OT for a complete shift chart. The NHL feed sometimes repeats a
- * shift row verbatim (e.g. 2026020075), so identical rows count once.
+ * Equals boxscore TOI minus OT for a complete shift chart. Identical rows are dropped by `uniqueShifts`.
  */
 export function regulationSeconds(team: string, shifts: ShiftInput[]): Map<number, number> {
   const seconds = new Map<number, number>();
-  const seen = new Set<string>();
-  for (const shift of shifts) {
+  for (const shift of uniqueShifts(shifts)) {
     if (shift.team !== team || shift.period > REGULATION_PERIODS || shift.endSec <= shift.startSec) continue;
-    const key = `${shift.playerId}:${shift.period}:${shift.startSec}:${shift.endSec}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
     seconds.set(shift.playerId, (seconds.get(shift.playerId) ?? 0) + shift.endSec - shift.startSec);
   }
   return seconds;
@@ -68,6 +78,10 @@ interface OnIce {
   goalie: boolean;
 }
 
+/**
+ * Repeated shift rows are counted once (see `uniqueShifts`), so a duplicate can neither inflate the
+ * on-ice skater count (which decides EV/PP/SH) nor double-count a player's seconds.
+ */
 export function analyzeGameLines(
   team: string,
   shifts: ShiftInput[],
@@ -75,7 +89,7 @@ export function analyzeGameLines(
 ): GameLines {
   // Bucket every on-ice second, per team.
   const seconds = new Map<number, Map<string, OnIce>>();
-  for (const shift of shifts) {
+  for (const shift of uniqueShifts(shifts)) {
     const pos = positions.get(shift.playerId);
     if (!pos || shift.endSec <= shift.startSec) continue;
     const offset = (shift.period - 1) * PERIOD_SECONDS;
