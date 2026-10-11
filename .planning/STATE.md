@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 1
 current_phase_name: Ice-Time Trends Table
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-10-11T20:06:24.581Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-10-11T20:11:01.523Z"
 last_activity: 2026-10-11
 last_activity_desc: Phase 1 execution started
-state_head: dbad487fe5b71f79b0f8da1e10c4a38c0827defe
+state_head: 73d331344f2a5e0525f089745ad9aeef0bad32c5
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-11)
 ## Current Position
 
 Phase: 1 (Ice-Time Trends Table) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-10-11 — Phase 1 execution started
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 |------|----------|-------|-------|
 | Phase 1 P01 | 11 min | 3 tasks | 10 files |
 | Phase 01 P02 | 4 min | 2 tasks | 5 files |
+| Phase 01 P03 | 4 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 1]: regulationSeconds counts verbatim-duplicate NHL shift rows once — Feed repeats rows (22 vs 19 boxscore shifts in game 2026020075); plain sum over-counted regulation TOI
 - [Phase 1]: Unknown regulation TOI (OT/SO game with no shift chart) is null and excluded from Avg TOI, never 0 — TRND-04: unknown values must not pull down averages
 - [Phase 01]: 01-02: strip popover is a hidden wrapper span with an inner grid span; cell and aria-label share one GameDetail model so they cannot drift
+- [Phase 01]: Mover thresholds 120 s TOI / 15 PP-share points (D-18) exported as TOI_MOVER_SECONDS and PP_MOVER_POINTS; deltaCrossing compares the displayed (rounded) magnitude
+- [Phase 01]: Recent part of a delta is the team's last 2 games by index regardless of whether the player played both; mixed-sign movers are not tinted (D-19)
 
 ### Pending Todos
 
@@ -94,6 +97,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-11T20:06:24.561Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-10-11T20:11:01.504Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
