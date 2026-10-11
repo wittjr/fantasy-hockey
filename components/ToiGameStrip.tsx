@@ -1,4 +1,4 @@
-import { stripCellState, stripOpacity, type StripGame } from "@/lib/research/game-strip";
+import { detailText, gameDetail, stripCellState, stripOpacity, type StripGame } from "@/lib/research/game-strip";
 import type { TrendRow } from "@/lib/research/toi-trends";
 
 /** One shaded square per team game, oldest left. Dashed = did not play (grey) or OT with no shift data (sky); sky ring = OT/SO. */
@@ -16,18 +16,55 @@ export function ToiGameStrip({ row, games }: { row: TrendRow; games: readonly St
               : state === "excluded"
                 ? " border border-dashed border-sky-500"
                 : "";
+          const detail = gameDetail(cell, game);
           return (
-            <span key={game.id} data-state={state} className={`block h-4 w-3 rounded-sm${ring}${outline}`}>
+            <span
+              key={game.id}
+              data-state={state}
+              tabIndex={0}
+              role="img"
+              aria-label={detailText(detail)}
+              className={`group/cell block h-4 w-3 rounded-sm outline-offset-2 hover:outline hover:outline-1 hover:outline-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-900 dark:focus-visible:outline-neutral-100${ring}${outline}`}
+            >
               {state === "played" && cell?.toi != null && row.avgToi !== null && (
                 <span
                   className="block h-full w-full rounded-sm bg-neutral-800 dark:bg-neutral-200"
                   style={{ opacity: stripOpacity(cell.toi, row.avgToi) }}
                 />
               )}
+              <span
+                aria-hidden="true"
+                className="absolute left-0 top-full z-10 mt-1 hidden w-max max-w-xs rounded-md border border-neutral-200 bg-white p-2 text-xs text-neutral-900 shadow-md group-hover/cell:block group-focus/cell:block dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
+              >
+                <span className="grid grid-cols-[auto_auto] gap-x-3">
+                  <span className="col-span-2 font-medium">
+                    {detail.title}
+                    {detail.periodTag && <span className="ml-1 rounded border border-sky-500 px-1">{detail.periodTag}</span>}
+                  </span>
+                  {detail.rows.map((r) => (
+                    <PopoverRow key={r.label} label={r.label} value={r.value} muted={r.muted} />
+                  ))}
+                  {detail.notes.map((n) => (
+                    <span key={n} className="col-span-2 text-neutral-600 dark:text-neutral-400">
+                      {n}
+                    </span>
+                  ))}
+                </span>
+              </span>
             </span>
           );
         })}
       </div>
     </td>
+  );
+}
+
+function PopoverRow({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  const tone = muted ? "text-neutral-500" : "text-neutral-600 dark:text-neutral-400";
+  return (
+    <>
+      <span className={tone}>{label}</span>
+      <span className={`text-right tabular-nums ${muted ? "text-neutral-500" : ""}`}>{value}</span>
+    </>
   );
 }

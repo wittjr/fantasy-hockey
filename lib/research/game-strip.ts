@@ -1,3 +1,4 @@
+import { formatClock, formatDate, gameLabel, resultLabel } from "./format";
 import type { ResearchGame } from "./team-games";
 import type { PerGameCell } from "./toi-trends";
 
@@ -19,3 +20,45 @@ export function stripCellState(cell: PerGameCell | null): StripCellState {
 }
 
 export type StripGame = Pick<ResearchGame, "id" | "date" | "home" | "opponent" | "score" | "overtime">;
+
+export interface GameDetail {
+  title: string;
+  periodTag: "OT" | "SO" | null;
+  rows: { label: string; value: string; muted?: boolean }[];
+  notes: string[];
+}
+
+/** The facts shown for one strip cell. Unknown values are dashes and a missed game has no numbers, never 0:00. */
+export function gameDetail(cell: PerGameCell | null, game: StripGame): GameDetail {
+  const result = resultLabel(game);
+  const title = `${formatDate(game.date)} ${gameLabel(game)}${result ? ` · ${result}` : ""}`;
+  const detail: GameDetail = { title, periodTag: game.overtime, rows: [], notes: [] };
+  if (cell === null) {
+    detail.notes.push("Did not play");
+    return detail;
+  }
+  if (cell.toi !== null) {
+    detail.rows.push({ label: "TOI", value: formatClock(cell.toi) });
+    if (game.overtime) {
+      detail.rows.push({ label: "OT excluded", value: `+${formatClock(cell.totalToi - cell.toi)}`, muted: true });
+    }
+  } else {
+    detail.rows.push({ label: "TOI", value: "—" }, { label: "Total (incl. OT)", value: formatClock(cell.totalToi) });
+    detail.notes.push("Excluded from averages: no shift data for overtime");
+  }
+  if (cell.pp === null || cell.sh === null) {
+    detail.rows.push({ label: "PP", value: "—" }, { label: "SH", value: "—" });
+    detail.notes.push("No PP/SH data (shift chart not published)");
+  } else {
+    const share = cell.ppShare !== null ? ` (${Math.round(cell.ppShare)}% of team PP)` : "";
+    detail.rows.push({ label: "PP", value: `${formatClock(cell.pp)}${share}` }, { label: "SH", value: formatClock(cell.sh) });
+  }
+  return detail;
+}
+
+/** One line for the cell's aria-label. */
+export function detailText(detail: GameDetail): string {
+  return [detail.title, detail.periodTag, ...detail.rows.map((r) => `${r.label} ${r.value}`), ...detail.notes]
+    .filter(Boolean)
+    .join(" · ");
+}
