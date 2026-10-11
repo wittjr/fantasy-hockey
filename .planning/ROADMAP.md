@@ -31,11 +31,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A player below the minimum games played in the window shows no trend, with the games-played count visible, and games the player missed are left out of averages and trends instead of being counted as 0
   5. User can sort the table by trend, average TOI, or PP share; the sort is in the URL, survives reload, and keeps the F/D grouping
 
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 01-01-PLAN.md — Tracer: regulation-TOI trends table (OT/SO via boxscore gameOutcome, loader regulationToi, tested buildTrendRows, components/ToiTrends.tsx; per-game grid removed)
+- [x] 01-01-PLAN.md — Tracer: regulation-TOI trends table (OT/SO via boxscore gameOutcome, loader regulationToi, tested buildTrendRows, components/ToiTrends.tsx; per-game grid removed)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-02-PLAN.md — Per-game strip with OT/missed/excluded states and CSS-only hover/focus popover of exact TOI/PP/SH
@@ -89,6 +89,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Ice-Time Trends Table | 0/4 | Planned | - |
+| 1. Ice-Time Trends Table | 1/4 | In Progress | - |
 | 2. Player Linemate Detail | 0/TBD | Not started | - |
 | 3. Unit Event Stats | 0/TBD | Not started | - |

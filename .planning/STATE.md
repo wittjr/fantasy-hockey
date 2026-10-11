@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 1
 current_phase_name: Ice-Time Trends Table
 status: executing
-stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-10-11T19:18:50.554Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-10-11T20:01:35.530Z"
 last_activity: 2026-10-11
-last_activity_desc: Roadmap created (3 phases, 16/16 v1 requirements mapped)
-state_head: 8b1375b094a9d02eb6e458a1af4af2cd94c5d875
+last_activity_desc: Phase 1 execution started
+state_head: c524e1d2adef05327b18b59c64b0cf148e9e1590
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-11)
 
 **Core value:** At a glance, show which players on a team are moving up or down in deployment, so pickup/drop decisions can be made before the rest of the league notices.
-**Current focus:** Phase 1 - Ice-Time Trends Table
+**Current focus:** Phase 1 — Ice-Time Trends Table
 
 ## Current Position
 
-Phase: 1 (Ice-Time Trends Table) — READY TO EXECUTE
-Plan: 0 of TBD in current phase
+Phase: 1 (Ice-Time Trends Table) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-10-11 — Roadmap created (3 phases, 16/16 v1 requirements mapped)
+Last activity: 2026-10-11 — Phase 1 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 1 P01 | 11 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -64,6 +69,8 @@ Recent decisions affecting current work:
 - [Roadmap]: UNIT-04 (unit-table name opens player detail) ships with Phase 2, where player detail is built
 - [Roadmap]: DATA-02 mapped to Phase 3 (only fully verifiable once event stats exist); Phase 2 still handles missing shift charts as unknown for linemate time
 - [Roadmap]: Phase 3 event columns are gated on fixture tests reproducing boxscore SOG and per-skater plus-minus
+- [Phase 1]: regulationSeconds counts verbatim-duplicate NHL shift rows once — Feed repeats rows (22 vs 19 boxscore shifts in game 2026020075); plain sum over-counted regulation TOI
+- [Phase 1]: Unknown regulation TOI (OT/SO game with no shift chart) is null and excluded from Avg TOI, never 0 — TRND-04: unknown values must not pull down averages
 
 ### Pending Todos
 
@@ -85,6 +92,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-11T17:32:16.203Z
-Stopped at: Phase 1 UI-SPEC approved
-Resume file: .planning/phases/01-ice-time-trends-table/01-UI-SPEC.md
+Last session: 2026-10-11T20:01:35.511Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None

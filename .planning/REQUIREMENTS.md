@@ -15,7 +15,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Trends
 
-- [ ] **TRND-01**: User can scan the ice-time section as a trends table: average TOI, PP share, SH time, trend arrow and sparkline are the primary columns; the per-game numeric grid is removed
+- [x] **TRND-01**: User can scan the ice-time section as a trends table: average TOI, PP share, SH time, trend arrow and sparkline are the primary columns; the per-game numeric grid is removed
 - [ ] **TRND-02**: User can still see exact per-game TOI/PP/SH values for a player (tooltip or player detail)
 - [ ] **TRND-03**: User can see a recent-vs-window delta (recent games vs window average) for TOI and PP share
 - [ ] **TRND-04**: User does not see a trend for players below a minimum number of games played; missed games are not treated as 0; OT games are flagged
@@ -76,7 +76,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-01 | Phase 3 | Pending |
 | DATA-02 | Phase 3 | Pending |
 | DATA-03 | Phase 3 | Pending |
-| TRND-01 | Phase 1 | Pending |
+| TRND-01 | Phase 1 | Complete |
 | TRND-02 | Phase 1 | Pending |
 | TRND-03 | Phase 1 | Pending |
 | TRND-04 | Phase 1 | Pending |
