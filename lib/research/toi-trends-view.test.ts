@@ -45,7 +45,7 @@ const headers = (html: string) =>
 
 test("renders headers in order, forwards before defense, no goalies", () => {
   const html = render(research(threeGames()));
-  assert.deepEqual(headers(html), ["Player", "Pos", "Avg TOI", "PP share", "SH", "TOI trend"]);
+  assert.deepEqual(headers(html), ["Player", "Pos", "Avg TOI", "PP share", "SH", "Per game", "TOI trend"]);
   assert.ok(html.includes("Ice-time trends"));
   assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Charlie Defense"));
   assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Bravo Forward"));
@@ -85,4 +85,49 @@ test("a window with games but no skaters shows the empty message and no table", 
 test("a one-game window has no TOI trend column", () => {
   const html = render(research([fixtureGame("2026-10-01", { 1: 1200, 3: 1300 })]));
   assert.ok(!headers(html).includes("TOI trend"));
+});
+
+// Game 1 regulation (player 2 missed it), game 2 OT with shift data, game 3 OT with no shift data.
+const stripGames = (): ResearchGame[] => {
+  const g1 = fixtureGame("2026-10-01", { 1: 1200, 3: 1300 });
+  const g2 = {
+    ...fixtureGame("2026-10-03", { 1: 1300, 2: 1000, 3: 1400 }),
+    overtime: "OT" as const,
+    regulationToi: new Map([[1, 1250], [2, 950], [3, 1350]]),
+  };
+  const g3 = { ...fixtureGame("2026-10-05", { 1: 1500, 2: 1100, 3: 1500 }, false), overtime: "OT" as const, regulationToi: null };
+  return [g1, g2, g3];
+};
+const rowHtml = (html: string, name: string) =>
+  [...html.matchAll(/<tr[^>]*>.*?<\/tr>/gs)].map((m) => m[0]).find((r) => r.includes(name)) ?? "";
+const cells = (row: string) => [...row.matchAll(/<span[^>]*data-state="([^"]*)"[^>]*>/g)].map((m) => ({ tag: m[0], state: m[1] }));
+
+test("every row has one strip cell per team game, oldest first, with played / dnp / excluded states", () => {
+  const html = render(research(stripGames()));
+  assert.deepEqual(cells(rowHtml(html, "Alpha Forward")).map((c) => c.state), ["played", "played", "excluded"]);
+  assert.deepEqual(cells(rowHtml(html, "Bravo Forward")).map((c) => c.state), ["dnp", "played", "excluded"]);
+  assert.equal(cells(rowHtml(html, "Charlie Defense")).length, 3);
+});
+
+test("a played OT game is ringed in sky; a regulation game is not", () => {
+  const alpha = cells(rowHtml(render(research(stripGames())), "Alpha Forward"));
+  assert.ok(!alpha[0].tag.includes("ring-sky-500"));
+  assert.ok(alpha[1].tag.includes("ring-sky-500"));
+});
+
+test("the sparkline marks a played OT game with a hollow sky dot", () => {
+  const html = render(research(stripGames()));
+  assert.ok(rowHtml(html, "Alpha Forward").includes("stroke-sky-500"));
+  assert.ok(!render(research(threeGames())).includes("stroke-sky-500"));
+});
+
+test("a one-game window still shows the Per game column with one cell per row", () => {
+  const html = render(research([fixtureGame("2026-10-01", { 1: 1200, 3: 1300 })]));
+  assert.ok(headers(html).includes("Per game"));
+  assert.equal(cells(rowHtml(html, "Alpha Forward")).length, 1);
+  assert.equal(cells(rowHtml(html, "Charlie Defense")).length, 1);
+});
+
+test("the legend explains the strip", () => {
+  assert.ok(render(research(threeGames())).includes("Squares are team games, oldest to newest."));
 });
