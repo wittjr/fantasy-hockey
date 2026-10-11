@@ -73,13 +73,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmapper) | | |
+| DATA-01 | Phase 3 | Pending |
+| DATA-02 | Phase 3 | Pending |
+| DATA-03 | Phase 3 | Pending |
+| TRND-01 | Phase 1 | Pending |
+| TRND-02 | Phase 1 | Pending |
+| TRND-03 | Phase 1 | Pending |
+| TRND-04 | Phase 1 | Pending |
+| TRND-05 | Phase 1 | Pending |
+| PLYR-01 | Phase 2 | Pending |
+| PLYR-02 | Phase 2 | Pending |
+| PLYR-03 | Phase 2 | Pending |
+| PLYR-04 | Phase 2 | Pending |
+| UNIT-01 | Phase 3 | Pending |
+| UNIT-02 | Phase 3 | Pending |
+| UNIT-03 | Phase 3 | Pending |
+| UNIT-04 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-10-11*
-*Last updated: 2026-10-11 after initial definition*
+*Last updated: 2026-10-11 after roadmap creation*
