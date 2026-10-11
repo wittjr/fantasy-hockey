@@ -70,7 +70,14 @@ async function loadGame(
   team: string,
   gameId: number,
 ): Promise<{ game: ResearchGame; players: Map<number, ResearchPlayer> }> {
-  const [box, shifts] = await Promise.all([getBoxscore(gameId), getShiftCharts(gameId)]);
+  // A failed shift chart behaves like an unpublished one: boxscore TOI only, no PP/SH.
+  const [box, shifts] = await Promise.all([
+    getBoxscore(gameId),
+    getShiftCharts(gameId).catch((err: unknown) => {
+      console.error(`Loading shift chart for game ${gameId} (${team}) failed`, err);
+      return [];
+    }),
+  ]);
   const home = box.homeTeam.abbrev === team;
   const mine = home ? box.playerByGameStats.homeTeam : box.playerByGameStats.awayTeam;
   const theirs = home ? box.playerByGameStats.awayTeam : box.playerByGameStats.homeTeam;

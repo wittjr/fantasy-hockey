@@ -35,12 +35,14 @@ export default async function ResearchPage({
   const sort = parseSort(sortParam, dirParam);
 
   let research: TeamResearch | null = null;
-  let error: string | null = null;
+  let loadFailed = false;
   if (team) {
     try {
       research = await loadTeamResearch(team, gameCount);
     } catch (e) {
-      error = e instanceof Error ? e.message : String(e);
+      // The detail (API path, status) stays in the server log; the page shows fixed copy.
+      console.error(`Loading research for ${team} failed`, e);
+      loadFailed = true;
     }
   }
 
@@ -87,9 +89,9 @@ export default async function ResearchPage({
 
       {!team ? (
         <p className="text-neutral-500">Pick a team to see its latest line combinations and ice-time trends.</p>
-      ) : error ? (
+      ) : loadFailed ? (
         <p className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
-          Couldn&apos;t load NHL data for {team}: {error}
+          Couldn&apos;t load NHL data for {team} right now. Try again in a minute.
         </p>
       ) : !research || research.games.length === 0 ? (
         <p className="text-neutral-500">{team} hasn&apos;t finished a regular-season game yet this season.</p>
