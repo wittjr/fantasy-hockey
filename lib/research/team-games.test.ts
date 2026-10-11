@@ -99,3 +99,30 @@ test("a team with no finished games loads empty without throwing", async (t) => 
   assert.deepEqual(research.games, []);
   assert.deepEqual(research.unavailableDates, []);
 });
+
+test("a failed shift chart keeps the game with boxscore TOI and no line data", async (t) => {
+  stubNhl(t, { shiftChartFails: [3] });
+  const research = await loadTeamResearch("MTL", 5);
+  assert.deepEqual(research.unavailableDates, []);
+  const [first, , third] = research.games;
+  assert.notEqual(first.lines, null);
+  assert.equal(third.lines, null);
+  assert.equal(third.regulationToi, third.toi);
+  assert.equal(third.toi.get(8), 900);
+});
+
+test("an OT game with a failed shift chart is kept but has unknown regulation TOI", async (t) => {
+  stubNhl(t, { shiftChartFails: [3], lastPeriod: { 3: "OT" } });
+  const research = await loadTeamResearch("MTL", 5);
+  const third = research.games[2];
+  assert.equal(third.overtime, "OT");
+  assert.equal(third.lines, null);
+  assert.equal(third.regulationToi, null);
+});
+
+test("a failed shift chart is logged server-side with its game id", async (t) => {
+  const errorLog = stubNhl(t, { shiftChartFails: [3] });
+  const research = await loadTeamResearch("MTL", 5);
+  assert.equal(research.games.length, 3);
+  assert.ok(mentions(errorLog.mock.calls, "game 3"));
+});
