@@ -19,7 +19,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **TRND-02**: User can still see exact per-game TOI/PP/SH values for a player (tooltip or player detail)
 - [x] **TRND-03**: User can see a recent-vs-window delta (recent games vs window average) for TOI and PP share
 - [x] **TRND-04**: User does not see a trend for players below a minimum number of games played; missed games are not treated as 0; OT games are flagged
-- [ ] **TRND-05**: User can sort the trends table by trend, average TOI, or PP share, with the sort preserved in the URL and F/D grouping kept
+- [x] **TRND-05**: User can sort the trends table by trend, average TOI, or PP share, with the sort preserved in the URL and F/D grouping kept
 
 ### Player Detail
 
@@ -80,7 +80,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRND-02 | Phase 1 | Complete |
 | TRND-03 | Phase 1 | Complete |
 | TRND-04 | Phase 1 | Complete |
-| TRND-05 | Phase 1 | Pending |
+| TRND-05 | Phase 1 | Complete |
 | PLYR-01 | Phase 2 | Pending |
 | PLYR-02 | Phase 2 | Pending |
 | PLYR-03 | Phase 2 | Pending |
