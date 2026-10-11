@@ -4,6 +4,7 @@ import {
   buildTrendRows,
   DEFAULT_SORT,
   deltaCrossing,
+  effectiveSort,
   moverDirection,
   nextSort,
   parseSort,
@@ -424,4 +425,15 @@ test("buildTrendRows orders by the default sort: forwards then defense, Avg TOI 
     [game({ 1: 800, 2: 1500, 3: 1100 })],
   );
   assert.deepEqual(ids(rows), [3, 1, 2]);
+});
+
+test("effectiveSort falls back to the default for a delta sort in a 1-game window", () => {
+  assert.deepEqual(effectiveSort({ key: "toiDelta", dir: "asc" }, 1), DEFAULT_SORT);
+  assert.deepEqual(effectiveSort({ key: "ppDelta", dir: "desc" }, 1), DEFAULT_SORT);
+});
+
+test("effectiveSort leaves other sorts and larger windows unchanged", () => {
+  assert.deepEqual(effectiveSort({ key: "ppShare", dir: "asc" }, 1), { key: "ppShare", dir: "asc" });
+  assert.deepEqual(effectiveSort({ key: "avgToi", dir: "asc" }, 1), { key: "avgToi", dir: "asc" });
+  assert.deepEqual(effectiveSort({ key: "toiDelta", dir: "asc" }, 5), { key: "toiDelta", dir: "asc" });
 });

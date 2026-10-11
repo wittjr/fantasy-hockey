@@ -326,3 +326,31 @@ test("rows follow the chosen sort within the forwards and defense blocks", () =>
   const asc = render(research(moverGames({ 1: [1000, 1000, 1000, 1000, 1000], 2: [1000, 1000, 1000, 1200, 1200] })), { key: "toiDelta", dir: "asc" });
   assert.ok(asc.indexOf("Alpha Forward") < asc.indexOf("Bravo Forward"));
 });
+
+test("a delta sort in a 1-game window orders by Avg TOI and marks Avg TOI active", () => {
+  const one = research([fixtureGame("2026-10-01", { 1: 900, 2: 1200, 3: 1300 })]);
+  const html = render(one, { key: "toiDelta", dir: "asc" });
+  const avg = headerCell(html, "Avg TOI");
+  assert.ok(avg.includes('aria-sort="descending"'), avg);
+  assert.equal((html.match(/aria-sort=/g) ?? []).length, 1);
+  assert.ok(html.indexOf("Bravo Forward") < html.indexOf("Alpha Forward"));
+  assert.ok(headerCell(html, "PP share").includes("<a"));
+  assert.equal([...html.matchAll(/<th[^>]*>[\s\S]*?<\/th>/g)].filter((m) => m[0].includes("<a")).length, 2);
+});
+
+test("the sortable headers carry their hover titles", () => {
+  const html = render(research(threeGames())).replaceAll("&#x27;", "'");
+  assert.ok(headerCell(html, "Avg TOI").includes('title="Average regulation ice time per game played"'));
+  assert.ok(headerCell(html, "TOI Δ").includes(`title="Average of the team's last 2 games minus the player's earlier games in the window"`));
+  assert.ok(headerCell(html, "PP share").includes(`title="Player's share of the team's power-play time over the window"`));
+  assert.ok(headerCell(html, "PP share Δ").includes('title="Same comparison, in percentage points"'));
+});
+
+test("the section intro is the approved copy", () => {
+  const html = render(research(threeGames())).replaceAll("&#x27;", "'");
+  assert.ok(
+    html.includes(
+      "Average regulation ice time per game played, and how each player's last 2 games compare with his earlier games in the window. Rows tinted green or red moved by 2:00 or more of TOI or 15 or more points of power-play share. Click Avg TOI, TOI Δ, PP share or PP share Δ to sort; hover or focus a square for exact per-game times.",
+    ),
+  );
+});
