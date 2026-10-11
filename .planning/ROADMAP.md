@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Ice-Time Trends Table
+
 **Goal**: User can scan a team's ice-time section as a trends table and immediately see which players are gaining or losing TOI and power-play time
 **Mode:** mvp
 **Depends on**: Nothing (first phase; builds on the existing `/research` page)
@@ -29,16 +30,26 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Each row shows a recent-vs-window delta for TOI and for PP share, so a player whose deployment jumped in the latest games stands out even while the window slope is still flat
   4. A player below the minimum games played in the window shows no trend, with the games-played count visible, and games the player missed are left out of averages and trends instead of being counted as 0
   5. User can sort the table by trend, average TOI, or PP share; the sort is in the URL, survives reload, and keeps the F/D grouping
+
 **Plans:** 4 plans
 
 Plans:
+**Wave 1**
 - [ ] 01-01-PLAN.md — Tracer: regulation-TOI trends table (OT/SO via boxscore gameOutcome, loader regulationToi, tested buildTrendRows, components/ToiTrends.tsx; per-game grid removed)
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-02-PLAN.md — Per-game strip with OT/missed/excluded states and CSS-only hover/focus popover of exact TOI/PP/SH
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 01-03-PLAN.md — Recent-vs-window TOI Δ / PP share Δ, muted slope arrows, mover colour/tint (±2:00 / ±15), DNP last 2, 1-game window
+
+**Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 01-04-PLAN.md — URL-persisted sorting by Avg TOI, TOI Δ, PP share, PP share Δ with F/D grouping kept
+
 **UI hint**: yes
 
 ### Phase 2: Player Linemate Detail
+
 **Goal**: User can open any player from the research page and see who that player has been on ice with, game by game and by situation, so a change in linemates is obvious
 **Mode:** mvp
 **Depends on**: Phase 1 (clickable rows in the trends table)
@@ -49,10 +60,12 @@ Plans:
   3. Each linemate's time together is also shown as a share of the player's own TOI in that situation, so a regular linemate is distinguishable from an occasional one
   4. Linemates are tagged New, Rising or Fading from time together alone (no quality scoring); a forward moved to a new line in the latest game shows the new linemates as New and the old ones as Fading
   5. Games whose shift chart is missing show as unknown ("—" or blank) in the heat strip, never 0, and do not count toward shares or tags; the existing last-game unit tables still show the same TOI and share values as before this phase
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 3: Unit Event Stats
+
 **Goal**: User can judge each last-game unit (EV, PP, SH; forwards and defense) by its shots, goals and shot attempts for and against, with counts that reconcile with the official boxscore
 **Mode:** mvp
 **Depends on**: Phase 2 (shared on-ice timeline and "unknown, not 0" handling for missing shift charts)
@@ -63,6 +76,7 @@ Plans:
   3. A legend on the page defines each stat and its exclusions (empty-net, shootout and teammate-blocked attempts), and an "other" row makes each table's unit totals add up to the team's totals for that game
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
+
 **Plans**: TBD
 **UI hint**: yes
 **Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs.
