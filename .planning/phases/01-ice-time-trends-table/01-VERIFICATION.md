@@ -1,8 +1,8 @@
 ---
 phase: 01-ice-time-trends-table
 verified: 2026-10-11T00:00:00Z
-status: gaps_found
-score: 5/6 must-haves verified
+status: human_needed
+score: 6/6 must-haves verified
 covered_files:
   - .planning/phases/01-ice-time-trends-table/01-01-PLAN.md
   - .planning/phases/01-ice-time-trends-table/01-01-SUMMARY.md
@@ -12,6 +12,12 @@ covered_files:
   - .planning/phases/01-ice-time-trends-table/01-03-SUMMARY.md
   - .planning/phases/01-ice-time-trends-table/01-04-PLAN.md
   - .planning/phases/01-ice-time-trends-table/01-04-SUMMARY.md
+  - .planning/phases/01-ice-time-trends-table/01-05-PLAN.md
+  - .planning/phases/01-ice-time-trends-table/01-05-SUMMARY.md
+  - .planning/phases/01-ice-time-trends-table/01-06-PLAN.md
+  - .planning/phases/01-ice-time-trends-table/01-06-SUMMARY.md
+  - .planning/phases/01-ice-time-trends-table/01-07-PLAN.md
+  - .planning/phases/01-ice-time-trends-table/01-07-SUMMARY.md
   - app/research/page.tsx
   - components/ToiGameStrip.tsx
   - components/ToiTrends.tsx
@@ -21,30 +27,32 @@ covered_files:
   - lib/research/lines.ts
   - lib/research/team-games.ts
   - lib/research/toi-trends.ts
-covered_digest: "v3:sha256:9faecd135b5fd2784d017f4fe403c2a39f2a21724e6313635fcdff544222dd79"
+covered_digest: "v3:sha256:7c64cfad8775a8bb46dcae3ec086b2acbbdd16d13b414c4fd3698e5e85c6b29e"
 behavior_unverified: 0
 overrides_applied: 0
-re_verification: false
-gaps:
-  - truth: "The PP share, PP share Δ, SH and mover tint the table shows are correct for games that have a shift chart"
-    status: failed
-    reason: "analyzeGameLines (lib/research/lines.ts:77-91) does not de-duplicate verbatim-repeated shift rows. regulationSeconds does, so TOI is right while PP/SH (and the team PP total that is PP share's denominator) are wrong in every affected game. Confirmed against live NHL data: game 2026020075 (MTL v DET) has 3 duplicate rows and gives team PP 549s / SH 395s raw vs 480s / 454s de-duplicated; one MTL skater shows 63s PP raw vs 1s real, another 38s vs 0s, another 455s vs 387s; 11 MTL and 12 DET skaters have wrong PP/SH. Sampling 8 teams' games also turned up duplicate rows in at least 3 other games (2026020048, 2026020067, 2026020050), so this is not rare."
-    artifacts:
-      - path: "lib/research/lines.ts"
-        issue: "analyzeGameLines pushes the same playerId into onIce.skaters once per duplicate row, inflating the skater count (mis-classifies strength EV/PP/SH) and double-counting playerSeconds"
-      - path: "lib/research/lines.test.ts"
-        issue: "de-duplication is covered only for regulationSeconds, not analyzeGameLines"
-    missing:
-      - "Skip a repeated (playerId, period, startSec, endSec) row at the top of the shift loop in analyzeGameLines (same key regulationSeconds uses), or de-duplicate once in loadGame before both consumers"
-      - "Regression test in lines.test.ts: a verbatim duplicate shift row leaves situationSeconds and playerSeconds unchanged"
-      - "Update 01-REVIEW-DISPOSITION.md CR-01 and deferred-items.md when fixed"
+re_verification:
+  previous_status: gaps_found
+  previous_score: 5/6
+  gaps_closed:
+    - "The PP share, PP share Δ, SH and mover tint the table shows are correct for games that have a shift chart (CR-01)"
+  gaps_remaining: []
+  regressions: []
+advisory:
+  - finding: "WR-05: a failed shift-chart request is worded as 'the NHL hasn't published shift charts'; for an OT/SO game the affected game drops out of Avg TOI/Δ"
+    category: other
+    reason: "Degraded-path copy is inaccurate for a transient upstream failure. Data shown is never wrong (the game is excluded or shown as no-PP/SH), and the cause is logged server-side. Does not stop a user seeing who is gaining or losing time on the normal path."
+    evidence_status: "reasoned from code (team-games.ts:73-80, ToiTrends.tsx:153-157); not exercised"
+  - finding: "WR-06: when the newest game fails to load, 'Last game' and the 'last 2 games' Δ re-anchor to the newest loaded games"
+    category: other
+    reason: "Partially disclosed: the amber banner names the missing date and says those games are left out of the window. The recency columns do not say they shifted. Needs a failed boxscore on the newest game to trigger."
+    evidence_status: "reasoned from code (team-games.ts:133-146, page.tsx:116-123); not exercised"
 human_verification:
   - test: "Signed in, open /research?team=MTL&games=5 and then games=20. Check the table reads as a trends table at a glance: columns Player, Pos (n/N GP), Avg TOI, TOI Δ, PP share, PP share Δ, SH, Per game, TOI trend; forwards block above defense block; no per-game numeric grid"
     expected: "Layout matches the UI-SPEC and reads as scannable; Last 20 scrolls horizontally rather than wrapping"
     why_human: "/research is Discord-auth-gated; only static-markup tests could be run"
-  - test: "Hover and keyboard-Tab through strip squares on the first forward row, the last forward row, the last defense row and with Last 20"
-    expected: "The popover is fully visible, not clipped by the overflow-x-auto wrapper, and appears near the hovered square"
-    why_human: "Plan 02 backstop truth. Code review WR-01: the popover is positioned against the td (the cell span has no `relative`), so every popover opens at the left edge of the strip rather than under the hovered square. The pb-28 -mb-24 clearance hack is unproven"
+  - test: "Hover and keyboard-Tab through strip squares on the first forward row, the last forward row, the last defense row and with Last 20, including an OT game with no shift chart (the largest popover)"
+    expected: "The popover opens under the hovered square, is fully visible and not clipped by the overflow-x-auto wrapper (pb-28 -mb-24 reserve, review IN-05)"
+    why_human: "WR-01 anchoring is fixed in code (relative square, right-0 top-full) but clipping and placement are CSS-layout outcomes with no browser check; plan 02 backstop truth"
   - test: "Tap a strip square on iOS Safari and Android Chrome"
     expected: "Popover shows (plan 02 backstop truth; if not, add a minimal client wrapper)"
     why_human: "Touch behaviour of a CSS-only :focus/:hover popover cannot be asserted from markup"
@@ -60,67 +68,78 @@ human_verification:
 
 **Phase Goal:** User can scan a team's ice-time section as a trends table and immediately see which players are gaining or losing TOI and power-play time
 **Verified:** 2026-10-11
-**Status:** gaps_found
-**Re-verification:** No, initial verification
+**Status:** human_needed
+**Re-verification:** Yes, after gap closure (plans 01-05, 01-06, 01-07)
 
 ## Goal Achievement
 
-The structure of the goal is delivered: a sortable trends table with deltas, arrows, strip, OT flagging and URL sort, covered by passing tests. One input to the "gaining or losing power-play time" half is wrong on real data: PP share, SH and the mover tint are computed from `analyzeGameLines`, which double-counts repeated shift rows (code-review CR-01). I reproduced this against live NHL data and it is not hypothetical, so I am treating it as a gap rather than a warning.
+The one blocking gap from the first verification (CR-01, duplicate shift rows corrupting PP/SH) is closed in code and on live NHL data. All six truths are verified, no regressions were found, and the full suite, type check and scoped lint are clean. The status is `human_needed` rather than `passed` only because the phase's visual and touch behaviours (popover placement and clipping, tap on mobile, sort interaction in a browser, OT visuals) sit behind Discord auth and have never been seen in a browser. Open review findings WR-05, WR-06 and IN-01..IN-06 do not block the goal (assessed below).
+
+### Prior Gap Closure
+
+| Prior gap / finding | Status now | Evidence |
+| ------------------- | ---------- | -------- |
+| CR-01: `analyzeGameLines` double-counts verbatim-repeated shift rows | CLOSED | `lib/research/lines.ts:22-30` exports `uniqueShifts`; both `regulationSeconds` (l.38) and `analyzeGameLines` (l.92) iterate `uniqueShifts(shifts)`. Dedupe key includes team. `lines.test.ts` adds tests for analyzeGameLines duplicate rows, a duplicated skater not turning EV into PP, `uniqueShifts` ordering and exactness, and no player's PP/SH exceeding the team's. Live check (below) |
+| Missing regression test for dedupe in `analyzeGameLines` | CLOSED | `lines.test.ts:130-171` |
+| WR-01 popover anchored to td | CLOSED in code | `ToiGameStrip.tsx`: td no longer positioned, each square `relative`, popover `absolute right-0 top-full`. Placement unproven in a browser (human item 2) |
+| WR-02 empty shift chart pinned for an hour | CLOSED | `client.ts:149-152` re-requests an empty first result with `cache: "no-store"`; tests in `client.test.ts` |
+| WR-03 one failed game blanks the page, raw error shown | CLOSED | `team-games.ts:133-150` `Promise.allSettled`, `unavailableDates`, throw only when no game loads; `page.tsx` shows fixed copy plus an amber banner naming dates; error text logged, not rendered |
+| WR-04 comment/behaviour mismatch, silent dashes at 2 games | CLOSED | 2-game legend in `ToiTrends.tsx` (MIN_GAMES_FOR_DELTA branch), PP share title corrected; view tests |
 
 ### Observable Truths
 
 | #   | Truth | Status | Evidence |
 | --- | ----- | ------ | -------- |
-| 1 | SC1: one row per player with Avg TOI, PP share, SH, trend arrow and sparkline, grouped F then D, per-game numeric grid gone (TRND-01) | VERIFIED | `components/ToiTrends.tsx` renders the columns (arrow lives after each Δ per D-20); `buildTrendRows` skips goalies and orders F before D; no per-game text columns remain; `page.tsx` renders `<ToiTrends>`; view tests "renders headers in order, forwards before defense, no goalies" pass |
-| 2 | SC2: exact per-game TOI/PP/SH readable without the grid; OT games visibly flagged (TRND-02, TRND-04 OT) | VERIFIED (visual behaviour needs human) | `ToiGameStrip.tsx` + `game-strip.ts`: aria-label and popover from one `GameDetail`; OT ring, OT/SO tag, "OT excluded +m:ss", hollow sparkline dot; tests pass. Popover placement and clipping are unproven (WR-01), see Human Verification |
-| 3 | SC3: recent-vs-window Δ for TOI and PP share on each row (TRND-03) | VERIFIED | `recentDelta`, `buildTrendRows` compute `toiDelta` / `ppShareDelta` (team-PP-weighted); `DeltaCell` renders signed values; boundary tests (3 vs 2 games, 120 s, 15 pts) pass. Δ inherits the CR-01 error for PP (see truth 6) |
-| 4 | SC4: below-minimum players show no trend with GP visible; missed games never 0; OT flagged (TRND-04) | VERIFIED | Δ gated at 3 included games, arrow at 2 (D-06), `perGame` is null for missed games, unknowns render "—"; "n/N GP" in Pos cell; 1-game window hides Δ/arrow/sparkline/tint; unit and view tests pass |
-| 5 | SC5: sort by trend (TOI Δ), Avg TOI or PP share, in the URL, F/D grouping kept (TRND-05) | VERIFIED | `parseSort` allowlist, `sortRows` (F before D, nulls last, deterministic tiebreak), `researchHref` carries sort across team/window links, `page.tsx` calls `parseSort(sortParam, dirParam)`; headers are `PendingLink` with `scroll={false}` and `aria-sort`; 1-game fallback tested. "Trend" is implemented as TOI Δ and PP share Δ per D-17 |
-| 6 | Derived from the goal: the PP share / PP share Δ / SH / tint values shown are correct for games with a shift chart | FAILED | CR-01 reproduced with live data, see gap above |
+| 1 | SC1: one row per player with Avg TOI, PP share, SH, trend arrow and sparkline, grouped F then D, per-game numeric grid gone (TRND-01) | VERIFIED | `ToiTrends.tsx` header row: Player, Pos, Avg TOI, TOI Δ, PP share, PP share Δ, SH, Per game, TOI trend; `buildTrendRows` skips goalies, F before D; `page.tsx` renders `<ToiTrends>`; no regression in `toi-trends-view.test.ts` |
+| 2 | SC2: exact per-game TOI/PP/SH readable without the grid; OT games visibly flagged (TRND-02, TRND-04 OT) | VERIFIED (visual behaviour needs human) | `ToiGameStrip.tsx`: aria-label and popover share one `gameDetail`; ring for OT/SO, dashed styles for DNP/excluded. Anchoring fix confirmed in code. Clipping/touch unproven, see Human Verification |
+| 3 | SC3: recent-vs-window Δ for TOI and PP share on each row (TRND-03) | VERIFIED | `toiDelta`/`ppShareDelta` in `toi-trends.ts` rendered as signed values; boundary tests pass. PP inputs now correct (CR-01 closed) |
+| 4 | SC4: below-minimum players show no trend with GP visible; missed games never 0; OT flagged (TRND-04) | VERIFIED | Δ gated at 3 included games, arrow at 2; null per-game for missed games; unit and view tests pass |
+| 5 | SC5: sort by trend (TOI Δ), Avg TOI or PP share, in the URL, F/D grouping kept (TRND-05) | VERIFIED | `parseSort` allowlist, `sortRows`, `researchHref`, `PendingLink` headers with `scroll={false}`; 1-game fallback tested |
+| 6 | Derived: PP share / PP share Δ / SH / tint values are correct for games with a shift chart | VERIFIED (was FAILED) | Live NHL game 2026020075 (the prior reproduction): 756 raw rows, 753 unique; `analyzeGameLines("MTL", …)` now returns team situationSeconds ev 2966 / pp 480 / sh 454, matching the prior verifier's de-duplicated figures (480 / 454, not 549 / 395), and no skater's PP or SH exceeds the team's |
 
-**Score:** 5/6 truths verified (0 present, behavior-unverified)
+**Score:** 6/6 truths verified (0 present, behavior-unverified)
 
-Prohibitions (plan 01, plan 03: unknown/missed games never 0, no Δ or tint below the minimum games) are enforced and tested, status VERIFIED. Plan 02's judgment-tier prohibition (OT never shown undisclosed) is satisfied in code (flagged in strip, popover, sparkline, legend); a human should still confirm it reads clearly (flagged, non-authoritative LLM-judge verdict).
+Prohibitions: unknown/missed games never 0 and no Δ or tint below the minimum games remain enforced and tested. Plan 02's judgment-tier prohibition (OT never shown undisclosed) is satisfied in code (strip ring, popover tag, sparkline dot, legend); a human should still confirm it reads clearly (flagged, non-authoritative LLM-judge verdict).
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | -------- | -------- | ------ | ------- |
-| `lib/research/toi-trends.ts` | row builder, Δ, movers, sort | VERIFIED | Substantive, imported by `ToiTrends` and `page.tsx`, data flows from `buildTrendRows` |
-| `components/ToiTrends.tsx` | table section | VERIFIED | Rendered by page, wired to rows |
-| `components/ToiGameStrip.tsx`, `lib/research/game-strip.ts` | strip + detail | VERIFIED | Wired; popover placement unproven |
-| `lib/research/lines.ts` | `regulationSeconds`, `analyzeGameLines` | PARTIAL | `regulationSeconds` correct; `analyzeGameLines` has the duplicate-row defect |
-| `lib/research/team-games.ts` | loader fills overtime, regulationToi | VERIFIED | Reads `gameOutcome.lastPeriodType`, regulation via shifts for OT/SO |
-| `lib/research/format.ts` | formatters incl. signed | VERIFIED | Used by table and strip |
-| `app/research/page.tsx` | sort params, auth gate kept | VERIFIED | Auth redirect unchanged, params validated |
+| `lib/research/lines.ts` | `uniqueShifts`, `regulationSeconds`, `analyzeGameLines` | VERIFIED | Dedupe shared by both consumers |
+| `lib/research/toi-trends.ts` | row builder, Δ, movers, sort | VERIFIED | Imported by `ToiTrends` and `page.tsx` |
+| `components/ToiTrends.tsx` | table section | VERIFIED | Rendered by page |
+| `components/ToiGameStrip.tsx`, `lib/research/game-strip.ts` | strip + detail | VERIFIED | Wired; placement unproven in browser |
+| `lib/research/team-games.ts` | loader with failure isolation, overtime, regulationToi | VERIFIED | `allSettled`, `unavailableDates` |
+| `lib/nhl/client.ts` | shift chart fetch with empty refetch | VERIFIED | `getShiftCharts` |
+| `lib/research/format.ts` | formatters | VERIFIED | Used by table and strip |
+| `app/research/page.tsx` | sort params, auth gate, error copy | VERIFIED | Auth gate unchanged |
 
 ### Key Link Verification
 
 | From | To | Via | Status |
 | ---- | -- | --- | ------ |
-| team-games.ts | lines.ts | `regulationSeconds(team, shiftInputs)` | WIRED |
-| team-games.ts | client.ts | `box.gameOutcome?.lastPeriodType` | WIRED |
-| ToiTrends | toi-trends.ts | `buildTrendRows`, `sortRows`, `deltaCrossing` | WIRED |
+| team-games.ts | lines.ts | `regulationSeconds`, `analyzeGameLines` over the same shift inputs | WIRED |
+| lines.ts | lines.ts | `uniqueShifts` used by both consumers | WIRED |
+| team-games.ts | client.ts | `getShiftCharts` with per-game `.catch`, `box.gameOutcome` | WIRED |
+| ToiTrends | toi-trends.ts | `buildTrendRows`, `sortRows`, `effectiveSort` | WIRED |
 | ToiTrends | ToiGameStrip | per-row `<ToiGameStrip>` | WIRED |
-| page.tsx | toi-trends.ts | `parseSort`, `researchHref` | WIRED |
-| ToiTrends | PendingLink | `SortHeader` with `scroll={false}` | WIRED |
+| page.tsx | team-games.ts | `unavailableDates` banner, `loadFailed` branch | WIRED |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data | Source | Real data | Status |
 | -------- | ---- | ------ | --------- | ------ |
 | ToiTrends Avg TOI | `row.avgToi` | boxscore TOI / de-duplicated shift seconds | Yes | FLOWING |
-| ToiTrends PP share, SH, PP Δ | `row.ppShare`, `shAvg`, `ppShareDelta` | `analyzeGameLines` over raw shifts | Yes, but wrong for games with duplicate shift rows | FLOWING, INCORRECT (CR-01) |
+| ToiTrends PP share, SH, PP Δ | `row.ppShare`, `shAvg`, `ppShareDelta` | `analyzeGameLines(uniqueShifts(...))` | Yes, correct on the previously failing game | FLOWING |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 | -------- | ------- | ------ | ------ |
-| Full test suite | `npm test` | 154 pass, 0 fail | PASS |
+| Full test suite | `npm test` | 178 pass, 0 fail | PASS |
 | Types | `npx tsc --noEmit` | exit 0 | PASS |
-| Lint on phase files | `npx eslint components lib/research app/research` | no output | PASS |
-| analyzeGameLines on live game 2026020075 vs de-duplicated shifts | scratch tsx script (not committed) | PP/SH differ for 11 MTL and 12 DET skaters; team PP 549 vs 480 | FAIL |
-| Same on 4 other MTL games without duplicate rows | same script | identical | PASS |
+| Lint on phase files | `npx eslint app/research lib/research lib/nhl components/ToiTrends.tsx components/ToiGameStrip.tsx` | exit 0, no output | PASS |
+| analyzeGameLines on live game 2026020075 (scratch tsx script, not committed) | fetch boxscore + shiftcharts, run `analyzeGameLines` | ev 2966 / pp 480 / sh 454; 756 rows to 753 unique; 0 skaters exceed team PP/SH | PASS |
 
 ### Probe Execution
 
@@ -130,34 +149,34 @@ Step 7c: SKIPPED (no probes declared or present).
 
 | Requirement | Source Plan | Description | Status | Evidence |
 | ----------- | ----------- | ----------- | ------ | -------- |
-| TRND-01 | 01-01 | Trends table, primary columns, grid removed | SATISFIED (PP share values affected by CR-01) | truth 1 |
+| TRND-01 | 01-01 | Trends table, primary columns, grid removed | SATISFIED | truth 1, 6 |
 | TRND-02 | 01-02 | Exact per-game TOI/PP/SH reachable | SATISFIED (popover placement needs human) | truth 2 |
-| TRND-03 | 01-03 | Recent-vs-window delta for TOI and PP share | SATISFIED for TOI; PP share Δ inherits CR-01 | truth 3 |
+| TRND-03 | 01-03 | Recent-vs-window delta for TOI and PP share | SATISFIED | truth 3, 6 |
 | TRND-04 | 01-01, 01-02, 01-03 | Min games, missed not 0, OT flagged | SATISFIED | truth 4 |
 | TRND-05 | 01-04 | Sort by trend/Avg TOI/PP share, URL, F/D kept | SATISFIED | truth 5 |
 
-All five IDs in PLAN frontmatter (TRND-01 to 05) appear in REQUIREMENTS.md and are mapped to Phase 1; no orphaned Phase 1 requirements. REQUIREMENTS.md marks all five Complete, which is premature while the PP-correctness gap is open.
+All five IDs (TRND-01 to 05) are declared in PLAN frontmatter, defined in REQUIREMENTS.md and mapped to Phase 1; no orphaned Phase 1 requirements. REQUIREMENTS.md currently shows TRND-02, 03 and 05 as "Gaps Found" (reverted after the first verification); that table is now stale and should be updated once the human checks pass. This verifier did not edit it.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | ---- | ---- | ------- | -------- | ------ |
-| `lib/research/lines.ts` | 77-91 | duplicate shift rows not de-duplicated | BLOCKER | Wrong PP share / SH / tint (CR-01) |
-| `components/ToiGameStrip.tsx` | 7, 27, 37 | popover anchored to td, not cell | Warning | WR-01, popover far from hovered square |
-| `lib/nhl/client.ts` | 116-145 | empty shift chart cached 1h | Warning | WR-02, shows "no PP/SH data" up to an hour after a game (disclosed, not wrong) |
-| `lib/research/team-games.ts` | 71, 123 | one failed fetch blanks the page, raw error shown | Warning | WR-03, pre-existing |
-| `lib/research/toi-trends.ts` | 47-56 | `toiDelta`/`ppShare` comments contradict implementation | Warning | WR-04, documentation only; code matches D-05/D-06 |
-| various | n/a | IN-01 to IN-04 | Info | See 01-REVIEW.md |
+| `lib/research/team-games.ts` | 73-80 | failed shift chart treated as unpublished (WR-05) | Warning | Inaccurate footer copy on a transient failure; data never wrong; OT/SO game excluded from averages in that case |
+| `lib/research/team-games.ts` | 133-146 | failed newest game silently re-anchors Last game / Δ (WR-06) | Warning | Banner names the date; recency columns not labelled |
+| `components/ToiTrends.tsx` | 56 | `pb-28 -mb-24` fixed popover reserve (IN-05) | Info | Worst-case last-row popover may clip; browser check |
+| `team-games.ts:92`, `page.tsx:134`, `game-strip.ts:38`, `client.ts:140`, `ToiTrends.tsx:50`, `page.tsx:97` | n/a | IN-01..IN-04, IN-06 | Info | Edge-case hygiene and copy drift; none changes goal behaviour |
 
-No TBD, FIXME, XXX, TODO or placeholder markers in phase files. All nine review findings remain `open` in 01-REVIEW-DISPOSITION.md; none was fixed.
+No TBD, FIXME, XXX markers in phase source files.
+
+Weighing the open findings against the goal: WR-05 and WR-06 only trigger when the upstream NHL API fails for a request, both are fail-visible at some level (server log, amber banner) and neither can make a shown number wrong for a game that loaded. The goal's normal path (scan the table, see who is gaining or losing TOI and PP time) is unaffected. They are advisory and worth fixing before relying on Δ during an NHL API outage; they are not gaps. IN-01..IN-06 are info. IN-05 is carried into the popover human check.
 
 ### Human Verification Required
 
-See the `human_verification` list in the frontmatter (5 items: signed-in layout, popover clipping and placement, touch tap, sort interaction, OT/missing-chart visuals). None was run; /research is auth-gated. They do not change the status, which is already gaps_found, but they must be done after the gap is closed.
+See the `human_verification` list in the frontmatter (5 items). None has been run; `/research` is Discord-auth-gated. These cover popover placement and clipping (including the IN-05 worst case), touch tap, sort interaction, OT/no-chart visuals and overall scannability.
 
 ### Gaps Summary
 
-One gap, with a small and well-understood fix. The PP-time half of the phase goal ("gaining or losing power-play time") reads from `analyzeGameLines`, which counts a repeated shift row twice. The NHL feed does repeat rows (confirmed in several current-season games), and in an affected game a player's PP seconds can be off by a minute or more and the team PP denominator by over a minute, which feeds PP share, PP share Δ, the mover tint and the SH column. The fix is the one the summary and `deferred-items.md` already describe: skip repeated (playerId, period, startSec, endSec) rows in `analyzeGameLines` (or once in `loadGame`) and add a regression test. Nothing in the phase scope is otherwise missing. This gap is not deferred: Phase 3 does not list shift-chart de-duplication in its goal or success criteria.
+No gaps. The prior blocking gap is closed and verified against live data, regressions were checked and none found. Remaining work is human visual/interaction verification, plus optional follow-up on WR-05 and WR-06.
 
 ---
 
