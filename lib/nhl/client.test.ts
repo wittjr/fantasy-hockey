@@ -13,7 +13,7 @@ const shiftRow = (playerId: number, typeCode = 517) => ({
 
 /** Stubs global fetch with a queue of responses and records each call's url and init. */
 function stubFetch(t: TestContext, queue: Array<{ body: unknown; status?: number }>) {
-  const calls: Array<{ url: string; init: RequestInit & { next?: { revalidate?: number } } }> = [];
+  const calls: Array<{ url: string; init: RequestInit }> = [];
   t.mock.method(globalThis, "fetch", async (url: string, init: RequestInit) => {
     calls.push({ url, init });
     const next = queue.shift();
