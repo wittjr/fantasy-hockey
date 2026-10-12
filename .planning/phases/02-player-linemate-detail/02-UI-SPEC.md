@@ -119,11 +119,13 @@ Hollow/solid versus dashed carries the meaning without relying on hue; amber onl
 
 ### Panel structure
 
+**Primary visual anchor:** the player name heading (`h2`, `font-medium`) and the `Avg TOI` value beside it identify the panel; the heat strip is the primary content below the tabs.
+
 `<section id="player-detail" aria-labelledby="player-detail-title" className="scroll-mt-4 flex flex-col gap-4 rounded-md border border-neutral-200 p-4 dark:border-neutral-800">`
 
 1. **Header row** (`flex flex-wrap items-start justify-between gap-x-6 gap-y-2`):
    - Left: `<h2 id="player-detail-title" className="font-medium">{name}</h2>` followed by `<span className="text-xs tabular-nums text-neutral-600 dark:text-neutral-400">{position} {gamesPlayed}/{teamGames} GP</span>` (the Phase 1 Pos string, e.g. `C 5/5 GP`).
-   - Right: close link `PendingLink` `× Close` (see Interaction).
+   - Right: close link `PendingLink` `× Close player detail` (see Interaction).
 2. **Header stats** (D-05): `<dl className="flex flex-wrap gap-x-6 gap-y-1">`, four items in the trends order: `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ`. Each item: `<dt className="text-xs text-neutral-600 dark:text-neutral-400">` label above `<dd className="text-sm tabular-nums">` value. Values come from the selected player's `TrendRow` with the same formatters as the table (`formatClock`, `formatSignedClock`, `Math.round(ppShare)%`, `formatSignedPoints`). Avg TOI is `font-medium`. A crossing Δ is colored per the accent rule plus `sr-only` "Moving up"/"Moving down". Unknown values render `—` (`text-neutral-400 dark:text-neutral-500`), never `0:00` or `0%`. **Window of 1:** drop the two Δ items (Phase 1 D-08). No slope arrows and no row tint in the panel.
 3. **Situation tabs** (D-10): see Interaction.
 4. **Intro paragraph** (`text-sm text-neutral-500`, copy below).
@@ -202,7 +204,7 @@ In `UnitTable`, each name in the joined list becomes a `PlayerLink` carrying tha
 
 ### Close (D-04)
 
-`PendingLink` `<span aria-hidden>×</span> Close`, `text-sm text-neutral-500 hover:underline`, `aria-label="Close {name} detail"`, `scroll={false}`, href = the current URL without `player` and `all` (keeps `team`, `games`, `sort`, `dir`, `sit`). Placed in the header row, top right.
+`PendingLink` `<span aria-hidden>×</span> Close player detail`, `text-sm text-neutral-500 hover:underline`, `aria-label="Close {name} detail"`, `scroll={false}`, href = the current URL without `player` and `all` (keeps `team`, `games`, `sort`, `dir`, `sit`). Placed in the header row, top right.
 
 ### Heat-strip cells and popover (D-07)
 
@@ -276,7 +278,7 @@ Rendered in the Tag column as a chip: `inline-block rounded border px-1 text-xs 
 | Panel title | `{Player name}` (h2), then muted `{Pos} {GP}/{teamGames} GP` |
 | Header stat labels | `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ` |
 | Primary CTA | None. The primary interaction is clicking a player's name. Name link `title`: `Show who {name} plays with` (unit tables: `Show who {name} plays with at {EV|PP|SH}`) |
-| Close link | `× Close` (`aria-label`: `Close {name} detail`) |
+| Close link | `× Close player detail` (`aria-label`: `Close {name} detail`) |
 | Tab labels | `EV`, `PP`, `SH` |
 | Intro paragraph | `Who {name} has been on the ice with, game by game. Click a square for exact minutes together; use EV, PP or SH to switch situation.` |
 | Column headers | `Linemate`, (game dates), `Window share`, `Tag` |
@@ -285,7 +287,7 @@ Rendered in the Tag column as a chip: `inline-block rounded border px-1 text-xs 
 | Show-all line | `Showing {n} of {total} linemates, most recent time together first.` + `Show all {total}` / `Showing all {total} linemates.` + `Show fewer` |
 | Legend line 1 | `Squares are team games, oldest to newest. Darker means that linemate was on the ice for more of {name}'s {EV} time in that game. Hollow means both played but not together. Dashed means one of them did not play; amber dashed means no shift chart. A blue ring means overtime; only regulation time counts.` |
 | Legend line 2 | `Window share is time together divided by {name}'s {EV} time in the games he played. Linemates are ordered by the team's last 2 games, then by the whole window, and only those with {2:00} or more together are listed.` |
-| Legend line 3 | `New, Rising, Fading and Out compare the team's last 2 games with the earlier games and need 2 or more games played. They describe time together only, not how good a linemate is. Rising and Fading mean a change of 15 or more points of share; Out means the linemate missed the recent games.` |
+| Legend line 3 | `New, Rising, Fading and Out compare the team's last 2 games (in a 2-game window, the latest game) with the earlier games and need 2 or more games played. They describe time together only, not how good a linemate is. Rising and Fading mean a change of 15 or more points of share; Out means the linemate missed the recent games.` |
 | 1-game note | `Tags need 2 or more games. Choose Last 3 or more.` |
 | Tags-unavailable note (played < 2) | `No tags: {name} played only {n} game in this window.` (singular/plural) |
 | Tags-unavailable note (missed recent) | `No tags: {name} missed the team's last 2 games.` (2-game window: `missed the team's latest game.`) |
@@ -309,7 +311,7 @@ Tone: plain, terse, no exclamation marks, same abbreviations as the page (TOI, P
 
 Element kinds: E1 panel header and stats, E2 situation tabs, E3 heat strip table and cells, E4 tag chips, E5 name links and selected-row bar, E6 show-all and close links. Authored by the UI researcher from the locked decisions; the ui-phase probe may re-run and replace these rows. Empty/error copy lives in the Copywriting Contract and States table; rows reference it.
 
-Applicable state considerations resolved: 22 covered, 4 backstop, 0 unresolved.
+Applicable state considerations resolved: 20 covered, 4 backstop, 0 unresolved.
 
 | Category | Element(s) | Status | Resolution / Reason |
 |----------|------------|--------|---------------------|
@@ -337,6 +339,14 @@ Applicable state considerations resolved: 22 covered, 4 backstop, 0 unresolved.
 | interaction | E5 | 🧪 backstop | `{ statement: "Clicking a name in the trends table or in a Last game unit table scrolls the page to the player panel and shows the right situation tab, and Back returns to the previous player", verification: backstop }` |
 | interaction | E3 | 🧪 backstop | `{ statement: "Heat-strip squares read as separate clickable squares in light and dark mode (borders, 4px gaps, hover outline, pointer cursor) and the popover shows on hover, focus and click", verification: backstop }` |
 | interaction | E3, E5 | 🧪 backstop | `{ statement: "Dark-mode check: shades are distinguishable on the dark surface for 0.2 to 1.0 opacity, and the selected-row bar is visible on green and red tinted rows in both themes", verification: backstop }` |
+
+**Probe reconciliation (ui-phase step 9.5, 2026-10-12):** the probe engine proposed 34 element × category items over E1–E6. Every one maps to a row above or is dismissed, and the user confirmed no element kind was missed.
+- E1 overflow / long-text → covered by the `long-text` E3/E1 row (names `whitespace-nowrap`; header wraps via `flex-wrap`).
+- E2 loading / error → covered by the `loading` E2/E5/E6 row and the `error` E5/E2 row (invalid `sit` falls back to EV). E2 overflow / long-text → dismissed: three fixed two-letter labels.
+- E3 (all 7) → covered by the E3 rows above.
+- E4 empty / partial / zero-one-many → covered by the E4 rows. E4 loading / error → covered: server-rendered, no fetch. E4 populated / overflow → dismissed: one short word chip per row, inside a `whitespace-nowrap` cell.
+- E5 (all 7) → covered by the E5 rows and the `loading` row. Empty is the unit-table `None` row, which has no link.
+- E6 empty / zero-one-many → covered: show-all renders only when the list is capped. E6 loading → covered by the `PendingLink` row. E6 error / populated / partial / overflow → dismissed: two static text links with no data state.
 
 ---
 
