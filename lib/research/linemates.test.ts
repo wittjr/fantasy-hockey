@@ -8,6 +8,7 @@ import {
   linemateDetail,
   linemateOpacity,
   recentStart,
+  SITUATION_WORDS,
   type LinemateGame,
 } from "./linemates";
 import { detailText } from "./game-strip";
@@ -250,4 +251,63 @@ test("linemateDetail adds the OT period tag for an overtime game", () => {
   const g = game(1, [1, 2], pairs(600, { 2: 240 }), "OT");
   const text = detailText(linemateDetail(linemateCell(g, 1, 2, "ev"), g, names, "ev", "MTL"));
   assert.ok(text.includes("Oct 1 vs BOS · W 3–2 · OT · Together 4:00"), text);
+});
+
+test("SITUATION_WORDS are the words used in sentences", () => {
+  assert.deepEqual(SITUATION_WORDS, { ev: "even-strength", pp: "power-play", sh: "penalty-kill" });
+});
+
+test("emptyReason is no-chart when every game the player dressed for lacks a shift chart", () => {
+  const games = [game(1, [1, 2], null), game(2, [1, 2], null)];
+  assert.equal(buildLinemateView(games, players, PLAYER, "ev").emptyReason, "no-chart");
+});
+
+test("emptyReason judges no-chart over the games the player dressed for, not the whole window", () => {
+  // Game 1 has a chart but the player did not dress; the games he played in have none: he must not be told he had no time.
+  const games = [game(1, [2], pairs(600, { 2: 300 })), game(2, [1, 2], null)];
+  assert.equal(buildLinemateView(games, players, PLAYER, "ev").emptyReason, "no-chart");
+});
+
+test("emptyReason is no-situation-time when he has charts but zero seconds in the situation", () => {
+  const games = [game(1, [1, 2], pairs(600, { 2: 300 })), game(2, [1, 2], pairs(600, { 2: 300 }))];
+  assert.equal(buildLinemateView(games, players, PLAYER, "pp").emptyReason, "no-situation-time");
+  assert.equal(buildLinemateView(games, players, PLAYER, "sh").emptyReason, "no-situation-time");
+});
+
+test("emptyReason is below-minimum when he has situation time but no linemate reaches the minimum", () => {
+  const games = [game(1, [1, 2], pairs(600, { 2: 100 }))];
+  const view = buildLinemateView(games, players, PLAYER, "ev");
+  assert.equal(allRows(view).length, 0);
+  assert.equal(view.emptyReason, "below-minimum");
+});
+
+test("emptyReason is below-minimum when nobody shared the ice at all", () => {
+  assert.equal(buildLinemateView([game(1, [1], pairs(600, {}))], players, PLAYER, "ev").emptyReason, "below-minimum");
+});
+
+test("emptyReason is null when a linemate is listed", () => {
+  const games = [game(1, [1, 2], pairs(600, { 2: 300 }))];
+  assert.equal(buildLinemateView(games, players, PLAYER, "ev").emptyReason, null);
+});
+
+test("emptyReason precedence is no-chart, then no-situation-time, then below-minimum", () => {
+  // No chart and no time: no-chart wins.
+  assert.equal(buildLinemateView([game(1, [1], null)], players, PLAYER, "pp").emptyReason, "no-chart");
+  // Chart, no time, and (vacuously) no linemate above the minimum: no-situation-time wins.
+  assert.equal(buildLinemateView([game(1, [1, 2], pairs(600, { 2: 100 }))], players, PLAYER, "pp").emptyReason, "no-situation-time");
+});
+
+test("a game without a chart does not turn the empty reason into no-chart while another game has one", () => {
+  const games = [game(1, [1, 2], null), game(2, [1, 2], pairs(600, { 2: 60 }))];
+  assert.equal(buildLinemateView(games, players, PLAYER, "ev").emptyReason, "below-minimum");
+});
+
+test("noChartDates lists the dates of window games without a shift chart, oldest first", () => {
+  const games = [game(8, [1, 2], null), game(9, [1, 2], pairs(600, { 2: 300 })), game(10, [1], null)];
+  assert.deepEqual(buildLinemateView(games, players, PLAYER, "ev").noChartDates, ["2026-10-08", "2026-10-10"]);
+});
+
+test("noChartDates includes a game the player missed and is empty when every game has a chart", () => {
+  assert.deepEqual(buildLinemateView([game(8, [2], null)], players, PLAYER, "ev").noChartDates, ["2026-10-08"]);
+  assert.deepEqual(buildLinemateView([game(8, [1, 2], pairs(600, { 2: 300 }))], players, PLAYER, "ev").noChartDates, []);
 });
