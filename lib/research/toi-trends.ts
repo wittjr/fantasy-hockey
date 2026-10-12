@@ -1,4 +1,4 @@
-import { trendSlope, type GameLines } from "./lines";
+import { trendSlope, type GameLines, type Situation } from "./lines";
 import type { ResearchGame, ResearchPlayer } from "./team-games";
 
 // A slope beyond these per-game changes is flagged as a rising/falling role.
@@ -182,11 +182,29 @@ export function sortRows(rows: readonly TrendRow[], spec: SortSpec): TrendRow[] 
   });
 }
 
+/** A single string of 1-10 digits becomes the player id; anything else (arrays, signs, long strings, `__proto__`) is null (T-01-06/T-01-07 allowlist). */
+export function parsePlayer(value: unknown): number | null {
+  return typeof value === "string" && /^\d{1,10}$/.test(value) ? Number(value) : null;
+}
+
+/** "pp" and "sh" pass through; anything else, including arrays, is even strength (T-01-06/T-01-07 allowlist). */
+export function parseSit(value: unknown): Situation {
+  return value === "pp" || value === "sh" ? value : "ev";
+}
+
 /** Built only from validated values, so a request's raw params never reach a link. */
-export function researchHref(team: string, games: number, sort: SortSpec): string {
+export function researchHref(
+  team: string,
+  games: number,
+  sort: SortSpec,
+  extras?: { player?: number | null; sit?: Situation; all?: boolean },
+): string {
   const params = new URLSearchParams({ team, games: String(games) });
   if (sort.key !== DEFAULT_SORT.key || sort.dir !== DEFAULT_SORT.dir) params.set("sort", sort.key);
   if (sort.dir === "asc") params.set("dir", "asc");
+  if (typeof extras?.player === "number") params.set("player", String(extras.player));
+  if (extras?.sit && extras.sit !== "ev") params.set("sit", extras.sit);
+  if (extras?.all) params.set("all", "1");
   return `/research?${params}`;
 }
 

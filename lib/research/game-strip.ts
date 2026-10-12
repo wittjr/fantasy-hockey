@@ -11,6 +11,10 @@ export function stripOpacity(toi: number, avgToi: number): number {
   return 0.2 + 0.8 * Math.min(1, Math.max(0, t));
 }
 
+/** Shared by the Per game strip and the linemate heat strip so the two squares cannot drift. */
+export const STRIP_SQUARE_CLASS =
+  "group/cell relative cursor-pointer block h-5 w-5 rounded-xs border outline-offset-2 hover:outline hover:outline-1 hover:outline-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-900 dark:focus-visible:outline-neutral-100";
+
 export type StripCellState = "played" | "dnp" | "excluded";
 
 /** dnp: did not dress; excluded: dressed but regulation TOI unknown (OT/SO game with no shift data). */
@@ -22,6 +26,8 @@ export function stripCellState(cell: PerGameCell | null): StripCellState {
 export type StripGame = Pick<ResearchGame, "id" | "date" | "home" | "opponent" | "score" | "overtime">;
 
 export interface GameDetail {
+  /** A line above the title, e.g. the linemate's name; absent for the Per game strip. */
+  heading?: string;
   title: string;
   periodTag: "OT" | "SO" | null;
   rows: { label: string; value: string; muted?: boolean }[];
@@ -58,7 +64,7 @@ export function gameDetail(cell: PerGameCell | null, game: StripGame): GameDetai
 
 /** One line for the cell's aria-label. */
 export function detailText(detail: GameDetail): string {
-  return [detail.title, detail.periodTag, ...detail.rows.map((r) => `${r.label} ${r.value}`), ...detail.notes]
+  return [detail.heading, detail.title, detail.periodTag, ...detail.rows.map((r) => `${r.label} ${r.value}`), ...detail.notes]
     .filter(Boolean)
     .join(" · ");
 }

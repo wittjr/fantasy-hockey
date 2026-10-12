@@ -54,7 +54,7 @@ export interface GameLines {
   playerSeconds: Map<number, Record<Situation, number>>;
 }
 
-const PERIOD_SECONDS = 1200;
+export const PERIOD_SECONDS = 1200;
 // Ignore combos that only exist for a moment during line changes.
 const MIN_UNIT_SECONDS = 10;
 // EV lines must be full lines; PP/SH units vary in shape (4F+1D, 2F+2D, ...).
@@ -66,28 +66,23 @@ export function parseClock(value: string | null | undefined): number | null {
   return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 
-function situationFor(team: OnIce, opp: OnIce): Situation {
+export function situationFor(team: OnIce, opp: OnIce): Situation {
   // A pulled goalie (empty net, delayed penalty) adds a skater without changing strength.
   const strength = (s: OnIce) => (s.goalie ? s.skaters.length : s.skaters.length - 1);
   const diff = strength(team) - strength(opp);
   return diff === 0 ? "ev" : diff > 0 ? "pp" : "sh";
 }
 
-interface OnIce {
+export interface OnIce {
   skaters: number[];
   goalie: boolean;
 }
 
-/**
- * Repeated shift rows are counted once (see `uniqueShifts`), so a duplicate can neither inflate the
- * on-ice skater count (which decides EV/PP/SH) nor double-count a player's seconds.
- */
-export function analyzeGameLines(
-  team: string,
+/** Every on-ice second of the game (key: seconds since the start of period 1), per team. */
+export function bucketOnIce(
   shifts: ShiftInput[],
   positions: Map<number, PositionGroup>,
-): GameLines {
-  // Bucket every on-ice second, per team.
+): Map<number, Map<string, OnIce>> {
   const seconds = new Map<number, Map<string, OnIce>>();
   for (const shift of uniqueShifts(shifts)) {
     const pos = positions.get(shift.playerId);
@@ -103,6 +98,19 @@ export function analyzeGameLines(
       else onIce.skaters.push(shift.playerId);
     }
   }
+  return seconds;
+}
+
+/**
+ * Repeated shift rows are counted once (see `uniqueShifts`), so a duplicate can neither inflate the
+ * on-ice skater count (which decides EV/PP/SH) nor double-count a player's seconds.
+ */
+export function analyzeGameLines(
+  team: string,
+  shifts: ShiftInput[],
+  positions: Map<number, PositionGroup>,
+): GameLines {
+  const seconds = bucketOnIce(shifts, positions);
 
   const situationSeconds: Record<Situation, number> = { ev: 0, pp: 0, sh: 0 };
   const unitSeconds: Record<Situation, { F: Map<string, number>; D: Map<string, number> }> = {

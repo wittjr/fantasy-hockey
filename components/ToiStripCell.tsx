@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { StripCellState } from "@/lib/research/game-strip";
+import type { LinemateCellState } from "@/lib/research/linemates";
 
 export type CellEvent = "click" | "blur" | "enter" | "space" | "escape" | "outside";
 
@@ -23,7 +24,7 @@ export function ToiStripCell({
   children,
 }: {
   label: string;
-  state: StripCellState;
+  state: StripCellState | LinemateCellState;
   className: string;
   children: ReactNode;
 }) {

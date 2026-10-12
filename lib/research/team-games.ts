@@ -13,6 +13,7 @@ import {
   type PositionGroup,
   type Situation,
 } from "./lines";
+import { pairSeconds, type GamePairs } from "./pair-seconds";
 
 // Regular season and playoffs; preseason deployment isn't representative.
 const RESEARCH_GAME_TYPES = new Set([2, 3]);
@@ -43,6 +44,11 @@ export interface ResearchGame {
   regulationToi: Map<number, number> | null;
   /** Null when the league hasn't published shift charts for the game yet. */
   lines: GameLines | null;
+  /**
+   * Regulation-only (periods 1-3) seconds per situation for each skater and each pair of skaters, for linemate time (D-19).
+   * Null when there is no shift chart, like lines.
+   */
+  pairs: GamePairs | null;
 }
 
 export interface TeamResearch {
@@ -120,6 +126,7 @@ async function loadGame(
     overtime,
     regulationToi,
     lines: shiftInputs.length > 0 ? analyzeGameLines(team, shiftInputs, positions) : null,
+    pairs: shiftInputs.length > 0 ? pairSeconds(team, shiftInputs, positions) : null,
   };
   return { game, players: gamePlayers };
 }

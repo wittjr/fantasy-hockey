@@ -2,12 +2,13 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PendingLink } from "@/components/PendingLink";
+import { PlayerLinemates } from "@/components/PlayerLinemates";
 import { ToiTrends } from "@/components/ToiTrends";
 import { NHL_TEAM_ABBREVS, type NhlTeamAbbrev } from "@/lib/nhl/client";
 import type { Situation, Unit } from "@/lib/research/lines";
 import { formatClock, formatDate, gameLabel, resultLabel } from "@/lib/research/format";
 import { loadTeamResearch, type TeamResearch } from "@/lib/research/team-games";
-import { parseSort, researchHref } from "@/lib/research/toi-trends";
+import { parsePlayer, parseSit, parseSort, researchHref } from "@/lib/research/toi-trends";
 
 const GAME_COUNTS = [1, 3, 5, 10, 20];
 const DEFAULT_GAME_COUNT = 5;
@@ -26,13 +27,15 @@ export default async function ResearchPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const { team: teamParam, games: gamesParam, sort: sortParam, dir: dirParam } = await searchParams;
+  const { team: teamParam, games: gamesParam, sort: sortParam, dir: dirParam, player: playerParam, sit: sitParam } = await searchParams;
   const team = (NHL_TEAM_ABBREVS as readonly string[]).includes(String(teamParam).toUpperCase())
     ? (String(teamParam).toUpperCase() as NhlTeamAbbrev)
     : null;
   const gameCount = GAME_COUNTS.includes(Number(gamesParam)) ? Number(gamesParam) : DEFAULT_GAME_COUNT;
 
   const sort = parseSort(sortParam, dirParam);
+  const player = parsePlayer(playerParam);
+  const sit = parseSit(sitParam);
 
   let research: TeamResearch | null = null;
   let loadFailed = false;
@@ -107,6 +110,9 @@ export default async function ResearchPage({
               Couldn&apos;t load NHL data for {research.unavailableDates.map(formatDate).join(", ")}, so those games are left out of this window
               {newestMissing && "; Last game and the last-2-games comparison use the newest games that did load"}. Reload to try again.
             </p>
+          )}
+          {player !== null && (
+            <PlayerLinemates research={research} playerId={player} sit={sit} team={team} gameCount={gameCount} sort={sort} />
           )}
           <LastGameLines research={research} />
           <ToiTrends research={research} sort={sort} team={team} gameCount={gameCount} />

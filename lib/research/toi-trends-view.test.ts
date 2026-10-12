@@ -32,6 +32,7 @@ function fixtureGame(date: string, toi: Record<number, number>, withLines = true
           playerSeconds: new Map([[1, { ev: 1000, pp: 60, sh: 10 }]]),
         }
       : null,
+    pairs: null,
   };
 }
 
