@@ -48,7 +48,7 @@ export function ToiTrends({
       <p className="text-sm text-neutral-500">
         Average regulation ice time per game played, and how each player&apos;s last 2 games compare with his earlier games in the window.
         Rows tinted green or red moved by 2:00 or more of TOI or 15 or more points of power-play share.
-        Click Avg TOI, TOI Δ, PP share or PP share Δ to sort; hover or focus a square for exact per-game times.
+        Click Avg TOI, TOI Δ, PP share or PP share Δ to sort; click, tap or hover a square for exact per-game times.
       </p>
       {rows.length === 0 ? (
         <p className="text-sm text-neutral-500">No skaters played in this window.</p>
@@ -64,7 +64,9 @@ export function ToiTrends({
                 <SortHeader label="PP share" title="Player's share of the team's power-play time in the games he played" sortKey="ppShare" {...sortProps} />
                 {showTrend && <SortHeader label="PP share Δ" title="Same comparison, in percentage points" sortKey="ppDelta" {...sortProps} />}
                 <th scope="col" className="py-1 pr-3 text-right font-medium whitespace-nowrap">SH</th>
-                <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Per game</th>
+                <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">
+                  Per game <span className="font-normal">(click a square)</span>
+                </th>
                 {showTrend && <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">TOI trend</th>}
               </tr>
             </thead>
@@ -86,7 +88,7 @@ export function ToiTrends({
                     )}
                   </td>
                   <td className="py-1 pr-3 whitespace-nowrap text-neutral-500">
-                    {row.player.position}
+                    {row.player.position}{" "}
                     <span className="ml-1 text-xs tabular-nums text-neutral-600 dark:text-neutral-400">
                       {row.gamesPlayed}/{research.games.length} GP
                     </span>
@@ -133,7 +135,7 @@ export function ToiTrends({
       <div className="flex flex-col gap-1 text-xs text-neutral-500">
         <p>
           Squares are team games, oldest to newest. Darker means more ice time than that player&apos;s own average. Dashed
-          means did not play (or overtime with no shift data). Outlined means overtime; OT minutes are excluded.
+          means did not play (or overtime with no shift data). A blue ring means overtime; OT minutes are excluded.
         </p>
         <p>
           {!showTrend ? (

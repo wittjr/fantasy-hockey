@@ -175,6 +175,19 @@ async function desktopChecks(pw) {
       return { ok: shown.length === 0 && !open, details: { shown } };
     });
 
+    await check("S1", "every row-0 square is at least 20x20 and neighbouring squares are at least 24px apart centre to centre", async () => {
+      const boxes = await page.evaluate(() =>
+        [...window.__strip.rows()[0].querySelectorAll("[data-state]")].map((s) => {
+          const r = s.getBoundingClientRect();
+          return { w: r.width, h: r.height, cx: r.x + r.width / 2, cy: r.y + r.height / 2 };
+        }),
+      );
+      const small = boxes.filter((b) => b.w < 20 || b.h < 20).map((b) => [b.w, b.h]);
+      const pitch = boxes.slice(1).map((b, i) => Math.hypot(b.cx - boxes[i].cx, b.cy - boxes[i].cy));
+      const tight = pitch.filter((d) => d < 24);
+      return { ok: boxes.length > 1 && small.length === 0 && tight.length === 0, details: { squares: boxes.length, small, minPitch: Math.min(...pitch) } };
+    });
+
     await check("D3", "click opens the row-0 popover, it stays open with the pointer away and is not clipped", async () => {
       await sqLoc(page, 0, COL).click();
       const b = await blankPoint(page);

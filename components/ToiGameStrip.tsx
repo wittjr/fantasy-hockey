@@ -3,7 +3,7 @@ import { detailText, gameDetail, stripCellState, stripOpacity, type StripGame } 
 import type { TrendRow } from "@/lib/research/toi-trends";
 
 /**
- * One shaded square per team game, oldest left. Dashed = did not play (grey) or OT with no shift data (sky); sky ring = OT/SO.
+ * One shaded, bordered 20x20 square per team game, oldest left. Dashed = did not play (grey) or OT with no shift data (sky); sky ring = OT/SO.
  * The popover opens on click or tap (ToiStripCell), mouse hover or keyboard focus, under the square and right-aligned to it,
  * so it grows left over the table's own columns and never runs past the scroll wrapper's right edge. It takes no pointer
  * events, so it never blocks the squares under it. This file stays a server component; only the square is client code.
@@ -11,28 +11,28 @@ import type { TrendRow } from "@/lib/research/toi-trends";
 export function ToiGameStrip({ row, games }: { row: TrendRow; games: readonly StripGame[] }) {
   return (
     <td className="py-1 pr-3">
-      <div role="group" aria-label="Per-game ice time, oldest to newest" className="flex gap-px">
+      <div role="group" aria-label="Per-game ice time, oldest to newest" className="flex gap-1">
         {games.map((game, i) => {
           const cell = row.perGame[i];
           const state = stripCellState(cell);
           const ring = state === "played" && game.overtime !== null ? " ring-1 ring-sky-500" : "";
           const outline =
             state === "dnp"
-              ? " border border-dashed border-neutral-400 dark:border-neutral-600"
+              ? " border-dashed border-neutral-400 dark:border-neutral-600"
               : state === "excluded"
-                ? " border border-dashed border-sky-500"
-                : "";
+                ? " border-dashed border-sky-500"
+                : " border-neutral-300 dark:border-neutral-700";
           const detail = gameDetail(cell, game);
           return (
             <ToiStripCell
               key={game.id}
               state={state}
               label={detailText(detail)}
-              className={`group/cell relative cursor-pointer block h-4 w-3 rounded-sm outline-offset-2 hover:outline hover:outline-1 hover:outline-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-900 dark:focus-visible:outline-neutral-100${ring}${outline}`}
+              className={`group/cell relative cursor-pointer block h-5 w-5 rounded-xs border outline-offset-2 hover:outline hover:outline-1 hover:outline-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-900 dark:focus-visible:outline-neutral-100${ring}${outline}`}
             >
               {state === "played" && cell?.toi != null && row.avgToi !== null && (
                 <span
-                  className="block h-full w-full rounded-sm bg-neutral-800 dark:bg-neutral-200"
+                  className="block h-full w-full bg-neutral-800 dark:bg-neutral-200"
                   style={{ opacity: stripOpacity(cell.toi, row.avgToi) }}
                 />
               )}
