@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Player Linemate Detail
 status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-10-12T19:42:39.070Z"
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-10-12T19:50:12.652Z"
 last_activity: 2026-10-12
 last_activity_desc: Phase 02 execution started
-state_head: 3a4f205801cce1212f36c8aa50db99322b3be229
+state_head: d0af4c058809c1064c2cff916f38d904a37bc0b1
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-12)
 ## Current Position
 
 Phase: 02 (Player Linemate Detail) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-10-12 — Phase 02 execution started
 
@@ -70,6 +70,7 @@ Progress: [███░░░░░░░] 33% (1 of 3 phases; 9/9 Phase 1 plans
 | Phase 02 P03 | 25 min | 3 tasks | 7 files |
 | Phase 02 P04 | 3 min | 2 tasks | 5 files |
 | Phase 02 P05 | 25 min | 2 tasks | 4 files |
+| Phase 02 P06 | 20 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-04: Escape dismiss is a data-dismissed flag + group-data-[dismissed]/cell:hidden variant (no blur); pointer leave keeps a pin but clears dismissed; aria-expanded removed (WR-10 fixed)
 - [Phase 02]: 02-05: emptyReason no-chart is judged over charted games the selected player dressed for, so unknown is never reported as no time (D-24)
 - [Phase 02]: 02-05: legend line 2 says 'in the games they both played' (D-25 wording); no-chart empty state shows only the message and tabs, other empty reasons still show the amber note when games lack a chart
+- [Phase 02]: 02-06: Linemate tags are neutral chips from rounded pooled time-together shares (+/-15 via deltaCrossing); Out comes from dressing alone; tagged rows bypass the list cap and cappedCount stays the capped count when all=1
 
 ### Pending Todos
 
@@ -127,6 +129,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12T19:42:39.028Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-10-12T19:50:06.556Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None
