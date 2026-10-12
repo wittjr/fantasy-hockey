@@ -48,6 +48,11 @@ export default async function ResearchPage({
 
   const href = (t: string, n: number) => researchHref(t, n, sort);
 
+  // ISO dates compare lexically. A failed game newer than every loaded one makes "Last game" and the Δ columns describe older games.
+  const newestMissing =
+    !!research && research.games.length > 0 &&
+    research.unavailableDates.some((d) => d > research.games[research.games.length - 1].date);
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 p-8">
       <Link href="/" className="text-sm text-neutral-500 hover:underline">
@@ -99,7 +104,8 @@ export default async function ResearchPage({
         <>
           {research.unavailableDates.length > 0 && (
             <p className="text-sm text-amber-600 dark:text-amber-400">
-              Couldn&apos;t load NHL data for {research.unavailableDates.map(formatDate).join(", ")}, so those games are left out of this window. Reload to try again.
+              Couldn&apos;t load NHL data for {research.unavailableDates.map(formatDate).join(", ")}, so those games are left out of this window
+              {newestMissing && "; Last game and the last-2-games comparison use the newest games that did load"}. Reload to try again.
             </p>
           )}
           <LastGameLines research={research} />
