@@ -71,7 +71,7 @@ Plans:
 **Requirements**: PLYR-01, PLYR-02, PLYR-03, PLYR-04, UNIT-04
 **Success Criteria** (what must be TRUE):
   1. Clicking a player row in the trends table, or a player name in any last-game unit table, opens that player's detail section; the URL carries `?player=<id>`, so reload, back/forward and a shared link all show the same player
-  2. Player detail shows a linemate heat strip (rows are linemates, columns are the games in the selected window, cell shade is minutes together) with separate EV, PP and SH views and forward linemates listed apart from defense partners
+  2. Player detail shows a linemate heat strip (rows are linemates, columns are the games in the selected window, cell shade is time together as a share of the player's own situation TOI, with minutes shown on click) with separate EV, PP and SH views and forward linemates listed apart from defense partners
   3. Each linemate's time together is also shown as a share of the player's own TOI in that situation, so a regular linemate is distinguishable from an occasional one
   4. Linemates are tagged New, Rising or Fading from time together alone (no quality scoring); a forward moved to a new line in the latest game shows the new linemates as New and the old ones as Fading
   5. Games whose shift chart is missing show as unknown ("—" or blank) in the heat strip, never 0, and do not count toward shares or tags; the existing last-game unit tables still show the same TOI and share values as before this phase
