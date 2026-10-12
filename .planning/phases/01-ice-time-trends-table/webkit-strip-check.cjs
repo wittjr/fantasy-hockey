@@ -9,7 +9,7 @@
  *  - runs `next dev -p 3101 -H 127.0.0.1` in the copy (loopback only, so the auth-free copy is not reachable from the network);
  *  - drives it with Playwright's bundled WebKit (playwright-core from the npx cache; nothing is installed): a desktop
  *    context (click, second click, outside click, one open at a time, popover does not block the square below, hover,
- *    Tab, no clipping at Last 20) and an emulated iPhone 13 (no hover: tap opens, tap elsewhere closes);
+ *    Tab, Escape dismisses without blurring (D13), no clipping at Last 20) and an emulated iPhone 13 (no hover: tap opens, tap elsewhere closes);
  *  - kills the server process group and removes the temp directory when done.
  * Prints PASS|FAIL|SKIP lines and a final "strip-check:" line. Exit 0 = all passed, 1 = a check failed, 2 = could not run.
  * Needs live NHL data for MTL (network access).
@@ -301,6 +301,58 @@ async function desktopChecks(pw) {
       await settle(page);
       const shownAfter = await call(page, "shown", found[0], found[1]);
       return { ok: shownOnFocus && !shownAfter, details: { square: found, shownOnFocus, shownAfter } };
+    });
+
+    await check("D13", "Escape hides a focused or pinned popover, keeps focus on the square, and the dismiss clears on blur", async () => {
+      const b = await blankPoint(page);
+      await page.mouse.click(b.x, b.y);
+      await page.mouse.move(1, 1);
+      let found = null;
+      for (let n = 1; n <= 300 && !found; n++) {
+        await page.keyboard.press("Tab");
+        found = await page.evaluate(() => {
+          const a = document.activeElement;
+          if (!a || !a.matches("[data-state]")) return null;
+          const rows = window.__strip.rows();
+          const r = rows.findIndex((tr) => tr.contains(a));
+          return [r, [...rows[r].querySelectorAll("[data-state]")].indexOf(a)];
+        });
+      }
+      if (!found) return { ok: false, details: { error: "no square reached in 300 Tab presses" } };
+      const [r, i] = found;
+      const state = () =>
+        page.evaluate(
+          ([row, idx]) => {
+            const sq = window.__strip.sq(row, idx);
+            return {
+              shown: window.__strip.shown(row, idx),
+              focused: document.activeElement === sq,
+              dismissed: sq.hasAttribute("data-dismissed"),
+              open: sq.hasAttribute("data-open"),
+              expanded: sq.hasAttribute("aria-expanded"),
+            };
+          },
+          [r, i],
+        );
+      await settle(page);
+      const shownOnFocus = (await state()).shown;
+      await page.keyboard.press("Escape");
+      await settle(page);
+      const afterEscape = await state();
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Shift+Tab");
+      await settle(page);
+      const refocused = await state();
+      await sqLoc(page, r, i).click();
+      const pinned = await state();
+      await page.keyboard.press("Escape");
+      await settle(page);
+      const afterPinEscape = await state();
+      await page.mouse.move(1, 1);
+      const okFocus = shownOnFocus && !afterEscape.shown && afterEscape.focused && afterEscape.dismissed && !afterEscape.expanded;
+      const okRearm = refocused.shown && !refocused.dismissed;
+      const okPin = pinned.open && !afterPinEscape.shown && !afterPinEscape.open && afterPinEscape.focused;
+      return { ok: okFocus && okRearm && okPin, details: { square: found, shownOnFocus, afterEscape, refocused, pinned, afterPinEscape } };
     });
 
     const page20 = await openResearch(context, 20);

@@ -14,7 +14,7 @@ Source: `01-REVIEW.md`. First review: standard depth, 13 files; 1 critical, 4 wa
 | WR-07 | warning | Strip square is focusable and clickable but exposed as `role="img"`: no Enter/Space toggle, no `aria-expanded`, no Escape dismiss (WCAG 1.4.13) | fixed in adb0f61 |
 | WR-08 | warning | Click/tap/outside-click/blur behaviour of `ToiStripCell` has no behavioural test (static markup only); popover regex in view test is fragile | partly fixed in 888cc03 (pure nextOpen transitions tested, popover selectors hardened); DOM wiring (outside pointerdown, blur) still untested — no DOM test library |
 | WR-09 | warning | Pos cell `text-neutral-500` fell below AA on the green/red-100 mover tint (no dark variant) | fixed in f55f465 (neutral-600 / dark:neutral-400) |
-| WR-10 | warning | `aria-expanded`/`data-open` track only click state while hover and focus-visible also show the popover: Tab shows it with aria-expanded=false, Enter/Space then look like no-ops, Escape always blurs (loses tab position) and cannot dismiss a hover popover | open |
+| WR-10 | warning | `aria-expanded`/`data-open` track only click state while hover and focus-visible also show the popover: Tab shows it with aria-expanded=false, Enter/Space then look like no-ops, Escape always blurs (loses tab position) and cannot dismiss a hover popover | fixed in ad76e51 (phase 02, plan 02-04): Escape hides via data-dismissed without blurring, expanded state removed, nextDismissed unit-tested; WebKit check D13 |
 | IN-01 | info | `if (secs)` conflates a 0:00 clock with a malformed one | open |
 | IN-02 | info | Non-null assertion inside a closure (`page.tsx:134`) | open |
 | IN-03 | info | Negative "OT excluded" time rendered as positive | open |
