@@ -506,20 +506,26 @@ export const playerHref = (...args: Parameters<typeof researchHref>) => `${resea
 | A8 | The Tailwind rule order that makes `data-dismissed` win holds for 4.3.3 only | Pitfall 9 | A Tailwind upgrade could reorder; the markup test and the WebKit check catch it |
 | A9 | The `package.json`/`package-lock.json` changes in `git status` come from the GSD installer, not from this research | Package Legitimacy Audit | If they are someone's real change, they were still not made here |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Window-share denominator when the linemate missed games.**
+   - **RESOLVED: UI-SPEC reading — CONTEXT D-25 (user, 2026-10-12).**
    - What we know: UI-SPEC's `absent` state excludes those games "from shares and tags"; D-09 text says "across the games the player played".
    - What's unclear: whether a linemate out 2 of 5 games should read as his share when healthy (UI-SPEC) or diluted (D-09 literal).
    - Recommendation: UI-SPEC reading (Pattern 3). Confirm with the user in plan review; cheap to flip.
 2. **Tags when the player has no counted earlier game** (e.g. he joined or returned inside the recent part).
+   - **RESOLVED: no tags plus the footnote — confirmed by the user in plan review (2026-10-12).**
    - What we know: D-15 says "at least 2 games played", D-18 only covers missing recent games.
    - What's unclear: there is nothing to compare with.
    - Recommendation: tags unavailable, footnote `No tags: {name} has no earlier games in this window to compare with.` Add to the copy table.
 3. **Does a returning-from-injury linemate count as New?** Under the rule earlier = 0 for a linemate with no counted earlier games, so yes if recent share >= 15 points. It cannot be told apart from a new acquisition using time-together alone, and it is a real change in who the player skates with. Recommendation: accept it and keep the UI-SPEC `title` copy.
+   - **RESOLVED: a returning linemate with real recent time is New — confirmed by the user in plan review (2026-10-12).**
 4. **±15 fires on about a third of rows.** D-16 locks 15. Recommendation: ship 15 as a single constant; if UAT finds it noisy, 20 drops it to about a quarter of rows.
+   - **RESOLVED: keep ±15 — CONTEXT D-27 (user, 2026-10-12).**
 5. **Cap versus change tags.** Option: exempt New/Rising/Fading rows from the cap (mean +1.1 rows, max 16). Default: UI-SPEC behaviour. The user decides in plan review.
+   - **RESOLVED: tagged rows bypass the cap — CONTEXT D-26 (user, 2026-10-12).**
 6. **Selected-name behaviour.** Recommendation: native anchor for the selected name (jumps every time, verified). Deviation from UI-SPEC's "PlayerLink everywhere" wording, same intent.
+   - **RESOLVED: plain `#player-detail` anchor for the selected name — confirmed by the user in plan review (2026-10-12).**
 
 ## Environment Availability
 

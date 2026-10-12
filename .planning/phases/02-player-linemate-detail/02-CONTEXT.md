@@ -63,7 +63,7 @@ The existing Last game unit tables must keep showing the same TOI and share valu
 - What happens to `?player` when the team or window changes. Suggested: drop it when the player isn't on the new team's roster for the window, and keep it otherwise. This wasn't discussed.
 - How the jump to the panel is done (a fragment anchor, `scroll` behaviour on links), provided it works with server rendering and the existing `PendingLink`.
 - The tag glyphs and wording, as long as "New", "Rising", "Fading" and "Out" read clearly.
-- Research recommendations adopted unless the plan finds a reason otherwise:
+- Research recommendations, confirmed by the user in plan review (2026-10-12):
   - The "little or none earlier" bound for New is 10 share points (`LINEMATE_NEW_EARLIER_MAX_POINTS`).
   - When the player has no counted earlier game, no tags are shown and a footnote says why.
   - A linemate returning from injury who gets real recent time counts as New.
