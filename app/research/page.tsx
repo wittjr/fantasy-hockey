@@ -49,8 +49,6 @@ export default async function ResearchPage({
     }
   }
 
-  const href = (t: string, n: number) => researchHref(t, n, sort);
-
   // ISO dates compare lexically. A failed game newer than every loaded one makes "Last game" and the Δ columns describe older games.
   const newestMissing =
     !!research && research.games.length > 0 &&
@@ -68,7 +66,7 @@ export default async function ResearchPage({
           {NHL_TEAM_ABBREVS.map((t) => (
             <PendingLink
               key={t}
-              href={href(t, gameCount)}
+              href={researchHref(t, gameCount, sort, { sit })}
               className={t === team ? "font-semibold underline" : "text-neutral-500 hover:underline"}
             >
               {t}
@@ -81,7 +79,7 @@ export default async function ResearchPage({
             team ? (
               <PendingLink
                 key={n}
-                href={href(team, n)}
+                href={researchHref(team, n, sort, { player, sit })}
                 className={n === gameCount ? "font-semibold underline" : "text-neutral-500 hover:underline"}
               >
                 {n === 1 ? "Last game" : `Last ${n}`}

@@ -192,6 +192,11 @@ export function parseSit(value: unknown): Situation {
   return value === "pp" || value === "sh" ? value : "ev";
 }
 
+/** On only for the exact string "1"; arrays and any other value are off (T-01-06/T-01-07 allowlist). */
+export function parseAll(value: unknown): boolean {
+  return value === "1";
+}
+
 /** Built only from validated values, so a request's raw params never reach a link. */
 export function researchHref(
   team: string,
@@ -206,6 +211,11 @@ export function researchHref(
   if (extras?.sit && extras.sit !== "ev") params.set("sit", extras.sit);
   if (extras?.all) params.set("all", "1");
   return `/research?${params}`;
+}
+
+/** Name links only: the hash makes Next scroll to the player panel after the server render. */
+export function playerHref(team: string, games: number, sort: SortSpec, extras: { player: number; sit?: Situation }): string {
+  return `${researchHref(team, games, sort, extras)}#player-detail`;
 }
 
 /** One row per skater who dressed in the window, in the default order (forwards, then defense, by Avg TOI descending). */
