@@ -4,18 +4,26 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { StripCellState } from "@/lib/research/game-strip";
 import type { LinemateCellState } from "@/lib/research/linemates";
 
-export type CellEvent = "click" | "blur" | "enter" | "space" | "escape" | "outside";
+export type CellEvent = "click" | "blur" | "enter" | "space" | "escape" | "outside" | "leave";
 
-/** The popover's open state after an event: click, Enter and Space toggle it; blur, Escape and an outside pointerdown close it. */
+/** The popover's open state after an event: click, Enter and Space toggle it; blur, Escape and an outside pointerdown close it; a pointer leaving keeps a pin. */
 export function nextOpen(open: boolean, event: CellEvent): boolean {
+  if (event === "leave") return open;
   return event === "click" || event === "enter" || event === "space" ? !open : false;
 }
 
+/** Escape hides the popover without moving focus (WCAG 1.4.13); the next click, Enter, Space, blur or pointer leave clears it. */
+export function nextDismissed(dismissed: boolean, event: CellEvent): boolean {
+  if (event === "escape") return true;
+  return event === "outside" ? dismissed : false;
+}
+
 /**
- * One Per game square. Lets a click or tap open its popover (data-open), because touch screens have no hover and the
- * squares are small hover targets. Enter or Space toggle it like a click. A second click, Escape, an outside pointerdown
- * or losing focus closes it. The popover itself is server-rendered and passed in as children; its CSS shows it while
- * this span carries data-open.
+ * One strip square. Hover or keyboard focus shows its popover; a click or tap, Enter or Space pins it (data-open),
+ * because touch screens have no hover. A second click, an outside pointerdown or losing focus unpins it. Escape hides
+ * it without moving focus (data-dismissed) until the next click, Enter, Space, blur or pointer leave. The popover itself
+ * is server-rendered and passed in as children; its CSS shows it on hover, focus or while this span carries data-open,
+ * and hides it while this span carries data-dismissed.
  */
 export function ToiStripCell({
   label,
@@ -29,12 +37,21 @@ export function ToiStripCell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
+
+  const send = (event: CellEvent) => {
+    setOpen((o) => nextOpen(o, event));
+    setDismissed((d) => nextDismissed(d, event));
+  };
 
   useEffect(() => {
     if (!open) return;
     const close = (e: PointerEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen((o) => nextOpen(o, "outside"));
+      if (!ref.current?.contains(e.target as Node)) {
+        setOpen((o) => nextOpen(o, "outside"));
+        setDismissed((d) => nextDismissed(d, "outside"));
+      }
     };
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
@@ -45,22 +62,22 @@ export function ToiStripCell({
       ref={ref}
       data-state={state}
       data-open={open ? "" : undefined}
+      data-dismissed={dismissed ? "" : undefined}
       tabIndex={0}
       role="button"
-      aria-expanded={open}
       aria-label={label}
       className={className}
-      onClick={() => setOpen((o) => nextOpen(o, "click"))}
+      onClick={() => send("click")}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          setOpen((o) => nextOpen(o, e.key === "Enter" ? "enter" : "space"));
+          send(e.key === "Enter" ? "enter" : "space");
         } else if (e.key === "Escape") {
-          setOpen((o) => nextOpen(o, "escape"));
-          e.currentTarget.blur(); // also ends :focus-visible, which would keep the popover showing
+          send("escape");
         }
       }}
-      onBlur={() => setOpen((o) => nextOpen(o, "blur"))}
+      onBlur={() => send("blur")}
+      onPointerLeave={() => send("leave")}
     >
       {children}
     </span>
