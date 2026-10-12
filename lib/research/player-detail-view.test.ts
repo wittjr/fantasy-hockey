@@ -496,6 +496,8 @@ test("when nobody meets the minimum the panel says so with the minimum for the s
 
 const tds = (html: string, name: string) => [...rowHtml(html, name).matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].map((m) => m[0]);
 const tagCell = (html: string, name: string) => tds(html, name).at(-1) ?? "";
+/** The chip's own opening tag inside a Tag cell. */
+const chipTag = (cell: string) => cell.match(/<span\b[^>]*title=[^>]*>/)?.[0] ?? "";
 
 // Game 1 is the earlier game; games 2 and 3 are the team's last 2.
 // Bravo 25% -> 45% (Rising), Charlie 0% -> 30% (New), Delta 40% -> 0% (Fading), Echo dressed only in game 1 (Out).
@@ -549,7 +551,7 @@ test("tag chips: New is the one solid chip, Rising and Fading carry an aria-hidd
 
   const charlie = tagCell(html, "Charlie Winger");
   assert.equal(stripTags(charlie), "New");
-  assert.ok(classTokens(charlie).includes("bg-neutral-900") && classTokens(charlie).includes("text-white"), charlie);
+  assert.ok(classTokens(chipTag(charlie)).includes("bg-neutral-900") && classTokens(chipTag(charlie)).includes("text-white"), charlie);
   assert.equal(unescape(charlie.match(/title="([^"]*)"/)?.[1] ?? ""), "Little or no time together before the recent games");
 
   const delta = tagCell(html, "Delta Defense");
@@ -558,12 +560,13 @@ test("tag chips: New is the one solid chip, Rising and Fading carry an aria-hidd
 
   const echo = tagCell(html, "Echo Defense");
   assert.equal(stripTags(echo), "Out");
-  assert.ok(classTokens(echo).includes("border-dashed"), echo);
+  assert.ok(classTokens(chipTag(echo)).includes("border-dashed"), echo);
   assert.equal(unescape(echo.match(/title="([^"]*)"/)?.[1] ?? ""), "Missed the recent games");
 
   for (const cell of [bravo, charlie, delta, echo]) {
-    assert.ok(!/green|red/.test(cell), cell);
-    assert.ok(classTokens(cell).includes("inline-block") && classTokens(cell).includes("rounded") && classTokens(cell).includes("whitespace-nowrap"), cell);
+    assert.ok(!/-(green|red)-/.test(cell), cell);
+    const tokens = classTokens(chipTag(cell));
+    for (const c of ["inline-block", "rounded", "border", "px-1", "text-xs", "whitespace-nowrap"]) assert.ok(tokens.includes(c), `${c} in ${cell}`);
   }
 });
 
@@ -577,7 +580,7 @@ test("the SC4 line change lists the New linemate above the Fading one in the for
   const html = renderPanel(research(lineChangeGames()));
   assert.ok(html.indexOf("Charlie Winger") < html.indexOf("Bravo Winger"));
   assert.equal(stripTags(tagCell(html, "Charlie Winger")), "New");
-  assert.equal(stripTags(tagCell(html, "Bravo Winger")), "Fading");
+  assert.equal(stripTags(tagCell(html, "Bravo Winger")), "▼ Fading");
 });
 
 test("a capped list says how many are shown and links to Show all with all=1 kept on the other params", () => {

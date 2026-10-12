@@ -8,6 +8,7 @@ import {
   buildLinemateView,
   gameColumnLabels,
   LINEMATE_MIN_SECONDS,
+  LINEMATE_TAG_POINTS,
   linemateDetail,
   linemateOpacity,
   SITUATION_ABBREV,
@@ -15,6 +16,7 @@ import {
   type LinemateCellState,
   type LinemateEmptyReason,
   type LinemateRow,
+  type LinemateTag,
 } from "@/lib/research/linemates";
 import type { TeamResearch } from "@/lib/research/team-games";
 import {
@@ -35,6 +37,14 @@ const CELL_BORDER: Record<LinemateCellState, string> = {
 
 const SITUATIONS: readonly Situation[] = ["ev", "pp", "sh"];
 
+// Tags are neutral on purpose: they describe time together, not how good a linemate is. New is the only solid chip.
+const TAG_CHIP: Record<LinemateTag, string> = {
+  New: "border-neutral-900 bg-neutral-900 text-white dark:border-neutral-100 dark:bg-neutral-100 dark:text-neutral-900",
+  Rising: "border-neutral-400 text-neutral-900 dark:border-neutral-500 dark:text-neutral-100",
+  Fading: "border-neutral-400 text-neutral-900 dark:border-neutral-500 dark:text-neutral-100",
+  Out: "border-dashed border-neutral-400 text-neutral-600 dark:border-neutral-600 dark:text-neutral-400",
+};
+
 /**
  * The player detail panel, rendered from `?player`. Shows the player's deployment numbers and the linemates (forwards, then
  * defense) he shared the ice with in each game of the window, as one shaded square per game, with EV/PP/SH tabs. The square is
@@ -47,6 +57,7 @@ export function PlayerLinemates({
   team,
   gameCount,
   sort,
+  all = false,
 }: {
   research: TeamResearch;
   playerId: number;
@@ -54,6 +65,7 @@ export function PlayerLinemates({
   team: string;
   gameCount: number;
   sort: SortSpec;
+  all?: boolean;
 }) {
   // The trend rows are exactly the skaters who dressed in the window, so a goalie or a stranger finds no row.
   const row = buildTrendRows(research.players.values(), research.games).find((r) => r.player.id === playerId);
@@ -73,11 +85,21 @@ export function PlayerLinemates({
   const { games } = research;
   const name = row.player.name;
   const abbrev = SITUATION_ABBREV[sit];
-  const view = buildLinemateView(games, research.players, playerId, sit);
+  const view = buildLinemateView(games, research.players, playerId, sit, { all });
   const labels = gameColumnLabels(games.map((g) => g.date));
   const toiCrossing = deltaCrossing(row.toiDelta, TOI_MOVER_SECONDS);
   const ppCrossing = deltaCrossing(row.ppShareDelta, PP_MOVER_POINTS);
   const showTrend = games.length > 1;
+  const columns = showTrend ? 4 : 3; // Linemate, games, Window share, and Tag when there is anything to compare (D-15)
+  const recentGames = games.length === 2 ? "latest game" : "last 2 games";
+  const tagNotes: Partial<Record<NonNullable<typeof view.tags.reason>, string>> = {
+    "played-fewer-than-2": `No tags: ${name} played only ${view.tags.dressedGames} ${view.tags.dressedGames === 1 ? "game" : "games"} in this window.`,
+    "missed-recent": `No tags: ${name} missed the team's ${recentGames}.`,
+    "no-recent-data": `No tags: ${name} has no ${SITUATION_WORDS[sit]} time with a shift chart in the team's ${recentGames}.`,
+    "no-earlier-data": `No tags: ${name} has no earlier games in this window to compare with.`,
+  };
+  const tagNote = view.tags.reason ? tagNotes[view.tags.reason] : undefined;
+  const showAllHref = researchHref(team, gameCount, sort, { player: playerId, sit, all: !all });
   const minimum = formatClock(LINEMATE_MIN_SECONDS[sit]);
   const emptyMessages: Record<LinemateEmptyReason, string> = {
     "no-chart": `No linemate data for ${name} in this window: no shift chart is available for these games (not published yet, or it failed to load).`,
@@ -132,7 +154,7 @@ export function PlayerLinemates({
         {SITUATIONS.map((s) => (
           <PendingLink
             key={s}
-            href={researchHref(team, gameCount, sort, { player: playerId, sit: s })}
+            href={researchHref(team, gameCount, sort, { player: playerId, sit: s, all })}
             scroll={false}
             aria-current={s === sit ? "true" : undefined}
             className={`-mb-px border-b-2 px-3 py-1 text-sm ${
@@ -177,6 +199,11 @@ export function PlayerLinemates({
                 >
                   Window share
                 </th>
+                {showTrend && (
+                  <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">
+                    Tag
+                  </th>
+                )}
               </tr>
             </thead>
             {(
@@ -187,13 +214,13 @@ export function PlayerLinemates({
             ).map(([title, rows, divider]) => (
               <tbody key={title}>
                 <tr className={divider}>
-                  <th scope="rowgroup" colSpan={3} className="pt-2 pb-1 text-left text-xs font-medium text-neutral-500">
+                  <th scope="rowgroup" colSpan={columns} className="pt-2 pb-1 text-left text-xs font-medium text-neutral-500">
                     {title}
                   </th>
                 </tr>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-1 pr-3 text-neutral-500 whitespace-nowrap">
+                    <td colSpan={columns} className="py-1 pr-3 text-neutral-500 whitespace-nowrap">
                       None
                     </td>
                   </tr>
@@ -206,6 +233,15 @@ export function PlayerLinemates({
             ))}
           </table>
         </div>
+      )}
+
+      {!view.emptyReason && view.cappedCount < view.total && (
+        <p className="text-xs text-neutral-500">
+          {all ? `Showing all ${view.total} linemates. ` : `Showing ${view.cappedCount} of ${view.total} linemates, most recent time together first. `}
+          <PendingLink href={showAllHref} scroll={false} className="text-xs underline">
+            {all ? "Show fewer" : `Show all ${view.total}`}
+          </PendingLink>
+        </p>
       )}
 
       {(!view.emptyReason || showNoChartNote) && (
@@ -222,6 +258,14 @@ export function PlayerLinemates({
                 ordered by the team&apos;s last 2 games, then by the whole window, and only those with {minimum} or more together
                 are listed.
               </p>
+              {showTrend && (
+                <p>
+                  New, Rising, Fading and Out compare the team&apos;s last 2 games (in a 2-game window, the latest game) with the
+                  earlier games and need 2 or more games played. They describe time together only, not how good a linemate is.
+                  Rising and Fading mean a change of {LINEMATE_TAG_POINTS} or more points of share; Out means the linemate missed
+                  the recent games.
+                </p>
+              )}
             </>
           )}
           {showNoChartNote && (
@@ -230,6 +274,8 @@ export function PlayerLinemates({
               (not published yet, or it failed to load). They are left out of shares and tags.
             </p>
           )}
+          {!view.emptyReason && !showTrend && <p>Tags need 2 or more games. Choose Last 3 or more.</p>}
+          {!view.emptyReason && tagNote && <p>{tagNote}</p>}
         </div>
       )}
     </section>
@@ -281,6 +327,13 @@ export function LinemateRowView({
   team: string;
 }) {
   const linemate = row.player.name;
+  const abbrev = SITUATION_ABBREV[sit];
+  const tagTitles: Record<LinemateTag, string> = {
+    New: "Little or no time together before the recent games",
+    Rising: `Share of ${playerName}'s ${abbrev} time is up ${LINEMATE_TAG_POINTS} or more points in the recent games`,
+    Fading: `Share of ${playerName}'s ${abbrev} time is down ${LINEMATE_TAG_POINTS} or more points in the recent games`,
+    Out: "Missed the recent games",
+  };
   return (
     <tr className="border-b border-neutral-100 dark:border-neutral-900">
       <td className="py-1 pr-3 whitespace-nowrap">{linemate}</td>
@@ -317,6 +370,20 @@ export function LinemateRowView({
           `${Math.round(row.windowShare * 100)}%`
         )}
       </td>
+      {research.games.length > 1 && (
+        <td className="py-1 pr-3 whitespace-nowrap">
+          {row.tag && (
+            <span
+              title={tagTitles[row.tag]}
+              className={`inline-block rounded border px-1 text-xs whitespace-nowrap ${TAG_CHIP[row.tag]}`}
+            >
+              {row.tag === "Rising" && <span aria-hidden>▲ </span>}
+              {row.tag === "Fading" && <span aria-hidden>▼ </span>}
+              {row.tag}
+            </span>
+          )}
+        </td>
+      )}
     </tr>
   );
 }

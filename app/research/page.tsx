@@ -105,7 +105,7 @@ export default async function ResearchPage({
             </p>
           )}
           {player !== null && (
-            <PlayerLinemates research={research} playerId={player} sit={sit} team={team} gameCount={gameCount} sort={sort} />
+            <PlayerLinemates research={research} playerId={player} sit={sit} team={team} gameCount={gameCount} sort={sort} all={all} />
           )}
           <LastGameLines research={research} team={team} gameCount={gameCount} sort={sort} sit={sit} selected={player} />
           <ToiTrends research={research} sort={sort} team={team} gameCount={gameCount} selected={player} sit={sit} all={all} />
