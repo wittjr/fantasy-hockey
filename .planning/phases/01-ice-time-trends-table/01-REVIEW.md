@@ -2,24 +2,17 @@
 phase: 01-ice-time-trends-table
 reviewed: 2026-10-11T00:00:00Z
 depth: standard
-files_reviewed: 11
+files_reviewed: 4
 files_reviewed_list:
-  - app/research/page.tsx
   - components/ToiGameStrip.tsx
+  - components/ToiStripCell.tsx
   - components/ToiTrends.tsx
-  - lib/nhl/client.test.ts
-  - lib/nhl/client.ts
-  - lib/research/lines.test.ts
-  - lib/research/lines.ts
-  - lib/research/team-games.test.ts
-  - lib/research/team-games.ts
   - lib/research/toi-trends-view.test.ts
-  - lib/research/toi-trends.ts
 findings:
   critical: 0
   warning: 2
-  info: 6
-  total: 8
+  info: 4
+  total: 6
 status: issues_found
 ---
 
@@ -27,93 +20,86 @@ status: issues_found
 
 **Reviewed:** 2026-10-11
 **Depth:** standard
-**Files Reviewed:** 11
+**Files Reviewed:** 4
 **Status:** issues_found
 
 ## Summary
 
-Incremental re-review after gap-closure plans 01-05..01-07. Diff base `a4a913a`. Dependencies read for context but not in scope: `lib/research/game-strip.ts`, `lib/research/format.ts`, `components/PendingLink.tsx`. `tsx --test` passes (122 tests), and `tsc --noEmit` and `eslint` are clean on the scoped files.
+Incremental re-review after gap plans 01-08 (click/tap popover via the new `ToiStripCell` client component) and 01-09 (bordered 20x20 squares, header hint, "C 5/5 GP" Pos cell). I also read `lib/research/game-strip.ts` and `lib/research/toi-trends.ts` to confirm the data the components consume.
 
-Prior findings verified as fixed:
+What checks out:
+- **Server/client boundary is sound.** `ToiStripCell` receives only `label` (string), `state` (string-literal union), `className` (string) and `children` (server-rendered elements). All are serializable. `ToiGameStrip` and `ToiTrends` have no hooks or handlers and stay server components. `import type` is used for the lib types, so no server-only code is pulled into the client bundle.
+- **Listener lifecycle is correct.** The `pointerdown` listener is added only while `open` is true. The effect cleanup removes it on close and on unmount. There is no leak and no stale closure (the handler reads only `ref` and the stable setter).
+- **Toggle sequencing works.** A pointerdown inside the square is ignored, so the `click` toggles it closed. A pointerdown on another square closes this one first. The `blur` handler covers focus loss.
+- **Tailwind 4 syntax is valid.** `group-data-[open]/cell:block` matches the `data-open=""` attribute, and `group-focus-visible/cell:block` is valid. In Tailwind 4, `hover:` and `group-hover:` are wrapped in `@media (hover: hover)`, so touch devices do not get a sticky hover popover competing with the tap-to-open state.
 
-- **CR-01** (duplicate shift rows in `analyzeGameLines`): `uniqueShifts` is now shared by `regulationSeconds` and `analyzeGameLines`, with tests for the PP/SH inflation case. The dedupe key includes team, so two clubs' rows never collide.
-- **WR-01** (popover anchoring): the `<td>` is no longer positioned, each square is `relative`, and the popover is `right-0 top-full`. There is no remaining anchoring defect.
-- **WR-02** (empty shift chart cached for an hour): an empty first result is re-requested with `cache: "no-store"`. The second request's rejection propagates to the caller's `.catch`.
-- **WR-03** (one failed game blanks the page, raw error shown): `Promise.allSettled`, `unavailableDates`, and fixed error copy with server-side logging. No raw error text reaches the page. The team param is allowlisted and links are built from validated values.
-- **WR-04** (comment/behaviour mismatch, silent dashes at 2 games): the doc comments match the code, the 2-game legend is added, and the PP share title is corrected.
-
-No critical defects found. The two warnings concern how partial-failure handling (the WR-03 fix) is surfaced to the user. IN-01..IN-04 are unchanged and still present.
+Remaining concerns are accessibility semantics of the clickable squares and the gap in test coverage for the new interactive behavior.
 
 ## Warnings
 
-### WR-05: A failed shift-chart request is reported as "the NHL hasn't published shift charts"
+### WR-07: Clickable squares use `role="img"` with no keyboard toggle, no `aria-expanded` and no Escape dismissal
 
-**File:** `lib/research/team-games.ts:76-79` (surfaced at `components/ToiTrends.tsx:153-157` and `app/research/page.tsx:126`)
-**Issue:** `loadGame` swallows a shift-chart rejection (503, network error, malformed envelope) and substitutes `[]`, which is identical to the "unpublished" case. Both the Ice-time trends footer ("No PP/SH data for ...: the NHL hasn't published shift charts for those games yet") and the Last game panel ("The NHL hasn't published shift charts for this game yet") then state an upstream fact that is false for a transient failure. Unlike the `unavailableDates` banner, there is no "Reload to try again" hint. For a failed chart on an OT/SO game, `regulationToi` becomes `null`, so every skater is silently excluded from that game's Avg TOI, slope and Δ. The user cannot tell this is a recoverable failure and not a data property. The only trace is a server log line.
-**Fix:** Record the failure on the game and word the copy accordingly. For example, add `shiftChartFailed: boolean` to `ResearchGame`, set it in the `.catch`, and branch the copy:
-```ts
-// team-games.ts
-let shiftChartFailed = false;
-getShiftCharts(gameId).catch((err) => {
-  console.error(...);
-  shiftChartFailed = true;
-  return [];
-});
-// ...game = { ..., shiftChartFailed }
+**File:** `components/ToiStripCell.tsx:35-45`
+**Issue:** The square is a focusable (`tabIndex={0}`), clickable control, but it is exposed as `role="img"`. That is a non-interactive role, so assistive tech does not announce it as actionable. Concretely:
+- Enter and Space do nothing, because only `onClick` is wired and a `span` gets no synthesized click from the keyboard. Keyboard users only get the popover through the `focus-visible` CSS, never the same open state as mouse and touch users.
+- There is no `aria-expanded` state. The popover is `aria-hidden`, so the `aria-label` carries the content. That part is fine, but the control's open or closed state is not conveyed.
+- Escape does not dismiss the open popover. WCAG 1.4.13 (content on hover or focus) requires it to be dismissible without moving the pointer or focus.
+- The project's lint config (`eslint-config-next`) enables only a small subset of `jsx-a11y`, so none of this is flagged.
+
+The test suite (`toi-trends-view.test.ts:191-192,430`) pins `role="img"` and `tabindex="0"`, so changing it also means updating those assertions.
+
+**Fix:** Either keep `role="img"` for pure hover and focus use and drop the click handler's claim to be interactive, or make it a real control. The minimal change is to add Escape handling and keyboard activation. The `useEffect` can also listen for `keydown` while open:
+```tsx
+// in the effect, while open
+const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+document.addEventListener("keydown", onKey);
+// ...and remove it in cleanup
+
+// on the span
+onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}
 ```
-Then show "Couldn't load shift charts for X. Reload to try again." when `shiftChartFailed`, and keep the "not published yet" text for the genuinely empty case.
+The cleaner option is `<button type="button" aria-expanded={open} aria-label={label}>`, with the `[role=img]` test assertions updated to match.
 
-### WR-06: When the newest game(s) fail to load, "Last game" and the "last 2 games" Δ silently re-anchor to older games
+### WR-08: The new interactive behavior (toggle, outside-click, blur, cleanup) has no test
 
-**File:** `lib/research/team-games.ts:133-146`, `app/research/page.tsx:116-123`, `lib/research/toi-trends.ts:102-107`
-**Issue:** After `allSettled`, `games` holds only the games that loaded and the failed ones are dropped. Every consumer treats `games[games.length - 1]` and the final `RECENT_GAMES` indices as the team's latest games.
-- If the newest game's boxscore fails, `LastGameLines` renders the heading "Last game: Oct 3 ..." for a game that is not the team's last game.
-- The TOI Δ and PP share Δ columns, the movers tint and `dnpLast2` compare "the team's last 2 games" against the rest. They now compare the last 2 loaded games, which can skip the most recent real game.
-- The amber banner names the missing date, but nothing says the recency-based columns shifted. A pickup decision (the app's core value) can rest on a Δ that omits the latest game.
+**File:** `lib/research/toi-trends-view.test.ts:423-445` (and `components/ToiStripCell.tsx:22-47`)
+**Issue:** Plan 01-08's entire purpose is that a click or tap opens the popover, a second click, an outside `pointerdown` or a blur closes it, and the popover never blocks the squares under it. The tests use `renderToStaticMarkup`, so they can only assert class tokens and the initial `data-open` absence ("starts closed"). The state machine is never exercised. A regression that breaks the toggle, drops the `blur` close, or leaks the document listener would pass the whole suite. One adjacent assertion is also fragile. The test at lines 198-205 matches popovers with a lazy `[\s\S]*?<\/span><\/span>`, which stops at the first nested `</span></span>`, so `popovers[0].includes("1:00")` can pass or fail depending on markup nesting rather than on content.
 
-**Fix:** Make the degradation explicit. Either:
-- (a) reword the banner when the failed game is newer than the last loaded one, for example "Couldn't load Oct 5; Last game, Δ and mover flags below use the latest games that loaded"; or
-- (b) when a failed game falls inside the most recent `RECENT_GAMES` of the requested window, label the "Last game" heading with its date as "Latest loaded game".
-
-Option (a) is the minimum change, since `unavailableDates` and the loaded dates are both already available.
+**Fix:** Add a small behavioral test with a DOM (for example `@testing-library/react` with jsdom or happy-dom, or a hand-driven `react-dom/client` render) covering:
+```ts
+// click toggles data-open on, second click off
+// pointerdown on document.body closes an open cell
+// pointerdown on another cell closes the first
+// blur closes
+// after close and after unmount, document has no pointerdown listener
+```
+If a DOM test dependency is too heavy for this project, at least tighten the line-200 regex to anchor on the popover's own class and assert on the extracted text of its subtree.
 
 ## Info
 
-### IN-01: `if (secs)` conflates a 0:00 clock with a malformed one
+### IN-05: Popover headroom (`pb-28 -mb-24`) is a fixed magic number; worst case still overflows (still present)
 
-**File:** `lib/research/team-games.ts:92-93`
-**Issue:** `parseClock` returns `0` for "0:00" and `null` for malformed input. The truthiness check treats both as "did not dress". A skater who dressed but logged "00:00" renders as DNP, which is arguably intended, but the code does not say so and the null case is dropped silently.
-**Fix:** `if (secs !== null && secs > 0)` with a short comment stating the intent.
+**File:** `components/ToiTrends.tsx:56`
+**Issue:** Re-reported. The popover opens downward inside an `overflow-x-auto` wrapper, which forces `overflow-y` to `auto`. The `pb-28 -mb-24` hack reserves 112px under the table. The tallest popover is a no-shift-data OT square: a title line, four rows (TOI, Total, PP, SH) and two notes, one of which wraps at `max-w-xs`. That is about 8 lines at 16px plus padding, border and `mt-1`, roughly 150px. The last row has only about 116px below its square, so the final line can be clipped or can create a vertical scrollbar in the wrapper. This is an estimate and has not been checked in a browser.
+**Fix:** Either raise the reserve (for example `pb-40 -mb-36`), or open the popover upward (`bottom-full mb-1`) for rows in the lower half, or move the popover out of the scroll container.
 
-### IN-02: Non-null assertion inside a closure
+### IN-06: Intro copy hard-codes the mover thresholds (still present)
 
-**File:** `app/research/page.tsx:134`
-**Issue:** `game.lines!.units[...]` sits inside a `.map` callback. TypeScript cannot carry the `!game.lines` narrowing into the closure, so the assertion is needed. It is safe today but fragile if the surrounding branch changes.
-**Fix:** Hoist `const lines = game.lines;` into the narrowed branch (for example `const units = game.lines.units;` before the JSX) and use it in the closure.
+**File:** `components/ToiTrends.tsx:48-51`
+**Issue:** Re-reported. The intro text literally says "2:00 or more of TOI or 15 or more points", while the same file imports `TOI_MOVER_SECONDS` and `PP_MOVER_POINTS` for the actual logic. Changing a constant silently makes the copy wrong. The test at line 363 also pins the literal copy, so the drift would not be caught. The "regular-season" wording part of the original finding is not in this file's current text.
+**Fix:** Interpolate `formatClock(TOI_MOVER_SECONDS)` and `PP_MOVER_POINTS` into the sentence, and update the test to build its expected string from the same constants.
 
-### IN-03: Negative "OT excluded" time rendered as positive
+### IN-07: A second click on a hovered square appears to do nothing on desktop
 
-**File:** `lib/research/game-strip.ts:38` (consumed by `components/ToiGameStrip.tsx`)
-**Issue:** `+${formatClock(cell.totalToi - cell.toi)}` uses `formatClock`, which applies `Math.abs`. If shift-derived regulation TOI exceeds boxscore total (a chart that overlaps or runs long), the popover shows `+0:12` for a negative difference, hiding the inconsistency.
-**Fix:** Clamp or flag it, for example `const ot = cell.totalToi - cell.toi; value: ot < 0 ? "—" : `+${formatClock(ot)}``.
+**File:** `components/ToiStripCell.tsx:43`
+**Issue:** `onClick` toggles `open`, but the popover is also shown by `group-hover`. On a pointer device, the first click sets `data-open` (the popover was already visible from hover), and the second click clears it, yet the popover stays visible because the pointer is still over the square. The toggle-off is invisible there. It only matters on touch and for keyboard focus. The click-to-open affordance advertised in the header ("click a square") therefore has no visible effect on desktop.
+**Fix:** Accept this and drop the "click" wording for non-touch users, or make the hint and behavior match. For example, say "(click or tap a square)", or leave it as is and document that click is a touch affordance.
 
-### IN-04: `getShiftCharts` assumes the response envelope
+### IN-08: One tab stop per square makes the table slow to traverse by keyboard
 
-**File:** `lib/nhl/client.ts:140-141`
-**Issue:** `(await res.json()) as { data: NhlShift[] }` followed by `data.data.filter(...)` throws a bare `TypeError` ("Cannot read properties of undefined") if the envelope changes or `data` is missing. This is an undocumented API. The error is now caught per game, but the log message carries no game context.
-**Fix:** `const rows = data?.data; if (!Array.isArray(rows)) throw new Error(`NHL shift charts ${gameId}: unexpected response shape`);`
-
-### IN-05: Popover headroom is a fixed magic number
-
-**File:** `components/ToiTrends.tsx:56` (`pb-28 -mb-24`)
-**Issue:** The scroll wrapper (`overflow-x-auto` forces `overflow-y: auto` as well) reserves 7rem of bottom padding so the last rows' popovers are not clipped, then pulls the layout back with a negative margin. The popover height is content-driven. The worst case is an excluded OT cell with no chart, which has 5 rows, 2 notes and a wrapping note at `max-w-xs`, and it can exceed the reserve. The popover would then be clipped or add an inner vertical scrollbar on the bottom rows. This is estimated from the CSS, not observed in a browser.
-**Fix:** Verify the worst-case popover on the last row in a browser. If it clips, raise the reserve or derive it from the maximum popover line count.
-
-### IN-06: Threshold copy and "regular-season" wording are hard-coded and can drift from the code
-
-**File:** `components/ToiTrends.tsx:50` and `app/research/page.tsx:97`
-**Issue:** The intro paragraph states "2:00 or more of TOI or 15 or more points" while the behaviour comes from `TOI_MOVER_SECONDS` and `PP_MOVER_POINTS`. A threshold change will leave the copy stale, and the view test pins the copy string, not the constants. Separately, the empty state says "hasn't finished a regular-season game" although `RESEARCH_GAME_TYPES` includes playoffs (type 3).
-**Fix:** Interpolate the constants into the copy (`formatClock(TOI_MOVER_SECONDS)`, `PP_MOVER_POINTS`) and change the empty-state wording to "a game".
+**File:** `components/ToiStripCell.tsx:39`
+**Issue:** Every square has `tabIndex={0}`. A 20-skater table with a 10-game window yields about 200 tab stops, so reaching the next page control or footer requires many Tab presses. Each stop also reads the full aria-label.
+**Fix:** Use a roving tabindex (one tab stop per row, with arrow keys moving between squares), or make only the first square in each row tabbable. This pairs naturally with the WR-07 keyboard work.
 
 ---
 
