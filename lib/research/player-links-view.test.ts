@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { LastGameLines } from "@/components/LastGameLines";
 import { ToiTrends } from "@/components/ToiTrends";
-import type { Situation } from "./lines";
+import type { Situation, Unit } from "./lines";
 import type { ResearchGame, ResearchPlayer, TeamResearch } from "./team-games";
 import { DEFAULT_SORT, researchHref, type SortSpec } from "./toi-trends";
 
@@ -128,4 +129,101 @@ test("the name link comes before the DNP last 2 chip", () => {
   const cell = nameCell(renderTrends(research(games)), "Bravo Forward");
   assert.ok(cell.includes("<a"), cell);
   assert.ok(cell.indexOf("<a") < cell.indexOf("DNP last 2"), cell);
+});
+
+// Last game unit tables (UNIT-04)
+const unit = (playerIds: number[], seconds = 300, pct = 20): Unit => ({ playerIds, seconds, pct });
+const unitPlayers = new Map<number, ResearchPlayer>(
+  [2, 3, 4, 5, 6, 7, 8, 11, 12, 13].map((id) => [id, { id, name: id === 2 ? "Bravo Forward" : `Player ${id}`, position: id === 11 ? "D" : "C", group: id === 11 ? "D" : "F" }]),
+);
+function unitResearch(units: Partial<Record<Situation, { F?: Unit[]; D?: Unit[] }>>, p = unitPlayers): TeamResearch {
+  const game = fixtureGame("2026-10-05", { 2: 1000 });
+  game.lines = {
+    situationSeconds: { ev: 3000, pp: 120, sh: 60 },
+    units: {
+      ev: { F: units.ev?.F ?? [], D: units.ev?.D ?? [] },
+      pp: { F: units.pp?.F ?? [], D: units.pp?.D ?? [] },
+      sh: { F: units.sh?.F ?? [], D: units.sh?.D ?? [] },
+    },
+    playerSeconds: new Map(),
+  };
+  return { players: p, games: [game], unavailableDates: [] };
+}
+const renderUnits = (r: TeamResearch, sit: Situation = "ev", selected: number | null = 2) =>
+  renderToStaticMarkup(createElement(LastGameLines, { research: r, team: "MTL", gameCount: 5, sort: DEFAULT_SORT, sit, selected }));
+const tableHtml = (html: string, title: string) =>
+  [...html.matchAll(/<table[\s\S]*?<\/table>/g)].map((m) => m[0]).find((t) => t.includes(`>${title}</th>`)) ?? "";
+const anchors = (cell: string) => [...cell.matchAll(/<a\b[^>]*>/g)].map((m) => m[0]);
+const fixtureUnits = () =>
+  unitResearch({
+    ev: { F: [unit([3, 4, 5], 600, 40), unit([6, 7, 8])] },
+    pp: { F: [unit([2, 3, 4, 5])], D: [unit([11])] },
+  });
+
+test("EV unit names link without sit and PP unit names link with sit=pp", () => {
+  const html = renderUnits(fixtureUnits());
+  const ev = anchors(tds(rowHtml(tableHtml(html, "EV - Forwards"), "Player 3"))[3]);
+  assert.deepEqual(ev.map((a) => attr(a, "href")), [3, 4, 5].map((id) => `/research?team=MTL&games=5&player=${id}#player-detail`));
+  const pp = anchors(tds(rowHtml(tableHtml(html, "PP - Forwards"), "Player 3"))[3]);
+  assert.deepEqual(pp.map((a) => attr(a, "href")), [2, 3, 4, 5].map((id) => `/research?team=MTL&games=5&player=${id}&sit=pp#player-detail`));
+});
+
+test("names in a unit are separated by an aria-hidden dash and a one-player unit has no separator", () => {
+  const html = renderUnits(fixtureUnits());
+  const three = tds(rowHtml(tableHtml(html, "EV - Forwards"), "Player 3"))[3];
+  assert.equal((three.match(/<span aria-hidden="true"> – <\/span>/g) ?? []).length, 2);
+  const one = tds(rowHtml(tableHtml(html, "PP - Defense"), "Player 11"))[3];
+  assert.equal(anchors(one).length, 1);
+  assert.ok(!one.includes("–"));
+});
+
+test("the #, Time and % cells keep their values", () => {
+  const cells = tds(rowHtml(tableHtml(renderUnits(fixtureUnits()), "EV - Forwards"), "Player 3")).map((c) => c.replace(/<[^>]*>/g, "").trim());
+  assert.deepEqual(cells.slice(0, 3), ["1", "10:00", "40.0"]);
+});
+
+test("an empty unit table shows one None row with no link", () => {
+  const sh = tableHtml(renderUnits(fixtureUnits()), "SH - Defense");
+  assert.ok(sh.includes("None"));
+  assert.equal((sh.match(/<tr/g) ?? []).length, 2);
+  assert.ok(!sh.includes("<a"));
+});
+
+test("the selected player is marked wherever he appears, and links to the table's own tab", () => {
+  const html = renderUnits(fixtureUnits(), "ev", 2);
+  const bravo = anchors(tds(rowHtml(tableHtml(html, "PP - Forwards"), "Bravo Forward"))[3])[0];
+  assert.equal(attr(bravo, "href"), "/research?team=MTL&games=5&player=2&sit=pp#player-detail");
+  assert.equal(attr(bravo, "aria-current"), "true");
+  assert.ok(classTokens(bravo).includes("font-medium"));
+  assert.equal(attr(bravo, "title"), "Show who Bravo Forward plays with at PP");
+});
+
+test("the selected player's name on his own tab is a plain #player-detail anchor", () => {
+  const html = renderUnits(fixtureUnits(), "ev", 3);
+  const evThree = anchors(tds(rowHtml(tableHtml(html, "EV - Forwards"), "Player 3"))[3])[0];
+  assert.equal(attr(evThree, "href"), "#player-detail");
+  assert.equal(attr(evThree, "aria-current"), "true");
+  const ppThree = anchors(tds(rowHtml(tableHtml(html, "PP - Forwards"), "Player 3"))[3])[1];
+  assert.equal(attr(ppThree, "href"), "/research?team=MTL&games=5&player=3&sit=pp#player-detail");
+  assert.equal(attr(ppThree, "aria-current"), "true");
+});
+
+test("an EV forward list of 5 units renders 4 rows", () => {
+  const five = unitResearch({ ev: { F: [3, 4, 5, 6, 7].map((id) => unit([id, 8])) } });
+  const table = tableHtml(renderUnits(five), "EV - Forwards");
+  assert.equal((table.match(/<tr/g) ?? []).length, 1 + 4);
+});
+
+test("players with the same display name get links with their own ids", () => {
+  const twins = new Map(unitPlayers);
+  twins.set(12, { id: 12, name: "Same Name", position: "C", group: "F" });
+  twins.set(13, { id: 13, name: "Same Name", position: "C", group: "F" });
+  const cell = tds(tableHtml(renderUnits(unitResearch({ ev: { F: [unit([12, 13])] } }, twins), "ev", null), "EV - Forwards").match(/<tr[\s\S]*?<\/tr>/g)![1])[3];
+  assert.deepEqual(anchors(cell).map((a) => attr(a, "href")), [12, 13].map((id) => `/research?team=MTL&games=5&player=${id}#player-detail`));
+});
+
+test("a last game with no shift chart still shows the unavailable note", () => {
+  const r = unitResearch({});
+  r.games[0].lines = null;
+  assert.ok(renderUnits(r).includes("No shift chart is available for this game (not published yet, or it failed to load)."));
 });
