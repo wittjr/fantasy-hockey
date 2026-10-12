@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Player Linemate Detail
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-10-12T19:23:10.501Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-10-12T19:28:06.701Z"
 last_activity: 2026-10-12
 last_activity_desc: Phase 02 execution started
-state_head: a89440233b7be280b8b7470c6926ad5476060b78
+state_head: e23d389d3b2526049e76e604708df4778cc236ad
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 16
-  completed_plans: 10
+  completed_plans: 11
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-12)
 ## Current Position
 
 Phase: 02 (Player Linemate Detail) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-10-12 — Phase 02 execution started
 
@@ -66,6 +66,7 @@ Progress: [███░░░░░░░] 33% (1 of 3 phases; 9/9 Phase 1 plans
 | Phase 01 P08 | 10 min | 2 tasks | 4 files |
 | Phase 01 P09 | 3 min | 2 tasks | 5 files |
 | Phase 02 P01 | 4 min | 2 tasks | 13 files |
+| Phase 02 P02 | 3 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-09: Per game squares are 20x20 (h-5 w-5) on a 24px pitch (gap-1) with rounded-xs and a 1px border per state; meets WCAG 2.5.8 and keeps rows the same height
 - [Phase 02]: 02-01: pairSeconds collapses duplicate skaters per second (Set) so overlapping differing shift rows cannot make time together exceed own seconds
 - [Phase 02]: 02-01: window share pooled over counted games only (D-25); a linemate with no counted game is never listed
+- [Phase 02]: 02-02: LinemateRowView exported so the dash window share (unreachable through the full panel) is testable
+- [Phase 02]: 02-02: StripPopover is the single popover for both strips; heading line shown first, title muted only when a heading is set
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12T19:23:10.461Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-10-12T19:28:06.654Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None

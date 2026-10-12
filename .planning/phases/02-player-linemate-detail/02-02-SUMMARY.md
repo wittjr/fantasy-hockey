@@ -67,7 +67,7 @@ coverage:
         ref: "lib/research/player-detail-view.test.ts#every heat-strip popover has the Per game strip popover's class string"
         status: pass
       - kind: unit
-        ref: "lib/research/toi-trends-view.test.ts (unedited, 39 tests)"
+        ref: "lib/research/toi-trends-view.test.ts (unedited, 48 tests)"
         status: pass
     human_judgment: false
   - id: D3
