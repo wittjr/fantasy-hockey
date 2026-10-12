@@ -52,12 +52,22 @@ The existing Last game unit tables must keep showing the same TOI and share valu
 - **D-23:** **Skaters only.** Goalies can't be selected and aren't listed as linemates.
 - **D-24:** **Missing shift charts** (unpublished, or a failed request) show as unknown/blank in the heat strip, never 0, and don't count toward shares or tags (roadmap criterion 5; DATA-02 spirit).
 
+### Follow-up decisions (after phase research, 2026-10-12)
+- **D-25:** **Window share counts only the games where both players dressed and a shift chart exists.** A linemate's missed games are blank and do not dilute his share (the UI-SPEC "absent" rule). This refines D-09's "across the games the player played".
+- **D-26:** **Tagged linemates bypass the list cap.** Rows tagged New, Rising, Fading or Out are always listed, even past the ~6F/4D (EV) or 4F/3D (PP/SH) cap; on real data this adds about 1 row on average. The minimum-time filter still applies. "Show all" still lists everyone above the minimum.
+- **D-27:** **Keep ±15 share points** for Rising/Fading (D-16 confirmed after research showed tags on about a third of EV rows). It is one named constant, to be raised to ±20 if UAT finds the tags noisy.
+
 ### Claude's Discretion
 - The minimum time together that counts as "meaningful" for listing and for New, and the exact list caps per situation (D-11, D-14). Tune these on real team data.
 - The visual design of the panel, tabs, divider, close link, row highlight and heat-strip colour, within the Phase 1 visual language (neutral palette, `tabular-nums`, squares and popovers like `ToiGameStrip`).
 - What happens to `?player` when the team or window changes. Suggested: drop it when the player isn't on the new team's roster for the window, and keep it otherwise. This wasn't discussed.
 - How the jump to the panel is done (a fragment anchor, `scroll` behaviour on links), provided it works with server rendering and the existing `PendingLink`.
 - The tag glyphs and wording, as long as "New", "Rising", "Fading" and "Out" read clearly.
+- Research recommendations adopted unless the plan finds a reason otherwise:
+  - The "little or none earlier" bound for New is 10 share points (`LINEMATE_NEW_EARLIER_MAX_POINTS`).
+  - When the player has no counted earlier game, no tags are shown and a footnote says why.
+  - A linemate returning from injury who gets real recent time counts as New.
+  - The already-selected name is a plain `#player-detail` anchor so re-clicking still jumps.
 - Whether pair seconds come from extending `analyzeGameLines` or from a new timeline helper (research ARCHITECTURE suggests `timeline.ts` + `pairSeconds` + `lib/research/linemates.ts`).
 
 </decisions>
