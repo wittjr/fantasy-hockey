@@ -121,7 +121,9 @@ blocked: 1
 
 - gap_id: G-01-7b
   truth: "In dark mode the mover row tint (green = moving up, red = moving down) is clearly visible, as it is in light mode"
-  status: failed
+  status: resolved
+  resolved_by: "/gsd-fast fix (no plan): dark tint raised from 950/30 to 900/40 in components/ToiTrends.tsx"
+  resolved_at: 2026-10-12
   reason: "User reported (test 7 passed otherwise): in dark mode the row colors are difficult to see"
   severity: cosmetic
   test: 7

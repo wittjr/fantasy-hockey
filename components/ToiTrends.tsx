@@ -76,7 +76,7 @@ export function ToiTrends({
                   key={row.player.id}
                   className={`border-b border-neutral-100 align-top dark:border-neutral-900 ${
                     i > 0 && rows[i - 1].player.group !== row.player.group ? "border-t-2 border-t-neutral-300 dark:border-t-neutral-700" : ""
-                  } ${row.mover === "up" ? "bg-green-50 dark:bg-green-950/30" : row.mover === "down" ? "bg-red-50 dark:bg-red-950/30" : ""}`}
+                  } ${row.mover === "up" ? "bg-green-50 dark:bg-green-900/40" : row.mover === "down" ? "bg-red-50 dark:bg-red-900/40" : ""}`}
                 >
                   <td className="py-1 pr-3 whitespace-nowrap">
                     {row.player.name}
