@@ -4,13 +4,19 @@ import { formatClock, formatDate, gameLabel, resultLabel } from "./format";
 import type { GameDetail, StripGame } from "./game-strip";
 import type { Situation } from "./lines";
 import type { ResearchGame, ResearchPlayer } from "./team-games";
-import { RECENT_GAMES } from "./toi-trends";
+import { deltaCrossing, RECENT_GAMES } from "./toi-trends";
 
 // A linemate needs at least this much time together in counted games to be listed. At EV a forward still shares 15-30%
 // of his ice with non-linemates through line changes, so the list cap does most of the filtering; this drops the noise.
 export const LINEMATE_MIN_SECONDS: Record<Situation, number> = { ev: 120, pp: 30, sh: 30 };
 // A cell is darkest when the linemate shared this share of the player's situation time (D-08).
 export const LINEMATE_SHADE_SATURATION_SHARE = 0.75;
+// List caps per situation and group before "Show all"; tagged rows are exempt (D-11, D-26).
+export const LINEMATE_CAPS: Record<Situation, { F: number; D: number }> = { ev: { F: 6, D: 4 }, pp: { F: 4, D: 3 }, sh: { F: 4, D: 3 } };
+// Rising/Fading need this many points of share change (D-16, D-27). Separate from PP_MOVER_POINTS so tuning one never moves the other; raise to 20 if tags prove noisy.
+export const LINEMATE_TAG_POINTS = 15;
+// A rise from an earlier share below this many points is New rather than Rising (D-14 "little or none earlier").
+export const LINEMATE_NEW_EARLIER_MAX_POINTS = 10;
 export const SITUATION_ABBREV: Record<Situation, string> = { ev: "EV", pp: "PP", sh: "SH" };
 // Words in sentences; the abbreviations are for chips and tabs.
 export const SITUATION_WORDS: Record<Situation, string> = { ev: "even-strength", pp: "power-play", sh: "penalty-kill" };
@@ -33,6 +39,11 @@ export interface LinemateCell {
   absentReason: AbsentReason | null;
 }
 
+/** Time-together tags only; they never judge how good a linemate is (PLYR-04). */
+export type LinemateTag = "New" | "Rising" | "Fading" | "Out";
+/** Why a view has no tags, in the order the reasons are checked. */
+export type LinemateTagsUnavailable = "one-game" | "played-fewer-than-2" | "missed-recent" | "no-recent-data" | "no-earlier-data";
+
 export interface LinemateRow {
   player: ResearchPlayer;
   group: "F" | "D";
@@ -44,6 +55,8 @@ export interface LinemateRow {
   recentSeconds: number;
   /** Seconds together in all counted games. */
   totalSeconds: number;
+  /** Null when the change is under LINEMATE_TAG_POINTS or tags are unavailable. */
+  tag: LinemateTag | null;
 }
 
 /** Why a view lists nobody, in precedence order: no shift chart for any game he played, no time in the situation, nobody above the minimum. */
@@ -57,6 +70,11 @@ export interface LinemateView {
   emptyReason: LinemateEmptyReason | null;
   /** ISO dates of the window games without a shift chart, oldest first. */
   noChartDates: string[];
+  tags: { available: boolean; reason: LinemateTagsUnavailable | null; dressedGames: number };
+  /** Listed linemates in both groups, before the cap. */
+  total: number;
+  /** Rows the cap keeps in both groups (capped rows plus every tagged row), whether or not `all` lifted the cap. */
+  cappedCount: number;
 }
 
 /** Index of the first "recent" game: the team's last RECENT_GAMES, or the latest game of a 2-game window; null for 1 game (D-15). */
@@ -108,12 +126,54 @@ function dominantGroup(games: readonly LinemateGame[], id: number, fallback: "F"
   return last.F > last.D ? "F" : "D";
 }
 
-/** Linemates of one skater in one situation: forwards and defense, recent time first (D-12, D-13). */
+/** Whether the selected player has a counted-capable game in the games (dressed, with a chart and situation time). */
+function hasSituationData(g: LinemateGame, playerId: number, situation: Situation): boolean {
+  return !!g.pairs && g.toi.has(playerId) && (g.pairs.self.get(playerId)?.[situation] ?? 0) > 0;
+}
+
+/** Whether recent and earlier shares can be compared at all, with the first failing reason (D-15, D-18, Open Question 2). */
+function tagAvailability(games: readonly LinemateGame[], playerId: number, situation: Situation, start: number | null): LinemateView["tags"] {
+  const dressedGames = games.filter((g) => g.toi.has(playerId)).length;
+  const unavailable = (reason: LinemateTagsUnavailable) => ({ available: false, reason, dressedGames });
+  if (start === null) return unavailable("one-game");
+  if (dressedGames < 2) return unavailable("played-fewer-than-2");
+  if (!games.some((g, i) => i >= start && g.toi.has(playerId))) return unavailable("missed-recent");
+  if (!games.some((g, i) => i >= start && hasSituationData(g, playerId, situation))) return unavailable("no-recent-data");
+  if (!games.some((g, i) => i < start && hasSituationData(g, playerId, situation))) return unavailable("no-earlier-data");
+  return { available: true, reason: null, dressedGames };
+}
+
+/** Rounded percent of the player's situation seconds spent together over the counted cells; null when none are counted. */
+function pooledShare(cells: readonly LinemateCell[]): number | null {
+  let together = 0;
+  let self = 0;
+  for (const c of cells) {
+    if (c.seconds === null || c.selfSeconds === null) continue;
+    together += c.seconds;
+    self += c.selfSeconds;
+  }
+  return self > 0 ? Math.round((100 * together) / self) : null;
+}
+
+/** New/Rising/Fading/Out from time together in counted games only; a linemate who missed the recent games is Out, never Fading (D-14..D-17, D-20). */
+function linemateTag(games: readonly LinemateGame[], cells: readonly LinemateCell[], linemateId: number, start: number): LinemateTag | null {
+  if (!games.some((g, i) => i >= start && g.toi.has(linemateId))) return "Out";
+  const recent = pooledShare(cells.slice(start));
+  if (recent === null) return null;
+  // No counted earlier game (a newcomer or a player returning) counts as no earlier time.
+  const earlier = pooledShare(cells.slice(0, start)) ?? 0;
+  const crossing = deltaCrossing(recent - earlier, LINEMATE_TAG_POINTS);
+  if (crossing === 1) return earlier < LINEMATE_NEW_EARLIER_MAX_POINTS ? "New" : "Rising";
+  return crossing === -1 ? "Fading" : null;
+}
+
+/** Linemates of one skater in one situation: forwards and defense, recent time first (D-12, D-13), tagged and capped (D-11, D-26). */
 export function buildLinemateView(
   games: readonly LinemateGame[],
   players: ReadonlyMap<number, ResearchPlayer>,
   playerId: number,
   situation: Situation,
+  options: { all?: boolean } = {},
 ): LinemateView {
   const candidates = new Set<number>();
   for (const g of games) {
@@ -122,6 +182,7 @@ export function buildLinemateView(
   candidates.delete(playerId);
 
   const start = recentStart(games.length);
+  const tags = tagAvailability(games, playerId, situation, start);
   const rows: LinemateRow[] = [];
   for (const id of candidates) {
     const player = players.get(id);
@@ -144,15 +205,25 @@ export function buildLinemateView(
       windowShare: self > 0 ? together / self : null,
       recentSeconds,
       totalSeconds: together,
+      tag: tags.available && start !== null ? linemateTag(games, cells, id, start) : null,
     });
   }
   rows.sort((a, b) => b.recentSeconds - a.recentSeconds || b.totalSeconds - a.totalSeconds || a.player.id - b.player.id);
+
+  const capped = (group: "F" | "D") =>
+    rows.filter((r) => r.group === group).filter((r, i) => i < LINEMATE_CAPS[situation][group] || r.tag !== null);
+  const all = (group: "F" | "D") => rows.filter((r) => r.group === group);
+  const keptForwards = capped("F");
+  const keptDefense = capped("D");
   return {
     situation,
-    forwards: rows.filter((r) => r.group === "F"),
-    defense: rows.filter((r) => r.group === "D"),
+    forwards: options.all ? all("F") : keptForwards,
+    defense: options.all ? all("D") : keptDefense,
     emptyReason: rows.length > 0 ? null : emptyReason(games, playerId, situation),
     noChartDates: games.filter((g) => !g.pairs).map((g) => g.date),
+    tags,
+    total: rows.length,
+    cappedCount: keptForwards.length + keptDefense.length,
   };
 }
 

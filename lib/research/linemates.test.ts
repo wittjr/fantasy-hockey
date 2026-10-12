@@ -348,7 +348,7 @@ for (const n of [2, 3, 5]) {
 test("line change: old linemates who did not dress in the recent games are Out, not Fading", () => {
   const games = [
     game(1, [1, 10, 11, 12], pairs(600, { 10: 300, 11: 300, 12: 0 })),
-    game(2, [1, 10, 11, 12], pairs(600, { 10: 300, 11: 300, 12: 0 })),
+    game(2, [1, 12], pairs(600, { 12: 300 })),
     game(3, [1, 12], pairs(600, { 12: 300 })),
   ];
   const view = buildLinemateView(games, wide, PLAYER, "ev");
@@ -473,8 +473,14 @@ test("a 2-game window compares the latest game with the game before it", () => {
 function crowd(situation: Situation, forwards: number, defense: number, extra: Record<number, number> = {}) {
   const together: Record<number, number> = { ...extra };
   const groups: Record<number, PositionGroup> = {};
-  for (let i = 0; i < forwards; i++) ((together[10 + i] = 600 - 10 * i), (groups[10 + i] = "F"));
-  for (let i = 0; i < defense; i++) ((together[20 + i] = 500 - 10 * i), (groups[20 + i] = "D"));
+  for (let i = 0; i < forwards; i++) {
+    together[10 + i] = 600 - 10 * i;
+    groups[10 + i] = "F";
+  }
+  for (let i = 0; i < defense; i++) {
+    together[20 + i] = 500 - 10 * i;
+    groups[20 + i] = "D";
+  }
   const dressed = [1, ...Object.keys(together).map(Number)];
   return [game(1, dressed, pairs(1000, together, groups, situation))];
 }
