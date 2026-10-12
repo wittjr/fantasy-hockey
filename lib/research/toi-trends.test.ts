@@ -7,6 +7,8 @@ import {
   effectiveSort,
   moverDirection,
   nextSort,
+  parsePlayer,
+  parseSit,
   parseSort,
   recentDelta,
   researchHref,
@@ -316,6 +318,40 @@ test("researchHref omits sort and dir for the default and dir for desc", () => {
   assert.equal(researchHref("MTL", 10, { key: "toiDelta", dir: "asc" }), "/research?team=MTL&games=10&sort=toiDelta&dir=asc");
   assert.equal(researchHref("MTL", 10, { key: "ppShare", dir: "desc" }), "/research?team=MTL&games=10&sort=ppShare");
   assert.equal(researchHref("MTL", 10, { key: "avgToi", dir: "asc" }), "/research?team=MTL&games=10&sort=avgToi&dir=asc");
+});
+
+test("parsePlayer accepts a single string of 1-10 digits", () => {
+  assert.equal(parsePlayer("8478402"), 8478402);
+  assert.equal(parsePlayer("007"), 7);
+});
+
+test("parsePlayer rejects everything else", () => {
+  for (const bad of ["", "abc", "-1", "1.5", " 12", "12345678901", "__proto__", ["1"], undefined, 12]) {
+    assert.equal(parsePlayer(bad), null, String(bad));
+  }
+});
+
+test("parseSit passes pp and sh through and treats anything else as ev", () => {
+  assert.equal(parseSit("pp"), "pp");
+  assert.equal(parseSit("sh"), "sh");
+  for (const other of ["ev", "PP", "bogus", ["pp"], undefined, "__proto__"]) assert.equal(parseSit(other), "ev", String(other));
+});
+
+test("researchHref appends player, sit and all only when set to a non-default value", () => {
+  assert.equal(researchHref("MTL", 10, DEFAULT_SORT), "/research?team=MTL&games=10");
+  assert.equal(researchHref("MTL", 10, DEFAULT_SORT, { player: 8478402 }), "/research?team=MTL&games=10&player=8478402");
+  assert.equal(researchHref("MTL", 10, DEFAULT_SORT, { sit: "ev" }), "/research?team=MTL&games=10");
+  assert.equal(researchHref("MTL", 10, DEFAULT_SORT, { player: null }), "/research?team=MTL&games=10");
+  assert.equal(researchHref("MTL", 10, DEFAULT_SORT, { all: false }), "/research?team=MTL&games=10");
+  assert.equal(researchHref("MTL", 10, DEFAULT_SORT, { sit: "pp" }), "/research?team=MTL&games=10&sit=pp");
+  assert.equal(researchHref("MTL", 10, DEFAULT_SORT, { all: true }), "/research?team=MTL&games=10&all=1");
+});
+
+test("researchHref puts the player extras after sort and dir", () => {
+  assert.equal(
+    researchHref("MTL", 10, { key: "toiDelta", dir: "asc" }, { player: 1, sit: "sh", all: true }),
+    "/research?team=MTL&games=10&sort=toiDelta&dir=asc&player=1&sit=sh&all=1",
+  );
 });
 
 function sortRow(id: number, group: "F" | "D", v: Partial<Pick<TrendRow, "avgToi" | "ppShare" | "toiDelta" | "ppShareDelta">>, name = `P${id}`): TrendRow {
