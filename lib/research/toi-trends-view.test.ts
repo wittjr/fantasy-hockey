@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { nextOpen, type CellEvent } from "@/components/ToiStripCell";
+import { nextDismissed, nextOpen, type CellEvent } from "@/components/ToiStripCell";
 import { ToiTrends } from "@/components/ToiTrends";
 import type { ResearchGame, ResearchPlayer, TeamResearch } from "./team-games";
 import { DEFAULT_SORT, researchHref, type SortSpec } from "./toi-trends";
@@ -437,7 +437,8 @@ test("every strip square shows a pointer cursor, is a named group and starts clo
     const tokens = classTokens(c.tag);
     assert.ok(tokens.includes("cursor-pointer") && tokens.includes("group/cell") && tokens.includes("relative"), c.tag);
     assert.ok(c.tag.includes('tabindex="0"') && c.tag.includes('role="button"'), c.tag);
-    assert.ok(c.tag.includes('aria-expanded="false"'), c.tag);
+    assert.ok(!c.tag.includes("aria-expanded"), c.tag);
+    assert.ok(!c.tag.includes("data-dismissed"), c.tag);
     assert.ok(!c.tag.includes("data-open"), c.tag);
   }
 });
@@ -451,6 +452,16 @@ test("every popover opens on click, hover or keyboard focus and takes no pointer
       assert.ok(tokens.includes(want), `${want} missing: ${tokens.join(" ")}`);
     }
     assert.ok(!tokens.includes("group-focus/cell:block"), tokens.join(" "));
+  }
+});
+
+// WR-10: Escape hides a popover shown by hover, focus or a pin without moving focus (the dismiss token must follow the show tokens).
+test("every popover is hidden while its square is dismissed", () => {
+  const popovers = popoverTags(render(research(threeGames()))).map(classTokens);
+  assert.equal(popovers.length, 9);
+  for (const tokens of popovers) {
+    assert.ok(tokens.includes("group-data-[dismissed]/cell:hidden"), tokens.join(" "));
+    assert.ok(tokens.indexOf("group-data-[dismissed]/cell:hidden") === tokens.indexOf("group-data-[open]/cell:block") + 1, tokens.join(" "));
   }
 });
 
@@ -512,6 +523,22 @@ test("a click toggles the popover and blur, Escape and an outside pointerdown al
   for (const event of closing) {
     assert.equal(nextOpen(true, event), false, event);
     assert.equal(nextOpen(false, event), false, event);
+  }
+});
+
+test("a pointer leaving a square keeps a pinned popover pinned", () => {
+  assert.equal(nextOpen(true, "leave"), true);
+  assert.equal(nextOpen(false, "leave"), false);
+});
+
+test("Escape dismisses the popover, an outside pointerdown leaves the flag alone, and every other event clears it", () => {
+  assert.equal(nextDismissed(false, "escape"), true);
+  assert.equal(nextDismissed(true, "escape"), true);
+  assert.equal(nextDismissed(false, "outside"), false);
+  assert.equal(nextDismissed(true, "outside"), true);
+  for (const event of ["click", "enter", "space", "blur", "leave"] as const) {
+    assert.equal(nextDismissed(true, event), false, event);
+    assert.equal(nextDismissed(false, event), false, event);
   }
 });
 
