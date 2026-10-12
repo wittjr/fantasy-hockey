@@ -2,17 +2,17 @@
 gsd_state_version: "1.0"
 current_phase: 01
 current_phase_name: Ice-Time Trends Table
-status: verifying
-stopped_at: Completed 01-07-PLAN.md
-last_updated: "2026-10-11T23:03:29.090Z"
+status: executing
+stopped_at: Completed 01-08-PLAN.md
+last_updated: "2026-10-12T02:02:34.133Z"
 last_activity: 2026-10-11
 last_activity_desc: Phase 01 execution started
-state_head: 5e21e1180515c0b3ae525545b951653b0ea469f2
+state_head: 987198815537e0fe1f178a5b01514a99a6fa9150
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
   percent: 0
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-10-11)
 ## Current Position
 
 Phase: 01 (Ice-Time Trends Table) — EXECUTING
-Plan: 7 of 7
-Status: Phase complete — ready for verification
+Plan: 2 of 9
+Status: Ready to execute
 Last activity: 2026-10-11 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P05 | 2 min | 2 tasks | 6 files |
 | Phase 01 P06 | 3 min | 2 tasks | 5 files |
 | Phase 01 P07 | 3 min | 2 tasks | 5 files |
+| Phase 01 P08 | 10 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-06: research page load-error banner shows fixed copy; error detail goes to server log only — T-01-11: no API path or status in markup
 - [Phase 01]: 01-07: strip popover is right-aligned to the hovered square (absolute right-0 top-full, square is relative) so the newest squares never clip at the table's right edge; still CSS only
 - [Phase 01]: 01-07: at exactly 2 games the Δ columns stay visible as dashes and the legend says why (WR-04); PP share title and toiDelta/ppShare docs now describe the computation, no value changed
+- [Phase 01]: 01-08: per-square client wrapper ToiStripCell (click/tap toggles data-open; outside pointerdown and blur close); popover reveals on data-open, focus-visible or hover and is pointer-events-none
 
 ### Pending Todos
 
@@ -109,6 +111,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-11T23:03:29.069Z
-Stopped at: Completed 01-07-PLAN.md
+Last session: 2026-10-12T02:02:34.103Z
+Stopped at: Completed 01-08-PLAN.md
 Resume file: None

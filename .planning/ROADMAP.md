@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A player below the minimum games played in the window shows no trend, with the games-played count visible, and games the player missed are left out of averages and trends instead of being counted as 0
   5. User can sort the table by trend, average TOI, or PP share; the sort is in the URL, survives reload, and keeps the F/D grouping
 
-**Plans:** 7/9 plans executed
+**Plans:** 8/9 plans executed
 
 Plans:
 **Wave 1**
@@ -56,7 +56,7 @@ Plans:
 - [x] 01-07-PLAN.md — WR-01: popover under the hovered square; WR-04: toiDelta/ppShare docs and PP share title match the code, 2-game Δ explanation
 
 **Wave 8** *(gap closure, UAT; blocked on Wave 7 completion)*
-- [ ] 01-08-PLAN.md — G-01-2: click/tap opens a square's popover (minimal ToiStripCell client wrapper, hover/keyboard kept, pointer cursor), open popover no longer blocks squares below; re-runnable WebKit check incl. emulated iPhone tap (UAT test 3)
+- [x] 01-08-PLAN.md — G-01-2: click/tap opens a square's popover (minimal ToiStripCell client wrapper, hover/keyboard kept, pointer cursor), open popover no longer blocks squares below; re-runnable WebKit check incl. emulated iPhone tap (UAT test 3)
 
 **Wave 9** *(gap closure, UAT; blocked on Wave 8 completion)*
 - [ ] 01-09-PLAN.md — G-01-5: separate 20x20 bordered squares (4px gap, 2px corners), "Per game (click a square)" hint, intro/legend copy; G-01-1b: "C 5/5 GP"; UI-SPEC strip contract revised
@@ -104,6 +104,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Ice-Time Trends Table | 7/9 | In Progress | - |
+| 1. Ice-Time Trends Table | 8/9 | In Progress | - |
 | 2. Player Linemate Detail | 0/TBD | Not started | - |
 | 3. Unit Event Stats | 0/TBD | Not started | - |

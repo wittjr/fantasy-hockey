@@ -13,6 +13,9 @@ provides:
   - "webkit-strip-check.cjs: re-runnable WebKit check (desktop + emulated iPhone) of the strip popover on the real page"
 affects: [01-09, verify-work UAT tests 2 and 3, 01-UI-SPEC touch backstop]
 
+plan_head_before: 210e89a60d3a58fc2cc7fd83e4470efa13e63584
+plan_head_after: bc9d914c51484b00246122fe54f15710fa145284
+
 actuals:
   tokens: 6900
   tasks: 2
