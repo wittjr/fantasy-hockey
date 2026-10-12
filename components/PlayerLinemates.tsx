@@ -1,4 +1,5 @@
 import { PendingLink } from "@/components/PendingLink";
+import { StripPopover } from "@/components/StripPopover";
 import { ToiStripCell } from "@/components/ToiStripCell";
 import { detailText, STRIP_SQUARE_CLASS } from "@/lib/research/game-strip";
 import type { Situation } from "@/lib/research/lines";
@@ -23,8 +24,8 @@ const CELL_BORDER: Record<LinemateCellState, string> = {
 
 /**
  * The player detail panel, rendered from `?player`. Shows the linemates (forwards, then defense) the player shared the ice with
- * in each game of the window, as one shaded square per game. Each square's aria-label carries its facts. Server component: only
- * the squares and links are client code.
+ * in each game of the window, as one shaded square per game. The square is shade only: its facts are in the popover and the
+ * aria-label. Server component: only the squares and links are client code.
  */
 export function PlayerLinemates({
   research,
@@ -178,6 +179,7 @@ function LinemateRowView({
                     style={{ opacity: linemateOpacity(cell.share) }}
                   />
                 )}
+                <StripPopover detail={detail} />
               </ToiStripCell>
             );
           })}
