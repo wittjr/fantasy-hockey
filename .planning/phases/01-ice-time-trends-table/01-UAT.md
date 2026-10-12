@@ -3,7 +3,7 @@ status: complete
 phase: 01-ice-time-trends-table
 source: [01-VERIFICATION.md]
 started: 2026-10-11T23:20:00Z
-updated: 2026-10-12T14:59:56.465Z
+updated: 2026-10-12T15:00:12.526Z
 ---
 
 ## Current Test
@@ -25,7 +25,7 @@ severity: major
 ### 3. Tap on touch devices
 expected: Tapping a strip square on iOS Safari and Android Chrome shows the popover (if not, add a minimal client wrapper).
 result: skipped
-reason: "Out of scope: the site targets laptop browsers, not phones (user, 2026-10-12). Emulated iPhone tap also passed in the WebKit check."
+reason: "Deferred follow-up: phone/touch testing not planned; the site targets laptop browsers (user, 2026-10-12). Emulated iPhone tap passed in the WebKit check."
 
 ### 4. Sort header interaction
 expected: Clicking Avg TOI, TOI Δ, PP share and PP share Δ headers updates the sort arrow and order; the sort survives reload; forwards stay above defense; the sort carries across team and window links; the spinner shows while pending without layout shift.
@@ -132,3 +132,9 @@ blocked: 0
       issue: "dark-mode mover tint classes too faint"
   missing:
     - "Stronger dark-mode tint for mover rows (e.g. a lighter shade or higher opacity), still subtle enough not to overwhelm the deltas"
+
+## Deferred Follow-Ups
+
+- test: 3
+  idea: "Phone/touch testing; not planned while the site targets laptop browsers"
+  deferred_at: 2026-10-12
