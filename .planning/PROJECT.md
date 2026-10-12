@@ -21,11 +21,10 @@ At a glance, show which players on a team are moving up or down in deployment �
 - ✓ Weekly planner: daily optimal lineups and pickup recommendations from Fantrax per-game projections, with "The List" spreadsheet fallback — existing
 - ✓ Line research page: pick team + last 1/3/5/10/20 games; last-game EV/PP/SH units (time and % share) derived from NHL shift charts — existing
 - ✓ Line research ice-time grid: per-game TOI/PP/SH, average TOI, PP share, TOI and PP-share trend slopes with sparklines — existing
+- ✓ Ice-time section reads cleanly as a trends table: Avg TOI (regulation), TOI Δ, PP share, PP share Δ, SH, mover tint, sortable headers in the URL; per-game values in a clickable strip with popovers — Phase 1
 
 ### Active
 
-- [ ] Ice-time section reads cleanly — numbers no longer run together visually
-- [ ] Ice-time section becomes a trends view: averages and trends are prominent, raw per-game times are de-emphasized
 - [ ] Last-game unit tables show shots, goals, and Corsi for and against per unit, for all situations (EV, PP, SH)
 - [ ] Clicking a player row opens a player detail section
 - [ ] Player detail shows linemate time trends across the selected games (who they played with, how much, per game) — names only, user judges quality
@@ -56,11 +55,15 @@ At a glance, show which players on a team are moving up or down in deployment �
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Refine the research page before adding league-wide views | Single-team page must be readable and useful first | — Pending |
+| Refine the research page before adding league-wide views | Single-team page must be readable and useful first | ✓ Good — Phase 1 trends table shipped |
 | Event stats (SF/SA, GF/GA, CF/CA) on all unit tables, not just EV | User wants PP/SH units evaluated the same way | — Pending |
 | Player detail opened by clicking a row in the trends table | Keeps selection in context of the trends | — Pending |
 | Linemates shown by name and time, no quality score | User prefers to judge linemate quality themselves | — Pending |
 | League ownership belongs in the league view, not the research page | Keeps research page league-agnostic; toggle still undecided | — Pending |
+| "Recent" = team's last 2 games; Δ needs ≥3 games, arrow ≥2; OT minutes removed from all TOI trends | Small samples are noisy; OT inflates TOI (Phase 1 D-05..D-13) | ✓ Shipped Phase 1 |
+| Mover thresholds ±2:00 TOI / ±15 PP-share points | Research found ±1:00/±10 mostly noise | ✓ Shipped Phase 1 |
+| Per-game values open on click (small client component), hover/focus kept | Hover-only tiny squares were not discoverable in UAT | ✓ Shipped Phase 1 |
+| Site targets laptop browsers; no phone/touch requirement | User decision during Phase 1 UAT | ✓ Applies to all phases |
 
 ## Evolution
 
@@ -80,4 +83,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-11 after initialization*
+*Last updated: 2026-10-12 after Phase 1*
