@@ -409,3 +409,27 @@ test("a 1-game window keeps its note and not the 2-game explanation", () => {
   assert.ok(html.includes("Deltas and trends need 2 or more games."));
   assert.ok(!html.includes("this window has only 2"));
 });
+
+// G-01-2: a click or tap opens a square's popover; hover and keyboard focus still do, and an open popover never blocks the squares below.
+test("every strip square shows a pointer cursor, is a named group and starts closed", () => {
+  const squares = cells(render(research(threeGames())));
+  assert.equal(squares.length, 9);
+  for (const c of squares) {
+    const tokens = classTokens(c.tag);
+    assert.ok(tokens.includes("cursor-pointer") && tokens.includes("group/cell") && tokens.includes("relative"), c.tag);
+    assert.ok(c.tag.includes('tabindex="0"') && c.tag.includes('role="img"'), c.tag);
+    assert.ok(!c.tag.includes("data-open"), c.tag);
+  }
+});
+
+test("every popover opens on click, hover or keyboard focus and takes no pointer events", () => {
+  const html = render(research(threeGames()));
+  const popovers = [...html.matchAll(/<span aria-hidden="true" class="([^"]*group-hover\/cell:block[^"]*)"/g)].map((m) => m[1].split(/\s+/));
+  assert.equal(popovers.length, 9);
+  for (const tokens of popovers) {
+    for (const want of ["group-data-[open]/cell:block", "group-focus-visible/cell:block", "pointer-events-none", "hidden", "absolute", "right-0", "top-full", "z-10"]) {
+      assert.ok(tokens.includes(want), `${want} missing: ${tokens.join(" ")}`);
+    }
+    assert.ok(!tokens.includes("group-focus/cell:block"), tokens.join(" "));
+  }
+});
