@@ -1,10 +1,12 @@
+import { ToiStripCell } from "@/components/ToiStripCell";
 import { detailText, gameDetail, stripCellState, stripOpacity, type StripGame } from "@/lib/research/game-strip";
 import type { TrendRow } from "@/lib/research/toi-trends";
 
 /**
  * One shaded square per team game, oldest left. Dashed = did not play (grey) or OT with no shift data (sky); sky ring = OT/SO.
- * The popover opens under the hovered or focused square, right-aligned to it, so it grows left over the table's own columns
- * and never runs past the scroll wrapper's right edge. CSS only: no client code.
+ * The popover opens on click or tap (ToiStripCell), mouse hover or keyboard focus, under the square and right-aligned to it,
+ * so it grows left over the table's own columns and never runs past the scroll wrapper's right edge. It takes no pointer
+ * events, so it never blocks the squares under it. This file stays a server component; only the square is client code.
  */
 export function ToiGameStrip({ row, games }: { row: TrendRow; games: readonly StripGame[] }) {
   return (
@@ -22,13 +24,11 @@ export function ToiGameStrip({ row, games }: { row: TrendRow; games: readonly St
                 : "";
           const detail = gameDetail(cell, game);
           return (
-            <span
+            <ToiStripCell
               key={game.id}
-              data-state={state}
-              tabIndex={0}
-              role="img"
-              aria-label={detailText(detail)}
-              className={`group/cell relative block h-4 w-3 rounded-sm outline-offset-2 hover:outline hover:outline-1 hover:outline-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-900 dark:focus-visible:outline-neutral-100${ring}${outline}`}
+              state={state}
+              label={detailText(detail)}
+              className={`group/cell relative cursor-pointer block h-4 w-3 rounded-sm outline-offset-2 hover:outline hover:outline-1 hover:outline-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-900 dark:focus-visible:outline-neutral-100${ring}${outline}`}
             >
               {state === "played" && cell?.toi != null && row.avgToi !== null && (
                 <span
@@ -38,7 +38,7 @@ export function ToiGameStrip({ row, games }: { row: TrendRow; games: readonly St
               )}
               <span
                 aria-hidden="true"
-                className="absolute right-0 top-full z-10 mt-1 hidden w-max max-w-xs rounded-md border border-neutral-200 bg-white p-2 text-xs text-neutral-900 shadow-md group-hover/cell:block group-focus/cell:block dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
+                className="pointer-events-none absolute right-0 top-full z-10 mt-1 hidden w-max max-w-xs rounded-md border border-neutral-200 bg-white p-2 text-xs text-neutral-900 shadow-md group-hover/cell:block group-focus-visible/cell:block group-data-[open]/cell:block dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100"
               >
                 <span className="grid grid-cols-[auto_auto] gap-x-3">
                   <span className="col-span-2 font-medium">
@@ -55,7 +55,7 @@ export function ToiGameStrip({ row, games }: { row: TrendRow; games: readonly St
                   ))}
                 </span>
               </span>
-            </span>
+            </ToiStripCell>
           );
         })}
       </div>
