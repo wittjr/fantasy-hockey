@@ -4,10 +4,10 @@ current_phase: 2
 current_phase_name: Player Linemate Detail
 status: planning
 stopped_at: Phase 1 complete, ready to plan Phase 2
-last_updated: "2026-10-12T15:07:35.038Z"
+last_updated: "2026-10-12T15:27:56.958Z"
 last_activity: 2026-10-12
 last_activity_desc: Phase 1 complete, transitioned to Phase 2
-state_head: 35c8e5b7c7a969a5b9a6745bc916b626587caa3d
+state_head: 9f4c3807f0945c276d3c39ae8a8b4b4d3307fb58
 progress:
   total_phases: 3
   completed_phases: 1
@@ -99,7 +99,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1 → later]: Open review warnings carried forward: WR-05/WR-06 (NHL API failure wording and Last-game re-anchoring), WR-07 (strip squares lack Enter/Space, Escape, aria-expanded), WR-08 (no npm-test coverage of click/tap behaviour); see 01-REVIEW-DISPOSITION.md
+- [Phase 1 → later]: WR-05..WR-08 fixed (1314b03, 88b2299, adb0f61, 888cc03). Still open: WR-10 (strip square aria-expanded tracks click only; Escape always blurs), WR-08 remainder (no DOM test of outside-click/blur), info IN-01..IN-13; see 01-REVIEW-DISPOSITION.md
 - [All phases]: Site targets laptop browsers; no phone/touch UAT
 - [Phase 3]: Decide whether SF%/CF% appear on PP/SH tables (research warns PP/SH "against" counts are easily misread as quality)
 - [Phase 3]: NHL API returned HTTP 429 at ~40 concurrent requests; verify the bounded-concurrency cap in dev before production
@@ -115,5 +115,5 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-12
-Stopped at: Phase 1 complete, ready to plan Phase 2
+Stopped at: Phase 1 complete and re-verified after review fixes, ready to plan Phase 2
 Resume file: None
