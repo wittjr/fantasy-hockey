@@ -142,7 +142,7 @@ export function PlayerLinemates({
   );
 }
 
-function LinemateRowView({
+export function LinemateRowView({
   row,
   research,
   playerName,

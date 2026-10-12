@@ -2,12 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PlayerLinemates } from "@/components/PlayerLinemates";
+import { LinemateRowView, PlayerLinemates } from "@/components/PlayerLinemates";
 import { ToiTrends } from "@/components/ToiTrends";
 import type { Situation } from "./lines";
+import { buildLinemateView, type LinemateRow } from "./linemates";
 import type { GamePairs } from "./pair-seconds";
 import type { ResearchGame, ResearchPlayer, TeamResearch } from "./team-games";
-import { DEFAULT_SORT } from "./toi-trends";
+import { DEFAULT_SORT, researchHref } from "./toi-trends";
 
 // Player 1 is the subject. 2 and 3 are forwards, 11 and 12 defensemen, 20 a goalie.
 const players = new Map<number, ResearchPlayer>([
@@ -103,6 +104,10 @@ const rowHtml = (html: string, name: string) =>
 
 interface Square {
   state: string;
+  /** The square's opening tag. */
+  tag: string;
+  /** Whether the square holds a shade fill span (an inline opacity style). */
+  filled: boolean;
   label: string;
   /** The popover's text, one entry per element. */
   lines: string[];
@@ -116,6 +121,8 @@ const squares = (html: string): Square[] =>
       const popover = chunk.includes('aria-hidden="true"') ? chunk.slice(chunk.indexOf('aria-hidden="true"')).replace(/^[^>]*>/, "") : "";
       return {
         state: chunk.slice(0, chunk.indexOf('"')),
+        tag: `<span data-state="${chunk.slice(0, chunk.indexOf(">") + 1)}`,
+        filled: (chunk.includes('aria-hidden="true"') ? chunk.slice(0, chunk.indexOf('aria-hidden="true"')) : chunk).includes('style="opacity:'),
         label: unescape(chunk.match(/aria-label="([^"]*)"/)?.[1] ?? ""),
         lines: unescape(popover.replace(/<span\s*$/, ""))
           .replace(/<[^>]*>/g, "\u0000")
@@ -184,4 +191,106 @@ test("every heat-strip popover has the Per game strip popover's class string", (
   assert.equal(expected.size, 1);
   assert.equal(heat.length, 12); // 4 linemates x 3 games
   for (const tag of heat) assert.ok(expected.has(classTokens(tag).join(" ")), tag);
+});
+
+test("the panel is a labelled section headed by the player's name, position and games played", () => {
+  const html = renderPanel(research());
+  const section = html.match(/<section[^>]*>/)?.[0] ?? "";
+  assert.ok(section.includes('id="player-detail"') && section.includes('aria-labelledby="player-detail-title"'), section);
+  assert.ok(classTokens(section).includes("scroll-mt-4"), section);
+  const h2 = html.match(/<h2 id="player-detail-title"[^>]*>([\s\S]*?)<\/h2>/)?.[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  assert.equal(h2, "Alpha Center C 3/3 GP");
+});
+
+test("the Forwards block comes before the Defense block, which carries the divider", () => {
+  const html = renderPanel(research());
+  assert.ok(html.indexOf(">Forwards</th>") < html.indexOf(">Defense</th>"));
+  for (const forward of ["Bravo Winger", "Charlie Winger"]) {
+    for (const defender of ["Delta Defense", "Echo Defense"]) {
+      assert.ok(html.indexOf(forward) < html.indexOf(defender), `${forward} before ${defender}`);
+    }
+  }
+  const labelRow = (title: string) => classTokens(html.match(new RegExp(`<tr[^>]*><th scope="rowgroup"[^>]*>${title}</th>`))?.[0] ?? "");
+  assert.ok(labelRow("Defense").includes("border-t-2"));
+  assert.ok(!labelRow("Forwards").includes("border-t-2"));
+});
+
+test("every listed row has one square per team game, and the no-chart game is unknown with an amber outline in every row", () => {
+  const html = renderPanel(research());
+  for (const name of ["Bravo Winger", "Charlie Winger", "Delta Defense", "Echo Defense"]) {
+    const sq = rowSquares(html, name);
+    assert.equal(sq.length, 3, name);
+    assert.equal(sq[1].state, "unknown", name);
+    assert.ok(classTokens(sq[1].tag).includes("border-amber-600"), sq[1].tag);
+    assert.ok(classTokens(sq[1].tag).includes("border-dashed"), sq[1].tag);
+    assert.ok(!sq[1].filled, name);
+  }
+});
+
+test("an absent square is dashed grey, an apart square is a plain light border with no fill and a together square is filled", () => {
+  const html = renderPanel(research());
+  const absent = rowSquares(html, "Charlie Winger")[0];
+  assert.equal(absent.state, "absent");
+  assert.ok(classTokens(absent.tag).includes("border-dashed") && classTokens(absent.tag).includes("border-neutral-400"), absent.tag);
+  assert.ok(!absent.filled);
+
+  const apart = rowSquares(html, "Echo Defense")[0];
+  assert.equal(apart.state, "apart");
+  assert.ok(classTokens(apart.tag).includes("border-neutral-200"), apart.tag);
+  assert.ok(!classTokens(apart.tag).includes("border-dashed"), apart.tag);
+  assert.ok(!apart.filled);
+
+  const together = rowSquares(html, "Bravo Winger")[0];
+  assert.equal(together.state, "together");
+  assert.ok(together.filled);
+});
+
+test("a row with no counted game shows a dash as its window share, not 0%", () => {
+  // buildLinemateView never lists such a row (it needs time together in a counted game), so the row component is rendered directly.
+  const base = buildLinemateView(fixtureGames(), players, 1, "ev").forwards[0];
+  const unknownGames = fixtureGames().map((g) => ({ ...g, pairs: null }));
+  const row: LinemateRow = {
+    ...base,
+    cells: unknownGames.map(() => ({ state: "unknown", seconds: null, share: null, selfSeconds: null, absentReason: null })),
+    windowShare: null,
+  };
+  const html = renderToStaticMarkup(
+    createElement("table", null, createElement("tbody", null, createElement(LinemateRowView, { row, research: research(unknownGames), playerName: "Alpha Center", sit: "ev", team: "MTL" }))),
+  );
+  const lastCell = [...html.matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].map((m) => m[0]).at(-1) ?? "";
+  assert.equal(lastCell.replace(/<[^>]*>/g, ""), "—");
+  assert.ok(!html.includes("%") && !html.includes("0:00"));
+});
+
+test("a window share is the pooled share over counted games", () => {
+  const html = renderPanel(research());
+  const lastCell = (name: string) => ([...rowHtml(html, name).matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].at(-1)?.[0] ?? "").replace(/<[^>]*>/g, "");
+  assert.equal(lastCell("Bravo Winger"), "57%"); // (300 + 500) / (600 + 800)
+  assert.equal(lastCell("Charlie Winger"), "50%"); // 400 / 800: game 1 is absent and left out
+});
+
+test("a group with no listed linemate shows one None row", () => {
+  const html = renderPanel(research(), 1, "pp");
+  const defense = html.slice(html.indexOf(">Defense</th>"));
+  assert.equal(defense.match(/<td[^>]*>None<\/td>/g)?.length, 1);
+  assert.equal(squares(defense).length, 0);
+  assert.ok(!html.slice(0, html.indexOf(">Defense</th>")).includes(">None<"));
+});
+
+test("a goalie or a player outside the window gets the not-in-window notice and no squares", () => {
+  for (const id of [20, 999]) {
+    const html = renderPanel(research(), id);
+    assert.ok(html.includes("That player didn&#x27;t play for MTL in this window."), html);
+    assert.equal(squares(html).length, 0);
+    assert.ok(!html.includes("<section"));
+  }
+});
+
+test("the close link keeps the team, games and situation in the panel and in the notice", () => {
+  const hrefs = (html: string) => [...html.matchAll(/href="([^"]*)"/g)].map((m) => unescape(m[1]));
+  for (const sit of ["ev", "pp"] as const) {
+    const expected = researchHref("MTL", 5, DEFAULT_SORT, { sit });
+    assert.deepEqual(hrefs(renderPanel(research(), 1, sit)), [expected]);
+    assert.deepEqual(hrefs(renderPanel(research(), 20, sit)), [expected]);
+  }
 });
