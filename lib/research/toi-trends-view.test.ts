@@ -47,7 +47,7 @@ const headers = (html: string) =>
 
 test("renders headers in order, forwards before defense, no goalies", () => {
   const html = render(research(threeGames()));
-  assert.deepEqual(headers(html), ["Player", "Pos", "Avg TOI ↓", "TOI Δ", "PP share", "PP share Δ", "SH", "Per game", "TOI trend"]);
+  assert.deepEqual(headers(html), ["Player", "Pos", "Avg TOI ↓", "TOI Δ", "PP share", "PP share Δ", "SH", "Per game (click a square)", "TOI trend"]);
   assert.ok(html.includes("Ice-time trends"));
   assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Charlie Defense"));
   assert.ok(html.indexOf("Alpha Forward") < html.indexOf("Bravo Forward"));
@@ -58,6 +58,16 @@ test("shows the games-played count in the Pos cell", () => {
   const games = threeGames();
   games[1].toi.delete(2);
   assert.ok(render(research(games)).includes("2/3 GP"));
+});
+
+// G-01-1b: the Pos cell reads position, a space, then games played.
+test("the Pos cell reads the position, a space, then games played", () => {
+  const games = threeGames();
+  games[1].toi.delete(2);
+  const html = render(research(games));
+  const posText = (name: string) => tds(rowHtml(html, name))[1].replace(/<[^>]*>/g, "").trim();
+  assert.equal(posText("Alpha Forward"), "C 3/3 GP");
+  assert.equal(posText("Bravo Forward"), "L 2/3 GP");
 });
 
 test("a player with null avgToi shows a dash and never 0:00", () => {
@@ -164,7 +174,7 @@ test("the sparkline marks a played OT game with a hollow sky dot", () => {
 
 test("a one-game window still shows the Per game column with one cell per row", () => {
   const html = render(research([fixtureGame("2026-10-01", { 1: 1200, 3: 1300 })]));
-  assert.ok(headers(html).includes("Per game"));
+  assert.ok(headers(html).some((h) => h.startsWith("Per game")));
   assert.equal(cells(rowHtml(html, "Alpha Forward")).length, 1);
   assert.equal(cells(rowHtml(html, "Charlie Defense")).length, 1);
 });
@@ -350,7 +360,7 @@ test("the section intro is the approved copy", () => {
   const html = render(research(threeGames())).replaceAll("&#x27;", "'");
   assert.ok(
     html.includes(
-      "Average regulation ice time per game played, and how each player's last 2 games compare with his earlier games in the window. Rows tinted green or red moved by 2:00 or more of TOI or 15 or more points of power-play share. Click Avg TOI, TOI Δ, PP share or PP share Δ to sort; hover or focus a square for exact per-game times.",
+      "Average regulation ice time per game played, and how each player's last 2 games compare with his earlier games in the window. Rows tinted green or red moved by 2:00 or more of TOI or 15 or more points of power-play share. Click Avg TOI, TOI Δ, PP share or PP share Δ to sort; click, tap or hover a square for exact per-game times.",
     ),
   );
 });
@@ -432,4 +442,54 @@ test("every popover opens on click, hover or keyboard focus and takes no pointer
     }
     assert.ok(!tokens.includes("group-focus/cell:block"), tokens.join(" "));
   }
+});
+
+// G-01-5: each game is its own bordered 20x20 square on a 24px pitch, and the column tells the user to click.
+test("the strip has 4px gaps, no hairline gap", () => {
+  const html = render(research(threeGames()));
+  const group = html.match(/<div role="group"[^>]*>/)?.[0] ?? "";
+  const tokens = classTokens(group);
+  assert.ok(tokens.includes("gap-1") && !tokens.includes("gap-px"), group);
+});
+
+test("every square is 20x20 with 2px corners and a 1px border, and nothing inside the strip uses the 4px radius", () => {
+  const html = render(research(threeGames()));
+  const squares = cells(html);
+  assert.equal(squares.length, 9);
+  for (const c of squares) {
+    const tokens = classTokens(c.tag);
+    for (const want of ["h-5", "w-5", "rounded-xs", "border"]) assert.ok(tokens.includes(want), `${want} missing: ${c.tag}`);
+    assert.ok(!tokens.includes("h-4") && !tokens.includes("w-3"), c.tag);
+  }
+  for (const td of [...html.matchAll(/<td class="[^"]*"><div role="group"[\s\S]*?<\/td>/g)].map((m) => m[0])) {
+    assert.ok(!/class="[^"]*\brounded-sm\b/.test(td), td);
+  }
+});
+
+test("a played square has a solid neutral border, a missed one a dashed grey border, an OT one without shift data a dashed sky border", () => {
+  const html = render(research(stripGames()));
+  const alpha = cells(rowHtml(html, "Alpha Forward")).map((c) => classTokens(c.tag));
+  const bravo = cells(rowHtml(html, "Bravo Forward")).map((c) => classTokens(c.tag));
+  assert.ok(alpha[0].includes("border-neutral-300") && alpha[0].includes("dark:border-neutral-700") && !alpha[0].includes("border-dashed"), alpha[0].join(" "));
+  assert.ok(!alpha[0].includes("ring-1"), alpha[0].join(" "));
+  assert.ok(alpha[1].includes("border-neutral-300") && alpha[1].includes("ring-1") && alpha[1].includes("ring-sky-500"), alpha[1].join(" "));
+  assert.ok(bravo[0].includes("border-dashed") && bravo[0].includes("border-neutral-400") && bravo[0].includes("dark:border-neutral-600"), bravo[0].join(" "));
+  assert.ok(alpha[2].includes("border-dashed") && alpha[2].includes("border-sky-500"), alpha[2].join(" "));
+});
+
+test("the Per game header carries the click hint and is not a link", () => {
+  const html = render(research(threeGames()));
+  const th = headerCell(html, "Per game");
+  assert.ok(th.includes("Per game") && th.includes("(click a square)"), th);
+  assert.ok(!th.includes("<a"), th);
+});
+
+test("legend line 1 names the dashed and blue-ring marks and no longer says outlined", () => {
+  const html = render(research(threeGames()));
+  assert.ok(
+    html.includes(
+      "Squares are team games, oldest to newest. Darker means more ice time than that player&#x27;s own average. Dashed means did not play (or overtime with no shift data). A blue ring means overtime; OT minutes are excluded.",
+    ),
+  );
+  assert.ok(!html.includes("Outlined"));
 });
