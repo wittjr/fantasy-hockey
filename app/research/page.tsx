@@ -50,7 +50,7 @@ export default async function ResearchPage({
     research.unavailableDates.some((d) => d > research.games[research.games.length - 1].date);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 p-8">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 p-8 [overflow-anchor:none]">
       <Link href="/" className="text-sm text-neutral-500 hover:underline">
         ← Your leagues
       </Link>
