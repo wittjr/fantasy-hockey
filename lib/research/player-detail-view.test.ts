@@ -19,6 +19,9 @@ const players = new Map<number, ResearchPlayer>([
   [11, { id: 11, name: "Delta Defense", position: "D", group: "D" }],
   [12, { id: 12, name: "Echo Defense", position: "D", group: "D" }],
   [20, { id: 20, name: "Golf Goalie", position: "G", group: "G" }],
+  // Fifteen more skaters for the capped-list fixture: forwards 30-38, defensemen 40-45. They appear in no other fixture.
+  ...Array.from({ length: 9 }, (_, i): [number, ResearchPlayer] => [30 + i, { id: 30 + i, name: `Forward ${30 + i}`, position: "C", group: "F" }]),
+  ...Array.from({ length: 6 }, (_, i): [number, ResearchPlayer] => [40 + i, { id: 40 + i, name: `Defender ${40 + i}`, position: "D", group: "D" }]),
 ]);
 
 const sec = (ev = 0, pp = 0, sh = 0): Record<Situation, number> => ({ ev, pp, sh });
@@ -90,8 +93,8 @@ const fixtureGames = (): ResearchGame[] => [
 ];
 
 const research = (games: ResearchGame[] = fixtureGames()): TeamResearch => ({ players, games, unavailableDates: [] });
-const renderPanel = (r: TeamResearch, playerId = 1, sit: Situation = "ev", sort: SortSpec = DEFAULT_SORT) =>
-  renderToStaticMarkup(createElement(PlayerLinemates, { research: r, playerId, sit, team: "MTL", gameCount: 5, sort }));
+const renderPanel = (r: TeamResearch, playerId = 1, sit: Situation = "ev", sort: SortSpec = DEFAULT_SORT, all = false) =>
+  renderToStaticMarkup(createElement(PlayerLinemates, { research: r, playerId, sit, team: "MTL", gameCount: 5, sort, all }));
 
 const classTokens = (tag: string) => (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
 const unescape = (s: string) => s.replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
@@ -258,16 +261,16 @@ test("a row with no counted game shows a dash as its window share, not 0%", () =
   const html = renderToStaticMarkup(
     createElement("table", null, createElement("tbody", null, createElement(LinemateRowView, { row, research: research(unknownGames), playerName: "Alpha Center", sit: "ev", team: "MTL" }))),
   );
-  const lastCell = [...html.matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].map((m) => m[0]).at(-1) ?? "";
-  assert.equal(lastCell.replace(/<[^>]*>/g, ""), "—");
+  const shareCell = [...html.matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].map((m) => m[0])[2] ?? "";
+  assert.equal(shareCell.replace(/<[^>]*>/g, ""), "—");
   assert.ok(!html.includes("%") && !html.includes("0:00"));
 });
 
 test("a window share is the pooled share over counted games", () => {
   const html = renderPanel(research());
-  const lastCell = (name: string) => ([...rowHtml(html, name).matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].at(-1)?.[0] ?? "").replace(/<[^>]*>/g, "");
-  assert.equal(lastCell("Bravo Winger"), "57%"); // (300 + 500) / (600 + 800)
-  assert.equal(lastCell("Charlie Winger"), "50%"); // 400 / 800: game 1 is absent and left out
+  const shareCell = (name: string) => ([...rowHtml(html, name).matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)][2]?.[0] ?? "").replace(/<[^>]*>/g, "");
+  assert.equal(shareCell("Bravo Winger"), "57%"); // (300 + 500) / (600 + 800)
+  assert.equal(shareCell("Charlie Winger"), "50%"); // 400 / 800: game 1 is absent and left out
 });
 
 test("a group with no listed linemate shows one None row", () => {
@@ -451,7 +454,7 @@ test("the amber footnote lists every window game without a shift chart and says 
 test("with every game charted there is no amber footnote", () => {
   const games = [1, 2, 3].map((n) => alphaGame(n, `2026-10-0${n}`, 1200, evPairs(), null));
   const notes = footnotes(renderPanel(research(games)));
-  assert.equal(notes.length, 2);
+  assert.equal(notes.length, 3); // legend lines 1-3
   assert.ok(!notes.some((n) => classTokens(n.attrs).includes("text-amber-600") || n.text.startsWith("No linemate data")));
 });
 
@@ -487,4 +490,174 @@ test("when nobody meets the minimum the panel says so with the minimum for the s
     alphaGame(n, `2026-10-0${n}`, 1200, pairsOf({ 1: sec(0, 120), 2: sec(0, 100) }, [[1, 2, sec(0, 9)]]), null),
   );
   assert.ok(stripTags(renderPanel(research(ppGames), 1, "pp")).includes("No linemates with 0:30 or more together in this window."));
+});
+
+// ---- Tags, tag footnotes and the show-all line (PLYR-04, D-11, D-26) ----
+
+const tds = (html: string, name: string) => [...rowHtml(html, name).matchAll(/<td[^>]*>[\s\S]*?<\/td>/g)].map((m) => m[0]);
+const tagCell = (html: string, name: string) => tds(html, name).at(-1) ?? "";
+
+// Game 1 is the earlier game; games 2 and 3 are the team's last 2.
+// Bravo 25% -> 45% (Rising), Charlie 0% -> 30% (New), Delta 40% -> 0% (Fading), Echo dressed only in game 1 (Out).
+const tagGames = (): ResearchGame[] => {
+  const all = { 1: sec(1000), 2: sec(1000), 3: sec(1000), 11: sec(1000), 12: sec(1000) };
+  const withoutEcho = { 1: all[1], 2: all[2], 3: all[3], 11: all[11] };
+  return [
+    mkGame(1, "2026-10-01", [1, 2, 3, 11, 12], pairsOf(all, [[1, 2, sec(250)], [1, 11, sec(400)], [1, 12, sec(300)]])),
+    mkGame(2, "2026-10-03", [1, 2, 3, 11], pairsOf(withoutEcho, [[1, 2, sec(450)], [1, 3, sec(300)]])),
+    mkGame(3, "2026-10-05", [1, 2, 3, 11], pairsOf(withoutEcho, [[1, 2, sec(450)], [1, 3, sec(300)]])),
+  ];
+};
+// Bravo shared half the earlier game and none of the recent ones; Charlie the reverse: a forward changed lines.
+const lineChangeGames = (): ResearchGame[] => {
+  const self = { 1: sec(1000), 2: sec(1000), 3: sec(1000) };
+  return [
+    mkGame(1, "2026-10-01", [1, 2, 3], pairsOf(self, [[1, 2, sec(500)]])),
+    mkGame(2, "2026-10-03", [1, 2, 3], pairsOf(self, [[1, 3, sec(500)]])),
+    mkGame(3, "2026-10-05", [1, 2, 3], pairsOf(self, [[1, 3, sec(500)]])),
+  ];
+};
+// One game; 9 forwards and 6 defensemen each with a clear amount of time with Alpha.
+const crowdGames = (): ResearchGame[] => {
+  const ids = [...Array.from({ length: 9 }, (_, i) => 30 + i), ...Array.from({ length: 6 }, (_, i) => 40 + i)];
+  const self: Record<number, Record<Situation, number>> = { 1: sec(2000) };
+  for (const id of ids) self[id] = sec(1000);
+  return [
+    mkGame(1, "2026-10-01", [1, ...ids], pairsOf(self, ids.map((id, i): [number, number, Record<Situation, number>] => [1, id, sec(600 - 10 * i)]))),
+  ];
+};
+
+test("with 3 or more games the table has a Tag column and the group rows span 4 columns; with 1 game neither", () => {
+  const html = renderPanel(research());
+  assert.ok(/<th scope="col"[^>]*>Tag<\/th>/.test(html), "Tag header");
+  const spans = [...html.matchAll(/<th scope="rowgroup" colSpan="(\d+)"/g)].map((m) => m[1]);
+  assert.deepEqual(spans, ["4", "4"]);
+  assert.equal(tds(html, "Bravo Winger").length, 4);
+
+  const one = renderPanel(research([fixtureGames()[0]]));
+  assert.ok(!/>Tag<\/th>/.test(one), "no Tag header");
+  assert.deepEqual([...one.matchAll(/<th scope="rowgroup" colSpan="(\d+)"/g)].map((m) => m[1]), ["3", "3"]);
+  assert.equal(tds(one, "Bravo Winger").length, 3);
+  assert.ok(footnotes(one).some((n) => n.text === "Tags need 2 or more games. Choose Last 3 or more."), JSON.stringify(footnotes(one)));
+});
+
+test("tag chips: New is the one solid chip, Rising and Fading carry an aria-hidden glyph and the word, Out is dashed", () => {
+  const html = renderPanel(research(tagGames()));
+  const bravo = tagCell(html, "Bravo Winger");
+  assert.ok(bravo.includes('<span aria-hidden="true">▲ </span>Rising'), bravo);
+  assert.equal(unescape(bravo.match(/title="([^"]*)"/)?.[1] ?? ""), "Share of Alpha Center's EV time is up 15 or more points in the recent games");
+
+  const charlie = tagCell(html, "Charlie Winger");
+  assert.equal(stripTags(charlie), "New");
+  assert.ok(classTokens(charlie).includes("bg-neutral-900") && classTokens(charlie).includes("text-white"), charlie);
+  assert.equal(unescape(charlie.match(/title="([^"]*)"/)?.[1] ?? ""), "Little or no time together before the recent games");
+
+  const delta = tagCell(html, "Delta Defense");
+  assert.ok(delta.includes('<span aria-hidden="true">▼ </span>Fading'), delta);
+  assert.equal(unescape(delta.match(/title="([^"]*)"/)?.[1] ?? ""), "Share of Alpha Center's EV time is down 15 or more points in the recent games");
+
+  const echo = tagCell(html, "Echo Defense");
+  assert.equal(stripTags(echo), "Out");
+  assert.ok(classTokens(echo).includes("border-dashed"), echo);
+  assert.equal(unescape(echo.match(/title="([^"]*)"/)?.[1] ?? ""), "Missed the recent games");
+
+  for (const cell of [bravo, charlie, delta, echo]) {
+    assert.ok(!/green|red/.test(cell), cell);
+    assert.ok(classTokens(cell).includes("inline-block") && classTokens(cell).includes("rounded") && classTokens(cell).includes("whitespace-nowrap"), cell);
+  }
+});
+
+test("a linemate with no tag has an empty Tag cell, not a dash", () => {
+  const cell = tagCell(renderPanel(research()), "Bravo Winger");
+  assert.equal(stripTags(cell), "");
+  assert.ok(!cell.includes("—"));
+});
+
+test("the SC4 line change lists the New linemate above the Fading one in the forwards block", () => {
+  const html = renderPanel(research(lineChangeGames()));
+  assert.ok(html.indexOf("Charlie Winger") < html.indexOf("Bravo Winger"));
+  assert.equal(stripTags(tagCell(html, "Charlie Winger")), "New");
+  assert.equal(stripTags(tagCell(html, "Bravo Winger")), "Fading");
+});
+
+test("a capped list says how many are shown and links to Show all with all=1 kept on the other params", () => {
+  const html = renderPanel(research(crowdGames()));
+  const line = html.match(/<p class="text-xs text-neutral-500">Showing [\s\S]*?<\/p>/)?.[0] ?? "";
+  assert.equal(stripTags(line), "Showing 10 of 15 linemates, most recent time together first. Show all 15");
+  const link = line.match(/<a\b[^>]*>/)?.[0] ?? "";
+  assert.equal(unescape(link.match(/href="([^"]*)"/)?.[1] ?? ""), researchHref("MTL", 5, DEFAULT_SORT, { player: 1, all: true }));
+  assert.ok(classTokens(link).includes("underline") && classTokens(link).includes("text-xs"), link);
+  assert.equal(squares(html).length, 10);
+});
+
+test("with all=1 the whole list shows with a Show fewer link that drops all", () => {
+  const html = renderPanel(research(crowdGames()), 1, "ev", DEFAULT_SORT, true);
+  const line = html.match(/<p class="text-xs text-neutral-500">Showing [\s\S]*?<\/p>/)?.[0] ?? "";
+  assert.equal(stripTags(line), "Showing all 15 linemates. Show fewer");
+  assert.equal(unescape(line.match(/href="([^"]*)"/)?.[1] ?? ""), researchHref("MTL", 5, DEFAULT_SORT, { player: 1 }));
+  assert.ok(!(line.match(/href="([^"]*)"/)?.[1] ?? "").includes("all="));
+  assert.equal(squares(html).length, 15);
+});
+
+test("a list with nothing hidden has no Showing line", () => {
+  assert.ok(!stripTags(renderPanel(research())).includes("Showing"));
+  assert.ok(!stripTags(renderPanel(research(), 1, "ev", DEFAULT_SORT, true)).includes("Showing"));
+});
+
+test("with all=1 every tab keeps it and the close link drops it", () => {
+  const html = renderPanel(research(), 1, "ev", DEFAULT_SORT, true);
+  assert.deepEqual(
+    tabLinks(html).map((t) => t.href),
+    (["ev", "pp", "sh"] as const).map((s) => researchHref("MTL", 5, DEFAULT_SORT, { player: 1, sit: s, all: true })),
+  );
+  for (const t of tabLinks(html)) assert.ok(t.href.includes("all=1"), t.href);
+  const close = [...html.replace(/<nav[\s\S]*?<\/nav>/, "").matchAll(/href="([^"]*)"/g)].map((m) => unescape(m[1]));
+  assert.deepEqual(close, [researchHref("MTL", 5, DEFAULT_SORT, { sit: "ev" })]);
+});
+
+test("legend line 3 appears whenever the Tag column does, and never in a 1-game window", () => {
+  const line3 =
+    "New, Rising, Fading and Out compare the team's last 2 games (in a 2-game window, the latest game) with the earlier games and need 2 or more games played. They describe time together only, not how good a linemate is. Rising and Fading mean a change of 15 or more points of share; Out means the linemate missed the recent games.";
+  assert.ok(footnotes(renderPanel(research())).some((n) => n.text === line3));
+  assert.ok(footnotes(renderPanel(research(tagGames()))).some((n) => n.text === line3));
+  assert.ok(!footnotes(renderPanel(research([fixtureGames()[0]]))).some((n) => n.text === line3));
+});
+
+test("a player who dressed in 1 game gets no tags and a note saying so", () => {
+  const games = [fixtureGames()[0], mkGame(2, "2026-10-03", [2], null), mkGame(3, "2026-10-05", [2], null)];
+  const html = renderPanel(research(games));
+  assert.ok(footnotes(html).some((n) => n.text === "No tags: Alpha Center played only 1 game in this window."), JSON.stringify(footnotes(html)));
+  assert.equal(stripTags(tagCell(html, "Bravo Winger")), "");
+});
+
+test("a player who missed the team's last 2 games gets a note naming them", () => {
+  const g = fixtureGames()[0];
+  const games = [g, { ...g, id: 11, date: "2026-10-02" }, { ...g, id: 12, date: "2026-10-03" }, mkGame(13, "2026-10-04", [2], null), mkGame(14, "2026-10-05", [2], null)];
+  const notes = footnotes(renderPanel(research(games))).map((n) => n.text);
+  assert.ok(notes.includes("No tags: Alpha Center missed the team's last 2 games."), notes.join("|"));
+});
+
+test("a recent game without a shift chart explains why there are no tags, with 'latest game' in a 2-game window", () => {
+  const withChart = fixtureGames()[0];
+  const three = [withChart, mkGame(2, "2026-10-03", [1, 2], null), mkGame(3, "2026-10-05", [1, 2], null)];
+  assert.ok(
+    footnotes(renderPanel(research(three))).some((n) => n.text === "No tags: Alpha Center has no even-strength time with a shift chart in the team's last 2 games."),
+  );
+  const two = [withChart, mkGame(2, "2026-10-03", [1, 2], null)];
+  assert.ok(
+    footnotes(renderPanel(research(two))).some((n) => n.text === "No tags: Alpha Center has no even-strength time with a shift chart in the team's latest game."),
+  );
+});
+
+test("a player with no earlier game to compare with gets a note", () => {
+  const g = fixtureGames()[0];
+  const games = [mkGame(11, "2026-10-01", [2], null), mkGame(12, "2026-10-02", [2], null), mkGame(13, "2026-10-03", [2], null), { ...g, id: 14, date: "2026-10-04" }, { ...g, id: 15, date: "2026-10-05" }];
+  const notes = footnotes(renderPanel(research(games))).map((n) => n.text);
+  assert.ok(notes.includes("No tags: Alpha Center has no earlier games in this window to compare with."), notes.join("|"));
+});
+
+test("the tag notes are not amber", () => {
+  const games = [fixtureGames()[0], mkGame(2, "2026-10-03", [2], null), mkGame(3, "2026-10-05", [2], null)];
+  const note = footnotes(renderPanel(research(games))).find((n) => n.text.startsWith("No tags:"));
+  assert.ok(note && !classTokens(note.attrs).includes("text-amber-600"), JSON.stringify(note));
 });
