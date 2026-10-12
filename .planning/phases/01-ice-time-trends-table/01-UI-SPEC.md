@@ -96,7 +96,7 @@ Neutral palette, matching the page. The page has no brand accent color; the only
 |------|-------|-------|
 | Dominant (60%) | `--background` `#ffffff` / `#0a0a0a` | Page and table surface |
 | Secondary (30%) | `neutral-200/800` header + divider borders, `neutral-100/900` row borders, `neutral-300/700` F/D divider, `white` / `neutral-900` popover surface, `neutral-500` header text, `neutral-600` / `neutral-400` in-row muted text | Table chrome, popover, muted text |
-| Accent (10%) | green `green-700` / `green-400` (up), red `red-700` / `red-400` (down); tint `green-50` / `green-900/40` and `red-50` / `red-900/40` | Directional movers only (list below) |
+| Accent (10%) | green `green-700` / `green-400` (up), red `red-700` / `red-400` (down); tint `green-100` / `green-900/40` and `red-100` / `red-900/40` | Directional movers only (list below) |
 | Caution | `amber-600` / `amber-400` (existing "no PP/SH data" color) | Missing-shift-chart note only |
 | Informational | `sky-500` (both themes) | OT marker only (strip cell ring/dashed border, sparkline OT dot) |
 | Destructive | not applicable | No destructive actions in this phase |
@@ -104,13 +104,13 @@ Neutral palette, matching the page. The page has no brand accent color; the only
 **Accent reserved for (explicit list):**
 1. The TOI Δ number when `|TOI Δ| >= 120 s` (D-18): `text-green-700 dark:text-green-400` (up) or `text-red-700 dark:text-red-400` (down), plus `font-medium`.
 2. The PP share Δ number when `|PP share Δ| >= 15` percentage points (D-18): same classes.
-3. The row tint (`bg-green-50 dark:bg-green-900/40` or `bg-red-50 dark:bg-red-900/40`) on `<tr>` for movers per the tint rule below.
+3. The row tint (`bg-green-100 dark:bg-green-900/40` or `bg-red-100 dark:bg-red-900/40`) on `<tr>` for movers per the tint rule below.
 
 Nothing else is green or red: not the slope arrows (always muted neutral), not sort indicators, not strip cells.
 
-**Light-mode red is `red-700`, not the page's existing `red-600` (discretion):** `red-600` on `red-50` is about 4.4:1 and fails AA for 14px text; `red-700` is about 5.9:1. Green `green-700` on `green-50` is about 4.9:1. Dark pairs (`400` on `900/40` over `#0a0a0a`) are about 9:1 (green) and 6:1 (red); the tint was raised from `950/30` after UAT gap G-01-7b (too faint in dark mode).
+**Light-mode red is `red-700`, not the page's existing `red-600` (discretion):** `red-600` on `red-50` is about 4.4:1 and fails AA for 14px text; `red-700` is about 5.9:1. Green `green-700` on `green-50` is about 4.9:1; after UAT the light tint was raised to `green-100`/`red-100` (more visible), where `green-700` is about 4.6:1 and `red-700` about 5.3:1, still AA. Dark pairs (`400` on `900/40` over `#0a0a0a`) are about 9:1 (green) and 6:1 (red); the tint was raised from `950/30` after UAT gap G-01-7b (too faint in dark mode).
 
-**Muted text on tinted rows (discretion):** in-row muted text is `text-neutral-600 dark:text-neutral-400` (not `neutral-500`) so it holds >= 4.5:1 on the `green-50`/`red-50` tint. Header text stays `text-neutral-500` as today (headers sit on the untinted surface).
+**Muted text on tinted rows (discretion):** in-row muted text is `text-neutral-600 dark:text-neutral-400` (not `neutral-500`) so it holds >= 4.5:1 on the `green-100`/`red-100` tint. Header text stays `text-neutral-500` as today (headers sit on the untinted surface).
 
 **Mover rule (D-16, D-18, D-19):**
 - TOI Δ "crosses" at `|Δ| >= 120 s`; PP share Δ "crosses" at `|Δ| >= 15` points. Named constants `TOI_MOVER_SECONDS = 120`, `PP_MOVER_POINTS = 15` beside the existing slope constants.

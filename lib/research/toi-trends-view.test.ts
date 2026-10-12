@@ -239,9 +239,9 @@ test("an up-mover row is tinted green and announced; a down-mover row is tinted 
   const up = rowHtml(html, "Alpha Forward");
   const down = rowHtml(html, "Charlie Defense");
   const flat = rowHtml(html, "Bravo Forward");
-  assert.ok(up.includes("bg-green-50") && up.includes("Moving up"));
-  assert.ok(down.includes("bg-red-50") && down.includes("Moving down"));
-  assert.ok(!flat.includes("bg-green-50") && !flat.includes("bg-red-50") && !flat.includes("Moving"));
+  assert.ok(up.includes("bg-green-100") && up.includes("Moving up"));
+  assert.ok(down.includes("bg-red-100") && down.includes("Moving down"));
+  assert.ok(!flat.includes("bg-green-100") && !flat.includes("bg-red-100") && !flat.includes("Moving"));
   assert.ok(tds(up)[3].includes("text-green-700") && tds(up)[3].includes("font-medium"));
   assert.ok(tds(down)[3].includes("text-red-700") && tds(down)[3].includes("font-medium"));
 });
@@ -256,7 +256,7 @@ test("a mixed-sign mover has no tint but each delta is coloured on its own", () 
     ),
   );
   const row = rowHtml(html, "Alpha Forward");
-  assert.ok(!row.includes("bg-green-50") && !row.includes("bg-red-50") && !row.includes("Moving"));
+  assert.ok(!row.includes("bg-green-100") && !row.includes("bg-red-100") && !row.includes("Moving"));
   assert.ok(tds(row)[3].includes("text-green-700"), tds(row)[3]);
   assert.ok(tds(row)[5].includes("text-red-700"), tds(row)[5]);
 });
@@ -280,12 +280,12 @@ test("a player who sat out the team's last 2 games shows the DNP badge after his
   assert.ok(row.indexOf("Alpha Forward") < row.indexOf("DNP last 2"));
   assert.ok(tds(row)[3].includes("—") && tds(row)[5].includes("—"));
   assert.ok(!rowHtml(html, "Bravo Forward").includes("DNP last 2"));
-  assert.ok(!row.includes("bg-green-50") && !row.includes("bg-red-50"));
+  assert.ok(!row.includes("bg-green-100") && !row.includes("bg-red-100"));
 });
 
 test("a one-game window never tints or shows the DNP badge", () => {
   const html = render(research([fixtureGame("2026-10-01", { 1: 1200, 3: 1300 })]));
-  assert.ok(!html.includes("bg-green-50") && !html.includes("bg-red-50") && !html.includes("DNP last 2"));
+  assert.ok(!html.includes("bg-green-100") && !html.includes("bg-red-100") && !html.includes("DNP last 2"));
 });
 
 // Sorting (TRND-05)
