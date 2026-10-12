@@ -12,6 +12,8 @@ export const LINEMATE_MIN_SECONDS: Record<Situation, number> = { ev: 120, pp: 30
 // A cell is darkest when the linemate shared this share of the player's situation time (D-08).
 export const LINEMATE_SHADE_SATURATION_SHARE = 0.75;
 export const SITUATION_ABBREV: Record<Situation, string> = { ev: "EV", pp: "PP", sh: "SH" };
+// Words in sentences; the abbreviations are for chips and tabs.
+export const SITUATION_WORDS: Record<Situation, string> = { ev: "even-strength", pp: "power-play", sh: "penalty-kill" };
 
 /** The slice of a ResearchGame the view-model reads; structural so tests can pass plain objects. */
 export type LinemateGame = Pick<ResearchGame, "id" | "date" | "home" | "opponent" | "score" | "overtime" | "toi" | "pairs">;
@@ -44,10 +46,17 @@ export interface LinemateRow {
   totalSeconds: number;
 }
 
+/** Why a view lists nobody, in precedence order: no shift chart for any game he played, no time in the situation, nobody above the minimum. */
+export type LinemateEmptyReason = "no-chart" | "no-situation-time" | "below-minimum";
+
 export interface LinemateView {
   situation: Situation;
   forwards: LinemateRow[];
   defense: LinemateRow[];
+  /** Null when at least one linemate is listed. */
+  emptyReason: LinemateEmptyReason | null;
+  /** ISO dates of the window games without a shift chart, oldest first. */
+  noChartDates: string[];
 }
 
 /** Index of the first "recent" game: the team's last RECENT_GAMES, or the latest game of a 2-game window; null for 1 game (D-15). */
@@ -142,7 +151,17 @@ export function buildLinemateView(
     situation,
     forwards: rows.filter((r) => r.group === "F"),
     defense: rows.filter((r) => r.group === "D"),
+    emptyReason: rows.length > 0 ? null : emptyReason(games, playerId, situation),
+    noChartDates: games.filter((g) => !g.pairs).map((g) => g.date),
   };
+}
+
+/** Judged over the games the player dressed for, so a missing chart is never reported as "no time" (unknown is not 0, D-24). */
+function emptyReason(games: readonly LinemateGame[], playerId: number, situation: Situation): LinemateEmptyReason {
+  const charted = games.filter((g) => g.pairs && g.toi.has(playerId));
+  if (charted.length === 0) return "no-chart";
+  const selfSeconds = charted.reduce((sum, g) => sum + (g.pairs?.self.get(playerId)?.[situation] ?? 0), 0);
+  return selfSeconds === 0 ? "no-situation-time" : "below-minimum";
 }
 
 /** Fill opacity for a together square: 0.2 (little shared time) to 1 (the linemate had LINEMATE_SHADE_SATURATION_SHARE or more). */
