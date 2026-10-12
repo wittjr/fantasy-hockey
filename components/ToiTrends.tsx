@@ -87,7 +87,7 @@ export function ToiTrends({
                       </span>
                     )}
                   </td>
-                  <td className="py-1 pr-3 whitespace-nowrap text-neutral-500">
+                  <td className="py-1 pr-3 whitespace-nowrap text-neutral-600 dark:text-neutral-400">
                     {row.player.position}{" "}
                     <span className="ml-1 text-xs tabular-nums text-neutral-600 dark:text-neutral-400">
                       {row.gamesPlayed}/{research.games.length} GP
