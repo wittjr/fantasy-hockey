@@ -1,5 +1,5 @@
 ---
-status: partial
+status: diagnosed
 phase: 01-ice-time-trends-table
 source: [01-VERIFICATION.md]
 started: 2026-10-11T23:20:00Z
@@ -55,8 +55,15 @@ blocked: 1
   reason: "User reported: I don't see any popovers"
   severity: major
   test: 2
-  artifacts: []
-  missing: []
+  root_cause: "Popover reveal is CSS hover/focus only on 12x16 squares with no clickable affordance. Committed CSS and markup work (verified in Chromium and WebKit on the real page), but macOS Safari ignores hover in an unfocused window and Tab went to the terminal, so nothing opened. Secondary: an open popover (z-10, ~100-130px tall) covers the squares of the next ~4 rows."
+  artifacts:
+    - path: "components/ToiGameStrip.tsx"
+      issue: "reveal depends on hover/focus only; no click/tap open; no visible affordance; open popover overlaps squares below"
+  missing:
+    - "Make each cell clickable/tappable to open its details (hover/focus as extras), e.g. native popover attribute, details, or the minimal client wrapper UI-SPEC allows"
+    - "Visible affordance that cells are interactive (cursor, outline)"
+    - "Open popover must not block the squares beneath it"
+  debug_session: .planning/debug/per-game-strip-popover.md
 
 - gap_id: G-01-1b
   truth: "The Pos column separates the position from games played so each reads on its own (e.g. 'C' and '5/5 GP', not 'C5/5 GP')"
@@ -64,8 +71,16 @@ blocked: 1
   reason: "User reported (during test 4, about the test 1 layout): There should be some space between the position and games played, I see things like C5/5 GP"
   severity: cosmetic
   test: 1
-  artifacts: []
-  missing: []
+  root_cause: "ToiTrends.tsx Pos cell renders position then a ml-1 span with no text separator, producing the literal text 'C5/5 GP'; only a 4px margin between two near-identical muted tones. View test only checks '2/3 GP'."
+  artifacts:
+    - path: "components/ToiTrends.tsx"
+      issue: "Pos td: {row.player.position}<span className=ml-1 ...> with no separator"
+    - path: "lib/research/toi-trends-view.test.ts"
+      issue: "no test asserts position and GP are separated"
+  missing:
+    - "Real separator between position and GP (text space plus wider margin, or a dot)"
+    - "View test asserting the cell text reads 'C 5/5 GP'"
+  debug_session: .planning/debug/per-game-strip-popover.md
 
 - gap_id: G-01-5
   truth: "The Per game strip reads as one distinct square per team game (shaded by TOI vs the player's average, with OT/SO ring and missed-game markers), and its popover shows the OT tag and 'OT excluded +m:ss'"
@@ -73,5 +88,15 @@ blocked: 1
   reason: "User reported: I don't see any popovers. Also the Per Game looks like small pieces of a bold line, I can't tell what it is"
   severity: major
   test: 5
-  artifacts: []
-  missing: []
+  root_cause: "Strip renders exactly as UI-SPEC specifies, and that spec reads as one segmented bar: 12x16 cells with 1px gaps, Tailwind 4 rounded-sm = 4px radius (a third of the cell width), one-colour opacity shading so neighbours look alike, no per-cell outline or affordance, legend far below the table. Popover half: same cause as G-01-2."
+  artifacts:
+    - path: "components/ToiGameStrip.tsx"
+      issue: "cell classes h-4 w-3 rounded-sm in flex gap-px; low-opacity cells have no outline"
+    - path: ".planning/phases/01-ice-time-trends-table/01-UI-SPEC.md"
+      issue: "strip contract specifies 12x16 cells with 1px hairline gap"
+  missing:
+    - "Wider gap (2-4px) and smaller radius so each game reads as its own square"
+    - "Faint outline/track per cell so low-opacity cells still read as squares"
+    - "Short hint at the Per game column, not only in the bottom legend"
+    - "Clickable cue from G-01-2"
+  debug_session: .planning/debug/per-game-strip-popover.md
