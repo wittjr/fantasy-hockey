@@ -2,19 +2,18 @@
 phase: 01-ice-time-trends-table
 reviewed: 2026-10-12T00:00:00Z
 depth: standard
-files_reviewed: 7
+files_reviewed: 6
 files_reviewed_list:
   - app/research/page.tsx
-  - components/ToiGameStrip.tsx
   - components/ToiStripCell.tsx
   - components/ToiTrends.tsx
+  - lib/research/team-games.test.ts
   - lib/research/team-games.ts
-  - lib/research/toi-trends.ts
   - lib/research/toi-trends-view.test.ts
 findings:
   critical: 0
-  warning: 4
-  info: 7
+  warning: 1
+  info: 10
   total: 11
 status: issues_found
 ---
@@ -23,153 +22,104 @@ status: issues_found
 
 **Reviewed:** 2026-10-12
 **Depth:** standard
-**Files Reviewed:** 7
+**Files Reviewed:** 6
 **Status:** issues_found
 
 ## Summary
 
-Re-verification of the still-open ledger findings against current source. All of WR-05, WR-06, WR-07, WR-08 and IN-01, IN-02, IN-05, IN-06, IN-07, IN-09, IN-10 are still present and are re-reported under their existing IDs. No new findings (no CR-02 / WR-10 / IN-11) after re-reading the seven files; `toi-trends.ts` is clean (sort/href/delta/mover logic traced, including the Avg-TOI-ascending href round trip).
+This is a re-review of the auto-fixer's four commits since f74a6a2 (1314b03 WR-05, 88b2299 WR-06, adb0f61 WR-07, 888cc03 WR-08). WR-05 and WR-06 are correct. WR-07 and WR-08 are mostly sound, but the aria-expanded wiring introduced by WR-07 has one real defect (WR-10 below).
 
-Not re-reported because they are fixed or accepted: CR-01, WR-01..WR-04, WR-09, IN-08.
+**WR-05 (verified correct).** `loadGame` computes `overtime` before building the shift inputs. A failed chart now yields `null` rather than `[]`. An OT/SO game with a `null` chart throws, `Promise.allSettled` records it as rejected, and its `gameDate` goes into `unavailableDates` (`team-games.ts:99,141-148`). Three cases were traced:
+- A regulation game with a failed chart is kept. `shifts ?? []` gives empty `shiftInputs`, `regulationToi = toi` (boxscore), and `lines = null`.
+- An OT game with a published chart is unchanged.
+- An OT game with an empty (not yet published) chart gives `shifts = []`, not `null`, so it does not throw. It is kept with `regulationToi = null` and `lines = null`, which renders as the "excluded" dashed-sky square.
 
-Out of file scope, so not re-reported but still present on a read-through (fix only if scope is widened): IN-03 (`lib/research/game-strip.ts:35`, `+${formatClock(cell.totalToi - cell.toi)}`; `formatClock` takes `Math.abs`, so a negative difference prints as a positive "OT excluded") and IN-04 (`lib/nhl/client.ts:146`, `data.data.filter` assumes the response envelope; the call is wrapped by the `.catch` in `loadGame`, so the effect is a degraded game, not a crash).
+The `getShiftCharts` re-fetch for an empty result (`lib/nhl/client.ts:149-151`) is untouched. A throw from it is caught by the same `.catch` and becomes `null`. Side effect: one failed shift-chart request is logged twice (once in the `.catch`, once in `loadTeamResearch`). That is harmless.
+
+**WR-06 (verified correct for the case it targets).** Both sides of the `>` comparison are ISO `YYYY-MM-DD` strings (`recent[i].gameDate` from the schedule, `games[last].date` from `box.gameDate`), so lexical comparison is valid. The strict `>` is right because a failed game cannot share a date with a loaded one. Narrowing of the `let research` inside the `.some` closure is accepted by tsc (the only assignment is before the closure). The fixer reports tsc and build green. Only the gap in IN-11 remains.
+
+**WR-07 (mostly correct).** `role="button"` with `onKeyDown` works in a Next 16 client component because the server/client boundary is unchanged. Details:
+- Space is `preventDefault`-ed on keydown, so the page does not scroll.
+- Enter is also prevented, which is harmless.
+- aria-expanded renders as `"false"` / `"true"` (`aria-expanded={open}` on a span emits the string), and the SSR test asserts it.
+
+Real problems are in WR-10 and IN-12.
+
+**WR-08 (still partly open per the ledger, not re-reported).** `popoverTags` is non-vacuous. It matches on the `aria-hidden="true"` attribute plus the `group-hover/cell:block` class token regardless of attribute order, and every test also asserts the count of 9. The `.split('aria-hidden="true"')` popover test is adequate: chunks from the sparkline and trend arrows are discarded by the `includes("Oct")` filter. The `nextOpen` tests are a truth table that restates the one-line implementation. They would not catch the actual regression surface (the `e.key` to event mapping, the effect, and the blur wiring in the component). That is the already-tracked "DOM wiring untested" gap, so I am noting it rather than raising it again.
 
 ## Warnings
 
-### WR-05: A failed shift-chart request is reported as "not published"; for an OT/SO game every skater silently drops out of that game's averages
+### WR-10: aria-expanded and data-open do not track whether the popover is actually visible; Enter/Space are visually a no-op for keyboard users
 
-**File:** `lib/research/team-games.ts:74-80,96,104-106` (copy at `app/research/page.tsx:126`, `components/ToiTrends.tsx:157`)
-**Issue:** `getShiftCharts(...).catch(() => [])` makes a failed request indistinguishable from an unpublished chart. For a regulation game that only loses PP/SH, but the UI then claims "the NHL hasn't published shift charts". For an OT/SO game `regulationToi` is `null` when `shiftInputs` is empty (line 106), so every skater's cell becomes `excluded` and the game vanishes from Avg TOI, slopes and Δ with no warning at all; `unavailableDates` is not populated because `loadGame` still resolves.
-**Fix:** Have the catch return `null`, and fail the whole game when its regulation TOI depends on the chart:
-```ts
-getShiftCharts(gameId).catch((err: unknown) => {
-  console.error(`Loading shift chart for game ${gameId} (${team}) failed`, err);
-  return null;
-}),
-// ...after `overtime` is computed (move that block above shiftInputs):
-if (overtime && shifts === null) throw new Error(`Shift chart for OT/SO game ${gameId} failed to load`);
-const shiftInputs = (shifts ?? []).flatMap(/* unchanged */);
-```
-The thrown error lands the game in `unavailableDates`, which the page already reports. Also soften the two user-facing strings so a failed fetch on a regulation game is not misreported, e.g. `ToiTrends.tsx:157`: "...: no shift chart is available for those games (not published yet, or it failed to load)." and the same wording at `page.tsx:126`. The existing test (`toi-trends-view.test.ts:82,84`) asserts only the "No PP/SH data for Oct 8" prefix, so it keeps passing.
+**File:** `components/ToiStripCell.tsx:46-62` (CSS in `components/ToiGameStrip.tsx:41`)
+**Issue:** The popover is shown by any of `group-hover/cell`, `group-focus-visible/cell`, or `group-data-[open]/cell`. `aria-expanded` and `data-open` only reflect the React state, which is driven by click, Enter, Space, Escape and blur. Consequences:
+1. A keyboard user tabs to a square and the popover is already visible through `:focus-visible`, while `aria-expanded="false"`. Pressing Enter or Space then sets `open=true`, and the popover looks identical. Pressing it again sets `open=false`, and the popover stays visible because focus-visible still shows it. The toggle the fix added has no visible effect on the keyboard path, and `aria-expanded` is false while the content is on screen.
+2. Escape clears `open` and blurs the square. That dismisses the focus-visible popover, but it also drops keyboard focus to `<body>` every time, even when nothing was open. A keyboard user loses their place in the 100+ tab stops.
+3. With the mouse hovering a square (laptop target), Escape cannot dismiss the hover popover, so the WCAG 1.4.13 "dismissible" requirement that motivated WR-07 is met only for the keyboard-focus path.
 
-### WR-06: When the newest game(s) fail to load, "Last game" and the last-2-games Δ silently re-anchor to older games
-
-**File:** `app/research/page.tsx:100-104,116` (cause: `lib/research/team-games.ts:138-146`)
-**Issue:** Failed games are dropped from `games`, so `LastGameLines` shows `games[games.length - 1]` under a heading that reads "Last game: <older date>", and `recentDelta` treats the newest two *loaded* games as "recent". The warning paragraph names the missing dates but never says that the "Last game" section and the Δ columns now describe older games, so a user can read a stale role change as current.
-**Fix:** Make the warning say so when a failed game is newer than the newest loaded one (ISO dates compare lexically). In `page.tsx`, inside the final `<>` branch:
-```tsx
-const newestLoaded = research.games[research.games.length - 1].date;
-const newestMissing = research.unavailableDates.some((d) => d > newestLoaded);
-// ...
-Couldn&apos;t load NHL data for {dates}, so those games are left out of this window
-{newestMissing && "; Last game and the last-2-games comparison use the newest games that did load"}. Reload to try again.
-```
-(Declare the two consts before the `return`, guarded by `research && research.games.length > 0`, or compute them in a small helper.)
-
-### WR-07: Strip square is focusable and clickable but exposed as `role="img"`: no Enter/Space toggle, no `aria-expanded`, no Escape dismiss
-
-**File:** `components/ToiStripCell.tsx:35-45`
-**Issue:** The span has `tabIndex=0` and an `onClick` toggle, so it is an interactive control, but it is announced as a static image and has no keyboard activation (Enter/Space do nothing), no expanded state, and no Escape handling. Keyboard users get the popover only via `:focus-visible` CSS, and cannot dismiss it without moving focus (WCAG 1.4.13 dismissable).
-**Fix:** Make it a real button role with expanded state and keys:
-```tsx
-role="button"
-aria-expanded={open}
-onKeyDown={(e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    setOpen((o) => !o);
-  } else if (e.key === "Escape") {
-    e.currentTarget.blur(); // onBlur closes data-open and ends :focus-visible
-  }
-}}
-```
-Tradeoff: Escape drops focus to the body; hover-shown popovers still end only when the pointer leaves. Update the tests that assert `role="img"` (`toi-trends-view.test.ts:192` and `:430`) to `role="button"` and add `aria-expanded="false"` to the closed-state assertion at `:431`. Update the stale `role` wording nowhere else (the `ToiGameStrip` doc comment does not mention it).
-
-### WR-08: `ToiStripCell` click / outside-click / blur behaviour has no behavioural test; popover regexes in the view test are fragile
-
-**File:** `lib/research/toi-trends-view.test.ts:198-205,377-385,435-445`; `components/ToiStripCell.tsx:25-48`
-**Issue:** Every strip test is a static-markup string match. The only logic in the client component (toggle, outside `pointerdown` close, blur close) is never exercised, and the markup tests are brittle: `:200` ends a popover at the first `</span></span>`, which is the end of the title span for any OT game (the `periodTag` span is the last child of the title), and `:379`/`:437` require `aria-hidden="true"` to be the first attribute and `class` the second, so any attribute reordering fails them for the wrong reason.
-**Feasibility:** A true behavioural test (dispatching click/pointerdown/blur and reading `data-open`) needs a DOM and a React renderer with effects; `renderToStaticMarkup` only renders initial state, and neither jsdom/happy-dom nor `@testing-library` is installed. That is **not feasible under `tsx --test lib/**/*.test.ts` without a new package**, so the wiring (`ref.contains`, listener add/remove) stays untested. Do not add a dependency.
-**Fix (what is feasible, no new packages):**
-1. Extract the state transitions into a pure function and test it under the existing runner (also covers the WR-07 keys):
-```ts
-// components/ToiStripCell.tsx
-export type CellEvent = "click" | "blur" | "enter" | "space" | "escape" | "outside";
-export function nextOpen(open: boolean, event: CellEvent): boolean {
-  return event === "click" || event === "enter" || event === "space" ? !open : false;
-}
-```
-Use it as `setOpen((o) => nextOpen(o, "click"))` etc., and add a `test()` table in the view test (or `lib/research/` colocated test) asserting closed->click->open->click->closed, and blur/escape/outside always close.
-2. Replace the position-sensitive regexes with one helper defined before first use, near the top of the test file:
-```ts
-const popoverTags = (html: string) =>
-  [...html.matchAll(/<span\b[^>]*>/g)].map((m) => m[0]).filter((t) => t.includes('aria-hidden="true"') && classTokens(t).includes("group-hover/cell:block"));
-```
-and, for `:198-205`, split the row on `aria-hidden="true"` and assert on the chunk that follows (`.filter((c) => c.includes("Oct"))`) instead of the lazy `</span></span>` match. Move `classTokens` (currently `:369`) above its first use.
-Keep this finding open until a DOM-capable test exists; the above only narrows it.
+**Fix:** Either make `open` the sole source of visibility for keyboard and click (drop `group-focus-visible/cell:block` from the popover and open on focus: `onFocus={() => setOpen(true)}`, leaving hover as the pointer path), or stop claiming state. Concretely, in `ToiStripCell` add `onFocus` for keyboard-initiated focus only (guard with `e.currentTarget.matches(":focus-visible")`). Keep `onKeyDown` Escape as `setOpen(false)` without `blur()`. Add a `data-dismissed` flag, or `group-data-[open]:...`, so Escape can also hide a hovered popover. Whichever model you pick, `aria-expanded` should be derived from the same condition that shows the popover.
 
 ## Info
 
-### IN-01: `if (secs)` conflates a 0:00 clock with a malformed one
+### IN-11: `newestMissing` does not cover a failed second-newest game; no test for the WR-05/WR-06 edge paths
 
-**File:** `lib/research/team-games.ts:92-93`
-**Issue:** `parseClock` returns `0` for `"00:00"` and `null` for garbage; `if (secs)` drops both, so a skater who dressed with 0:00 is treated as a scratch (DNP), contradicting the `toi` field comment ("every skater who dressed").
-**Fix:** Make the intent explicit and behaviour-preserving, or include the zero:
-```ts
-if (secs !== null && secs > 0) toi.set(p.playerId, secs); // 0:00 means he did not take a shift: treated as not played
-```
+**File:** `app/research/page.tsx:51-54`, `lib/research/team-games.test.ts:103-126`
+**Issue:** `newestMissing` is true only when a failed date is newer than the newest loaded game. If the second-newest game of A, B, C, D fails (C), "Last game" is still D, so no note appears. Yet the "last 2 games" comparison silently uses B and D. The wording the fix adds also claims only the "newest games that did load" case. Separately, the team-games tests have no case for an OT/SO game with a published-but-empty chart (the "still excluded, not unavailable" branch, `team-games.ts:109`). The stub always returns non-empty `SHIFT_ROWS`. The WR-06 clause has no test (the page has no render test).
+**Fix:** Compute `lastTwoDisturbed` as "any unavailable date newer than the second-newest loaded game" and use it for the clause. Add a `shiftChartEmpty?: number[]` option to `Stub` and a test that an OT game with `data: []` is kept with `regulationToi === null` and `lines === null`, and is not in `unavailableDates`. Extract the newest-missing predicate to a pure function in `lib/research/` and unit-test it.
 
-### IN-02: Non-null assertion inside a closure
+### IN-12: `nextOpen` and `CellEvent` live in a `"use client"` module; key repeat and modified Enter/Space still toggle
 
-**File:** `app/research/page.tsx:134`
-**Issue:** `game.lines!` is needed only because TypeScript does not keep property narrowing from the `!game.lines` check inside the `flatMap`/`map` callbacks.
-**Fix:** Narrow a const and drop the `!`:
-```tsx
-const lines = game.lines;
-// ...
-{!lines ? (...) : ( ... units={lines.units[situation][group].slice(0, UNIT_LIMITS[situation][group])} ...
-```
+**File:** `components/ToiStripCell.tsx:6-11, 53-61`
+**Issue:** `nextOpen` and `CellEvent` are exported from a `"use client"` file. A server component that imports `nextOpen` gets a client reference that throws if it is called on the server. Only the test imports it today, so there is no bug yet. The `enter` and `space` events are indistinguishable from `click` in `nextOpen`, so the three-way union adds nothing. Holding Enter or Space auto-repeats keydown, so the popover flickers open and closed. Ctrl/Alt/Meta+Enter also toggles.
+**Fix:** Move `nextOpen` to `lib/research/` (a plain module, as the project convention for pure logic suggests). Guard the handler with `if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;`.
 
-### IN-05: Popover headroom (`pb-28 -mb-24`) is a fixed magic number; a worst-case last-row popover can exceed it
+### IN-13: `aria-expanded` on a button whose controlled content is `aria-hidden`
+
+**File:** `components/ToiStripCell.tsx:48-50`, `components/ToiGameStrip.tsx:41`
+**Issue:** The popover is `aria-hidden="true"` and the full detail is already in `aria-label`. A screen reader therefore announces "button, collapsed/expanded" for a control that reveals nothing it can read. There is no `aria-controls`. This is noise rather than breakage, and ties into WR-10.
+**Fix:** Drop `aria-expanded` and use `aria-haspopup`-free, label-only semantics (for example `role="img"` plus a non-toggling click), or make the popover readable and reference it with `aria-describedby`.
+
+### IN-01: `if (secs)` conflates a 0:00 clock with a malformed one (still open)
+
+**File:** `lib/research/team-games.ts:94`
+**Issue:** Unchanged by the fix commits. A skater with a `0:00` boxscore TOI is dropped, the same as an unparseable one.
+**Fix:** `if (secs !== null)`, if a skater who dressed with 0:00 should count as played.
+
+### IN-02: Non-null assertion inside a closure (still open)
+
+**File:** `app/research/page.tsx:140`
+**Issue:** `game.lines!` inside the `.map` closure (the ledger cites line 134; the code shifted after the fix).
+**Fix:** `const lines = game.lines;` after the null check, then use `lines`.
+
+### IN-05: Popover headroom `pb-28 -mb-24` is a fixed magic number (still open)
 
 **File:** `components/ToiTrends.tsx:56`
-**Issue:** The wrapper reserves 112 px under the table (plus 4 px row padding). A worst-case popover (an excluded OT game: title, TOI, Total, PP, SH rows plus two note lines, `p-2`, border, `mt-1`) is roughly 130-135 px tall, so on the last row it can run past the padding. Because `overflow-x-auto` forces `overflow-y` to `auto`, that shows as a vertical scrollbar or clipped popover. Not browser-checked.
-**Fix:** Increase the reserve and say why it is that size:
-```tsx
-{/* Headroom for the tallest popover (about 135px) under the last row; the negative margin gives the space back. */}
-<div className="overflow-x-auto pb-40 -mb-36">
-```
+**Issue:** Unchanged. A last-row popover whose content grows (long opponent and result strings with `max-w-xs`) can exceed the reserved space and clip against `overflow-x-auto`.
+**Fix:** Check it in a browser at the 20-game window, or portal the popover out of the scroll container.
 
-### IN-06: Intro copy hard-codes 2:00 / 15 instead of the mover constants; empty state says "regular-season" though playoff games are included
+### IN-06: Intro copy hard-codes thresholds; empty state says "regular-season" (still open)
 
-**File:** `components/ToiTrends.tsx:50`; `app/research/page.tsx:97`
-**Issue:** Changing `TOI_MOVER_SECONDS` / `PP_MOVER_POINTS` (already imported at `ToiTrends.tsx:11,18`) would leave the visible explanation wrong. `RESEARCH_GAME_TYPES` includes playoffs (`team-games.ts:18`), so "regular-season" is inaccurate.
-**Fix:** Build the sentence from the constants (output is unchanged, so the approved-copy test at `toi-trends-view.test.ts:359-366` still passes; use a template string so no text-node splitting is involved):
-```tsx
-{`Rows tinted green or red moved by ${formatClock(TOI_MOVER_SECONDS)} or more of TOI or ${PP_MOVER_POINTS} or more points of power-play share.`}
-```
-and change `page.tsx:97` to "...hasn't finished a game yet this season."
+**File:** `components/ToiTrends.tsx:50`, `app/research/page.tsx:102`
+**Issue:** "2:00" and "15 points" duplicate `TOI_MOVER_SECONDS` and `PP_MOVER_POINTS`. The empty-state copy says "regular-season" although playoff games are included.
+**Fix:** Interpolate the constants through `formatClock`. Reword the empty state to "hasn't finished a regular-season or playoff game".
 
-### IN-07: On desktop a second click on a hovered square has no visible effect, so the "click a square" hint can mislead
+### IN-07: A second click on a hovered square has no visible effect (still open)
 
-**File:** `components/ToiTrends.tsx:51,68`; `components/ToiGameStrip.tsx:41`
-**Issue:** On a laptop the pointer is already hovering the square when it is clicked, so the popover is already visible and the click changes nothing visible; the click only pins it open after the pointer leaves, which is not explained. The header hint and intro both say to click.
-**Fix:** Say what works on the target device: change the header hint to "(hover or click a square)" at `ToiTrends.tsx:68` and update the matching assertions at `toi-trends-view.test.ts:50` and `:483`. Leave the intro sentence as is (it already says "click, tap or hover").
+**File:** `components/ToiStripCell.tsx:52`, `components/ToiGameStrip.tsx:41`
+**Issue:** On a laptop the pointer is over the square, so `group-hover` already shows the popover. The toggle only matters for touch, which this site does not target. Related to WR-10.
+**Fix:** Soften the "(click a square)" header hint to "hover a square", or accept it.
 
-### IN-09: Tests pin the literal light tint shade in many places; no test covers the `dark:bg-*-900/40` classes
+### IN-09: Tests pin the literal light tint in five places; dark classes untested (still open)
 
-**File:** `lib/research/toi-trends-view.test.ts:242-244,259,283,288`
-**Issue:** `bg-green-100` / `bg-red-100` are repeated as raw strings, and the dark-mode tint (`ToiTrends.tsx:79`) is untested, so removing or mistyping it passes the suite.
-**Fix:** Define `const TINT = { up: "bg-green-100", down: "bg-red-100" }` once and reuse it, and add to the up/down test:
-```ts
-assert.ok(up.includes("dark:bg-green-900/40") && down.includes("dark:bg-red-900/40"));
-```
+**File:** `lib/research/toi-trends-view.test.ts:252-254, 269, 293, 298`
+**Issue:** Unchanged by the fix commits.
+**Fix:** Export the tint class strings from a shared constant and assert on that, plus the `dark:bg-*-900/40` variant.
 
-### IN-10: `text-green-700` on green-100 is 4.56:1, only just above AA
+### IN-10: `text-green-700` on green-100 is only just above AA (still open)
 
-**File:** `components/ToiTrends.tsx:232` (pinned by `toi-trends-view.test.ts:245,260,273`)
-**Issue:** The up-mover delta text is barely above the 4.5:1 AA threshold on the tinted row; any rendering/colour-profile variance puts it under.
-**Fix:** Use `text-green-800` (`"font-medium text-green-800 dark:text-green-400"`) and update the three test assertions from `text-green-700` to `text-green-800`.
+**File:** `components/ToiTrends.tsx:232`
+**Issue:** Contrast is 4.56:1. Unchanged.
+**Fix:** Use `text-green-800` for headroom.
 
 ---
 
