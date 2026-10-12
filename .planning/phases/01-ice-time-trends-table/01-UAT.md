@@ -1,14 +1,18 @@
 ---
-status: diagnosed
+status: testing
 phase: 01-ice-time-trends-table
 source: [01-VERIFICATION.md]
 started: 2026-10-11T23:20:00Z
-updated: 2026-10-12T01:12:46.838Z
+updated: 2026-10-12T02:11:39Z
 ---
 
 ## Current Test
 
-[testing complete]
+number: 6
+name: Re-test after 01-08: click or tap opens a square's popover (G-01-2)
+expected: |
+  Signed in, /research?team=MTL&games=5 (click into the browser window first). Clicking a Per game square opens its popover directly under it and it stays open; clicking it again closes it; clicking a blank area closes it; opening another square closes the first. Hovering a square also shows its popover, and Tab onto a square shows it. Sweeping the pointer down one column shows each row's own popover without the first one covering the rows below. With games=20 and on the last defense row, popovers are fully visible.
+awaiting: user response
 
 ## Tests
 
@@ -38,12 +42,24 @@ result: issue
 reported: "I don\'t see any popovers. Also the Per Game looks like small pieces of a bold line, I can\'t tell what it is"
 severity: major
 
+### 6. Re-test after 01-08: click or tap opens a square's popover (G-01-2)
+expected: Signed in, /research?team=MTL&games=5 (click into the browser window first). Clicking a Per game square opens its popover directly under it and it stays open; clicking it again closes it; clicking a blank area closes it; opening another square closes the first. Hovering a square also shows its popover, and Tab onto a square shows it. Sweeping the pointer down one column shows each row's own popover without the first one covering the rows below. With games=20 and on the last defense row, popovers are fully visible.
+result: [pending]
+
+### 7. Re-test after 01-09: Per game squares read as separate games (G-01-5)
+expected: Each Per game square is a distinct 20x20 bordered square with clear gaps (not a segmented bar), in light and dark mode. The header reads "Per game (click a square)". Missed games are dashed grey, OT games with no shift data dashed blue, played OT/SO games have a blue ring, and the OT popover shows the OT tag and "OT excluded +m:ss" (or "Total (incl. OT)" when no shift data).
+result: [pending]
+
+### 8. Re-test after 01-09: Pos column separates position and games played (G-01-1b)
+expected: The Pos column reads like "C 5/5 GP", with the position and games played visibly separate.
+result: [pending]
+
 ## Summary
 
-total: 5
+total: 8
 passed: 2
 issues: 2
-pending: 0
+pending: 3
 skipped: 0
 blocked: 1
 
