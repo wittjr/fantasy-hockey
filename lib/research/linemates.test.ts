@@ -4,6 +4,10 @@ import type { PositionGroup, Situation } from "./lines";
 import {
   buildLinemateView,
   gameColumnLabels,
+  LINEMATE_CAPS,
+  LINEMATE_MIN_SECONDS,
+  LINEMATE_NEW_EARLIER_MAX_POINTS,
+  LINEMATE_TAG_POINTS,
   linemateCell,
   linemateDetail,
   linemateOpacity,
@@ -310,4 +314,213 @@ test("noChartDates lists the dates of window games without a shift chart, oldest
 test("noChartDates includes a game the player missed and is empty when every game has a chart", () => {
   assert.deepEqual(buildLinemateView([game(8, [2], null)], players, PLAYER, "ev").noChartDates, ["2026-10-08"]);
   assert.deepEqual(buildLinemateView([game(8, [1, 2], pairs(600, { 2: 300 }))], players, PLAYER, "ev").noChartDates, []);
+});
+
+// ---- Tags, tag availability and the cap (PLYR-04, D-11, D-14..D-18, D-20, D-26) ----
+
+const wide = new Map<number, ResearchPlayer>([
+  ...players,
+  ...[10, 11, 12, 13, 14, 15, 16, 17, 18].map((id): [number, ResearchPlayer] => [id, { id, name: `Forward ${id}`, position: "C", group: "F" }]),
+  ...[20, 21, 22, 23, 24, 25].map((id): [number, ResearchPlayer] => [id, { id, name: `Defense ${id}`, position: "D", group: "D" }]),
+]);
+const tagOf = (v: ReturnType<typeof buildLinemateView>, id: number) => allRows(v).find((r) => r.player.id === id)?.tag;
+
+test("tag constants are single named values: 15 points, and New below 10 points earlier", () => {
+  assert.equal(LINEMATE_TAG_POINTS, 15);
+  assert.equal(LINEMATE_NEW_EARLIER_MAX_POINTS, 10);
+  assert.deepEqual(LINEMATE_CAPS, { ev: { F: 6, D: 4 }, pp: { F: 4, D: 3 }, sh: { F: 4, D: 3 } });
+});
+
+// Synthetic line change with near-zero earlier overlap: P skated with 10 and 11 earlier and with 12 and 13 in the recent games.
+for (const n of [2, 3, 5]) {
+  test(`line change in a ${n}-game window: the new linemates are New and listed first, the old ones Fading`, () => {
+    const start = recentStart(n)!;
+    const dressed = [1, 10, 11, 12, 13];
+    const games = Array.from({ length: n }, (_, i) =>
+      game(i + 1, dressed, i < start ? pairs(600, { 10: 300, 11: 300, 12: 0, 13: 0 }) : pairs(600, { 10: 0, 11: 0, 12: 300, 13: 300 })),
+    );
+    const view = buildLinemateView(games, wide, PLAYER, "ev");
+    assert.equal(view.tags.available, true);
+    assert.deepEqual(view.forwards.map((r) => [r.player.id, r.tag]), [[12, "New"], [13, "New"], [10, "Fading"], [11, "Fading"]]);
+  });
+}
+
+test("line change: old linemates who did not dress in the recent games are Out, not Fading", () => {
+  const games = [
+    game(1, [1, 10, 11, 12], pairs(600, { 10: 300, 11: 300, 12: 0 })),
+    game(2, [1, 10, 11, 12], pairs(600, { 10: 300, 11: 300, 12: 0 })),
+    game(3, [1, 12], pairs(600, { 12: 300 })),
+  ];
+  const view = buildLinemateView(games, wide, PLAYER, "ev");
+  assert.deepEqual(view.forwards.map((r) => [r.player.id, r.tag]), [[12, "New"], [10, "Out"], [11, "Out"]]);
+});
+
+test("a linemate who dressed in none of the recent games is Out even with a 60% earlier share", () => {
+  const games = [
+    game(1, [1, 2], pairs(1000, { 2: 600 })),
+    game(2, [1, 2], pairs(1000, { 2: 600 })),
+    game(3, [1, 2], pairs(1000, { 2: 600 })),
+    game(4, [1, 3], pairs(1000, { 3: 500 })),
+    game(5, [1, 3], pairs(1000, { 3: 500 })),
+  ];
+  assert.equal(tagOf(buildLinemateView(games, players, PLAYER, "ev"), 2), "Out");
+});
+
+/** 3-game window: game 1 earlier, games 2-3 recent. Each share is per 1000 s of the player's time. */
+function shareWindow(earlier: number, recent: number) {
+  return [
+    game(1, [1, 2], pairs(1000, { 2: earlier })),
+    game(2, [1, 2], pairs(1000, { 2: recent })),
+    game(3, [1, 2], pairs(1000, { 2: recent })),
+  ];
+}
+const tagForShares = (earlier: number, recent: number) => buildLinemateView(shareWindow(earlier, recent), players, PLAYER, "ev").forwards[0].tag;
+
+test("boundary on rounded shares: 40 against 25 is Rising, 39 against 25 is no tag, 10 against 25 is Fading", () => {
+  assert.equal(tagForShares(250, 400), "Rising");
+  assert.equal(tagForShares(250, 390), null);
+  assert.equal(tagForShares(250, 100), "Fading");
+  assert.equal(tagForShares(250, 110), null);
+});
+
+test("the 15-point test uses the rounded shares: 40.4 against 25.5 rounds to 40 against 26 and gets no tag", () => {
+  assert.equal(tagForShares(255, 404), null);
+});
+
+test("a 15-point rise from a rounded earlier share of 9 is New, from 10 it is Rising", () => {
+  assert.equal(tagForShares(90, 240), "New");
+  assert.equal(tagForShares(100, 250), "Rising");
+});
+
+test("a linemate with no counted earlier game and a 30% recent share is New, and his absent earlier game is not in the window share", () => {
+  const games = [game(1, [1], pairs(1000, {})), game(2, [1, 2], pairs(1000, { 2: 300 })), game(3, [1, 2], pairs(1000, { 2: 300 }))];
+  const [row] = buildLinemateView(games, players, PLAYER, "ev").forwards;
+  assert.equal(row.tag, "New");
+  assert.equal(row.cells[0].state, "absent");
+  close(row.windowShare!, 0.3);
+});
+
+test("a linemate who still dresses but spent the recent games apart after a 40% earlier share is Fading", () => {
+  assert.equal(tagForShares(400, 0), "Fading");
+});
+
+test("games without a shift chart, or where a player missed, never count toward a tag's shares", () => {
+  // Game 2 has no chart; game 3 the linemate missed. The only counted recent cell is game 4 (30% against 30%): no tag.
+  const games = [
+    game(1, [1, 2], pairs(1000, { 2: 300 })),
+    game(2, [1, 2], null),
+    game(3, [1], pairs(1000, {})),
+    game(4, [1, 2], pairs(1000, { 2: 300 })),
+  ];
+  const view = buildLinemateView(games, players, PLAYER, "ev");
+  assert.equal(view.tags.available, true);
+  assert.equal(tagOf(view, 2), null);
+});
+
+test("a linemate who dressed in the recent games but has no counted recent game gets no tag", () => {
+  // Game 2 has a chart but linemate 2 missed it; his only recent dressed game (3) has no chart. He is not Out, and not Fading.
+  const games = [game(1, [1, 2], pairs(1000, { 2: 300 })), game(2, [1], pairs(1000, {})), game(3, [1, 2], null)];
+  const view = buildLinemateView(games, players, PLAYER, "ev");
+  assert.equal(view.tags.available, true);
+  assert.equal(tagOf(view, 2), null);
+});
+
+test("tag availability: a 1-game window has no tags", () => {
+  const view = buildLinemateView([game(1, [1, 2], pairs(600, { 2: 300 }))], players, PLAYER, "ev");
+  assert.deepEqual(view.tags, { available: false, reason: "one-game", dressedGames: 1 });
+  assert.deepEqual(allRows(view).map((r) => r.tag), [null]);
+});
+
+test("tag availability: a player who dressed in 1 of 3 games has no tags", () => {
+  const games = [game(1, [1, 2], pairs(600, { 2: 300 })), game(2, [2], pairs(600, { 2: 300 })), game(3, [2], pairs(600, { 2: 300 }))];
+  const view = buildLinemateView(games, players, PLAYER, "ev");
+  assert.deepEqual(view.tags, { available: false, reason: "played-fewer-than-2", dressedGames: 1 });
+  assert.ok(allRows(view).every((r) => r.tag === null));
+});
+
+test("tag availability: a player who dressed in the 3 earlier games of 5 but neither recent one has no tags (missed-recent)", () => {
+  const games = [1, 2, 3].map((d) => game(d, [1, 2], pairs(600, { 2: 300 }))).concat([4, 5].map((d) => game(d, [2], pairs(600, { 2: 300 }))));
+  const view = buildLinemateView(games, players, PLAYER, "ev");
+  assert.deepEqual(view.tags, { available: false, reason: "missed-recent", dressedGames: 3 });
+  assert.ok(allRows(view).every((r) => r.tag === null));
+});
+
+test("tag availability: dressed in the recent games but both lack a chart is no-recent-data", () => {
+  const games = [game(1, [1, 2], pairs(600, { 2: 300 })), game(2, [1, 2], null), game(3, [1, 2], null)];
+  assert.equal(buildLinemateView(games, players, PLAYER, "ev").tags.reason, "no-recent-data");
+});
+
+test("tag availability: dressed only in the 2 recent games of 5 is no-earlier-data", () => {
+  const games = [1, 2, 3].map((d) => game(d, [2], pairs(600, { 2: 300 }))).concat([4, 5].map((d) => game(d, [1, 2], pairs(600, { 2: 300 }))));
+  const view = buildLinemateView(games, players, PLAYER, "ev");
+  assert.deepEqual(view.tags, { available: false, reason: "no-earlier-data", dressedGames: 2 });
+});
+
+test("tag availability: no time in the situation in the recent games is no-recent-data for that tab", () => {
+  const games = [game(1, [1, 2], pairs(600, { 2: 30 }, {}, "pp")), game(2, [1, 2], pairs(600, { 2: 300 })), game(3, [1, 2], pairs(600, { 2: 300 }))];
+  assert.equal(buildLinemateView(games, players, PLAYER, "pp").tags.reason, "no-recent-data");
+  assert.equal(buildLinemateView(games, players, PLAYER, "ev").tags.reason, "no-earlier-data");
+});
+
+test("a 2-game window compares the latest game with the game before it", () => {
+  const games = [game(1, [1, 2], pairs(1000, { 2: 100 })), game(2, [1, 2], pairs(1000, { 2: 500 }))];
+  const view = buildLinemateView(games, players, PLAYER, "ev");
+  assert.equal(view.tags.available, true);
+  assert.equal(tagOf(view, 2), "Rising");
+});
+
+/** One game, `forwards` forwards (ids 10..) and `defense` defensemen (ids 20..), the earlier ids with the most time, all untagged. */
+function crowd(situation: Situation, forwards: number, defense: number, extra: Record<number, number> = {}) {
+  const together: Record<number, number> = { ...extra };
+  const groups: Record<number, PositionGroup> = {};
+  for (let i = 0; i < forwards; i++) ((together[10 + i] = 600 - 10 * i), (groups[10 + i] = "F"));
+  for (let i = 0; i < defense; i++) ((together[20 + i] = 500 - 10 * i), (groups[20 + i] = "D"));
+  const dressed = [1, ...Object.keys(together).map(Number)];
+  return [game(1, dressed, pairs(1000, together, groups, situation))];
+}
+
+test("cap at EV: 9 forwards and 6 defensemen show 6 and 4 of 15; all lifts it", () => {
+  const games = crowd("ev", 9, 6);
+  const capped = buildLinemateView(games, wide, PLAYER, "ev");
+  assert.equal(capped.forwards.length, 6);
+  assert.equal(capped.defense.length, 4);
+  assert.equal(capped.total, 15);
+  assert.equal(capped.cappedCount, 10);
+  const open = buildLinemateView(games, wide, PLAYER, "ev", { all: true });
+  assert.equal(open.forwards.length, 9);
+  assert.equal(open.defense.length, 6);
+  assert.equal(open.total, 15);
+  assert.equal(open.cappedCount, 10);
+});
+
+test("cap on special teams is 4 forwards and 3 defense", () => {
+  for (const sit of ["pp", "sh"] as const) {
+    const view = buildLinemateView(crowd(sit, 9, 6), wide, PLAYER, sit);
+    assert.deepEqual([view.forwards.length, view.defense.length, view.total, view.cappedCount], [4, 3, 15, 7]);
+  }
+});
+
+test("a tagged forward at position 8 is shown under the cap", () => {
+  // Forwards 10-16 hold 40% in every game, so no tag. Forward 17 goes from nothing to 30% (New) but ranks 8th; 18 stays at 10%.
+  const dressed = [1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25];
+  const groups: Record<number, PositionGroup> = Object.fromEntries(dressed.slice(1).map((id) => [id, id < 20 ? "F" : "D"]));
+  const steady: Record<number, number> = { 10: 600, 11: 590, 12: 580, 13: 570, 14: 560, 15: 550, 16: 540, 18: 100, 20: 400, 21: 390, 22: 380, 23: 370, 24: 360, 25: 350 };
+  const games = [
+    game(1, dressed, pairs(1000, { ...steady, 17: 0 }, groups)),
+    game(2, dressed, pairs(1000, { ...steady, 17: 300 }, groups)),
+    game(3, dressed, pairs(1000, { ...steady, 17: 300 }, groups)),
+  ];
+  const view = buildLinemateView(games, wide, PLAYER, "ev");
+  assert.deepEqual(view.forwards.map((r) => r.player.id), [10, 11, 12, 13, 14, 15, 17]);
+  assert.equal(view.forwards[6].tag, "New");
+  assert.equal(view.defense.length, 4);
+  assert.equal(view.total, 15);
+  assert.equal(view.cappedCount, 11);
+});
+
+test("all lifts the cap but never lists a linemate below the minimum", () => {
+  const games = crowd("ev", 9, 6, { 3: LINEMATE_MIN_SECONDS.ev - 1 });
+  const view = buildLinemateView(games, wide, PLAYER, "ev", { all: true });
+  assert.equal(view.total, 15);
+  assert.ok(!allRows(view).some((r) => r.player.id === 3));
 });
