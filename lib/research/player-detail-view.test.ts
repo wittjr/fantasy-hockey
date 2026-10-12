@@ -484,7 +484,7 @@ test("when nobody meets the minimum the panel says so with the minimum for the s
   assert.ok(!html.includes("<table"));
   assert.deepEqual(tabLinks(html).map((t) => t.label), ["EV", "PP", "SH"]);
   const ppGames = [1, 2, 3].map((n) =>
-    alphaGame(n, `2026-10-0${n}`, 1200, pairsOf({ 1: sec(0, 120), 2: sec(0, 100) }, [[1, 2, sec(0, 10)]]), null),
+    alphaGame(n, `2026-10-0${n}`, 1200, pairsOf({ 1: sec(0, 120), 2: sec(0, 100) }, [[1, 2, sec(0, 9)]]), null),
   );
   assert.ok(stripTags(renderPanel(research(ppGames), 1, "pp")).includes("No linemates with 0:30 or more together in this window."));
 });

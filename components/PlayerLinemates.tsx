@@ -1,19 +1,30 @@
 import { PendingLink } from "@/components/PendingLink";
 import { StripPopover } from "@/components/StripPopover";
 import { ToiStripCell } from "@/components/ToiStripCell";
+import { formatClock, formatDate, formatSignedClock, formatSignedPoints } from "@/lib/research/format";
 import { detailText, STRIP_SQUARE_CLASS } from "@/lib/research/game-strip";
 import type { Situation } from "@/lib/research/lines";
 import {
   buildLinemateView,
   gameColumnLabels,
+  LINEMATE_MIN_SECONDS,
   linemateDetail,
   linemateOpacity,
   SITUATION_ABBREV,
+  SITUATION_WORDS,
   type LinemateCellState,
+  type LinemateEmptyReason,
   type LinemateRow,
 } from "@/lib/research/linemates";
 import type { TeamResearch } from "@/lib/research/team-games";
-import { buildTrendRows, researchHref, type SortSpec } from "@/lib/research/toi-trends";
+import {
+  buildTrendRows,
+  deltaCrossing,
+  PP_MOVER_POINTS,
+  researchHref,
+  TOI_MOVER_SECONDS,
+  type SortSpec,
+} from "@/lib/research/toi-trends";
 
 const CELL_BORDER: Record<LinemateCellState, string> = {
   together: "border-neutral-300 dark:border-neutral-700",
@@ -22,10 +33,12 @@ const CELL_BORDER: Record<LinemateCellState, string> = {
   unknown: "border-dashed border-amber-600 dark:border-amber-400",
 };
 
+const SITUATIONS: readonly Situation[] = ["ev", "pp", "sh"];
+
 /**
- * The player detail panel, rendered from `?player`. Shows the linemates (forwards, then defense) the player shared the ice with
- * in each game of the window, as one shaded square per game. The square is shade only: its facts are in the popover and the
- * aria-label. Server component: only the squares and links are client code.
+ * The player detail panel, rendered from `?player`. Shows the player's deployment numbers and the linemates (forwards, then
+ * defense) he shared the ice with in each game of the window, as one shaded square per game, with EV/PP/SH tabs. The square is
+ * shade only: its facts are in the popover and the aria-label. Server component: only the squares and links are client code.
  */
 export function PlayerLinemates({
   research,
@@ -62,6 +75,16 @@ export function PlayerLinemates({
   const abbrev = SITUATION_ABBREV[sit];
   const view = buildLinemateView(games, research.players, playerId, sit);
   const labels = gameColumnLabels(games.map((g) => g.date));
+  const toiCrossing = deltaCrossing(row.toiDelta, TOI_MOVER_SECONDS);
+  const ppCrossing = deltaCrossing(row.ppShareDelta, PP_MOVER_POINTS);
+  const showTrend = games.length > 1;
+  const minimum = formatClock(LINEMATE_MIN_SECONDS[sit]);
+  const emptyMessages: Record<LinemateEmptyReason, string> = {
+    "no-chart": `No linemate data for ${name} in this window: no shift chart is available for these games (not published yet, or it failed to load).`,
+    "no-situation-time": `${name} had no ${SITUATION_WORDS[sit]} time in this window.`,
+    "below-minimum": `No linemates with ${minimum} or more together in this window.`,
+  };
+  const showNoChartNote = view.noChartDates.length > 0 && view.emptyReason !== "no-chart";
 
   return (
     <section
@@ -86,59 +109,161 @@ export function PlayerLinemates({
         </PendingLink>
       </div>
 
-      <div className="overflow-x-auto pb-28 -mb-24">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
-              <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Linemate</th>
-              <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">
-                <span className="sr-only">Games, oldest to newest</span>
-                <div className="flex gap-1">
-                  {labels.map((label, i) => (
-                    <div key={games[i].id} className="w-5 text-center text-xs tabular-nums font-normal">
-                      <div className="h-4 leading-4">{label.month}</div>
-                      <div className="h-4 leading-4">{label.day}</div>
-                    </div>
-                  ))}
-                </div>
-              </th>
-              <th
-                scope="col"
-                title={`Time together as a share of ${name}'s ${abbrev} time in the games they both played`}
-                className="py-1 pr-3 text-right font-medium whitespace-nowrap"
-              >
-                Window share
-              </th>
-            </tr>
-          </thead>
-          {(
-            [
-              ["Forwards", view.forwards, ""],
-              ["Defense", view.defense, "border-t-2 border-t-neutral-300 dark:border-t-neutral-700"],
-            ] as const
-          ).map(([title, rows, divider]) => (
-            <tbody key={title}>
-              <tr className={divider}>
-                <th scope="rowgroup" colSpan={3} className="pt-2 pb-1 text-left text-xs font-medium text-neutral-500">
-                  {title}
+      <dl className="flex flex-wrap gap-x-6 gap-y-1">
+        <HeaderStat label="Avg TOI" value={row.avgToi === null ? null : formatClock(row.avgToi)} bold />
+        {showTrend && (
+          <HeaderStat
+            label="TOI Δ"
+            value={row.toiDelta === null ? null : formatSignedClock(row.toiDelta)}
+            crossing={toiCrossing}
+          />
+        )}
+        <HeaderStat label="PP share" value={row.ppShare === null ? null : `${Math.round(row.ppShare)}%`} />
+        {showTrend && (
+          <HeaderStat
+            label="PP share Δ"
+            value={row.ppShareDelta === null ? null : formatSignedPoints(row.ppShareDelta)}
+            crossing={ppCrossing}
+          />
+        )}
+      </dl>
+
+      <nav aria-label="Situation" className="flex gap-1 border-b border-neutral-200 dark:border-neutral-800">
+        {SITUATIONS.map((s) => (
+          <PendingLink
+            key={s}
+            href={researchHref(team, gameCount, sort, { player: playerId, sit: s })}
+            scroll={false}
+            aria-current={s === sit ? "true" : undefined}
+            className={`-mb-px border-b-2 px-3 py-1 text-sm ${
+              s === sit
+                ? "border-neutral-900 font-medium text-neutral-900 dark:border-neutral-100 dark:text-neutral-100"
+                : "border-transparent text-neutral-600 hover:text-neutral-900 hover:underline dark:text-neutral-400 dark:hover:text-neutral-100"
+            }`}
+          >
+            {SITUATION_ABBREV[s]}
+          </PendingLink>
+        ))}
+      </nav>
+
+      <p className="text-sm text-neutral-500">
+        Who {name} has been on the ice with, game by game. Click a square for exact minutes together; use EV, PP or SH to switch
+        situation.
+      </p>
+
+      {view.emptyReason ? (
+        <p className="text-sm text-neutral-500">{emptyMessages[view.emptyReason]}</p>
+      ) : (
+        <div className="overflow-x-auto pb-28 -mb-24">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
+                <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Linemate</th>
+                <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">
+                  <span className="sr-only">Games, oldest to newest</span>
+                  <div className="flex gap-1">
+                    {labels.map((label, i) => (
+                      <div key={games[i].id} className="w-5 text-center text-xs tabular-nums font-normal">
+                        <div className="h-4 leading-4">{label.month}</div>
+                        <div className="h-4 leading-4">{label.day}</div>
+                      </div>
+                    ))}
+                  </div>
+                </th>
+                <th
+                  scope="col"
+                  title={`Time together as a share of ${name}'s ${abbrev} time in the games they both played`}
+                  className="py-1 pr-3 text-right font-medium whitespace-nowrap"
+                >
+                  Window share
                 </th>
               </tr>
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="py-1 pr-3 text-neutral-500 whitespace-nowrap">
-                    None
-                  </td>
+            </thead>
+            {(
+              [
+                ["Forwards", view.forwards, ""],
+                ["Defense", view.defense, "border-t-2 border-t-neutral-300 dark:border-t-neutral-700"],
+              ] as const
+            ).map(([title, rows, divider]) => (
+              <tbody key={title}>
+                <tr className={divider}>
+                  <th scope="rowgroup" colSpan={3} className="pt-2 pb-1 text-left text-xs font-medium text-neutral-500">
+                    {title}
+                  </th>
                 </tr>
-              ) : (
-                rows.map((r) => (
-                  <LinemateRowView key={r.player.id} row={r} research={research} playerName={name} sit={sit} team={team} />
-                ))
-              )}
-            </tbody>
-          ))}
-        </table>
-      </div>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="py-1 pr-3 text-neutral-500 whitespace-nowrap">
+                      None
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r) => (
+                    <LinemateRowView key={r.player.id} row={r} research={research} playerName={name} sit={sit} team={team} />
+                  ))
+                )}
+              </tbody>
+            ))}
+          </table>
+        </div>
+      )}
+
+      {(!view.emptyReason || showNoChartNote) && (
+        <div className="flex flex-col gap-1 text-xs text-neutral-500">
+          {!view.emptyReason && (
+            <>
+              <p>
+                Squares are team games, oldest to newest. Darker means that linemate was on the ice for more of {name}&apos;s{" "}
+                {abbrev} time in that game. Hollow means both played but not together. Dashed means one of them did not play;
+                amber dashed means no shift chart. A blue ring means overtime; only regulation time counts.
+              </p>
+              <p>
+                Window share is time together divided by {name}&apos;s {abbrev} time in the games they both played. Linemates are
+                ordered by the team&apos;s last 2 games, then by the whole window, and only those with {minimum} or more together
+                are listed.
+              </p>
+            </>
+          )}
+          {showNoChartNote && (
+            <p className="text-amber-600 dark:text-amber-400">
+              No linemate data for {view.noChartDates.map(formatDate).join(", ")}: no shift chart is available for those games
+              (not published yet, or it failed to load). They are left out of shares and tags.
+            </p>
+          )}
+        </div>
+      )}
     </section>
+  );
+}
+
+/** One header stat. A Δ that crosses the Phase 1 mover threshold gets the trends table's tone plus a screen-reader word; unknown shows a dash. */
+function HeaderStat({
+  label,
+  value,
+  crossing = 0,
+  bold = false,
+}: {
+  label: string;
+  value: string | null;
+  crossing?: -1 | 0 | 1;
+  bold?: boolean;
+}) {
+  const tone =
+    crossing === 1
+      ? "font-medium text-green-700 dark:text-green-400"
+      : crossing === -1
+        ? "font-medium text-red-700 dark:text-red-400"
+        : bold
+          ? "font-medium"
+          : "";
+  return (
+    <div>
+      <dt className="text-xs text-neutral-600 dark:text-neutral-400">{label}</dt>
+      <dd className={`text-sm tabular-nums ${tone}`}>
+        {value ?? <span className="text-neutral-400 dark:text-neutral-500">—</span>}
+        {crossing !== 0 && <span className="sr-only">{crossing === 1 ? "Moving up" : "Moving down"}</span>}
+      </dd>
+    </div>
   );
 }
 
