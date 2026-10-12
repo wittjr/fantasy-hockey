@@ -76,7 +76,7 @@ Plans:
   4. Linemates are tagged New, Rising or Fading from time together alone (no quality scoring); a forward moved to a new line in the latest game shows the new linemates as New and the old ones as Fading
   5. Games whose shift chart is missing show as unknown ("—" or blank) in the heat strip, never 0, and do not count toward shares or tags; the existing last-game unit tables still show the same TOI and share values as before this phase
 
-**Plans:** 2/7 plans executed
+**Plans:** 3/7 plans executed
 
 Plans:
 **Wave 1**
@@ -84,7 +84,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [x] 02-02-PLAN.md — Shared StripPopover for both strips (heat-strip popovers with minutes and share) and the panel's markup pinned by tests
-- [ ] 02-03-PLAN.md — Trends-table and Last game unit-table names open the player (jump to #player-detail, unit tables on their own tab), selected-row bar, nav/sort links keep or drop the selection
+- [x] 02-03-PLAN.md — Trends-table and Last game unit-table names open the player (jump to #player-detail, unit tables on their own tab), selected-row bar, nav/sort links keep or drop the selection
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 02-04-PLAN.md — WR-10: Escape hides a strip popover without losing focus, expanded state removed (both strips), WebKit D13
@@ -124,5 +124,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
-| 2. Player Linemate Detail | 2/7 | In Progress | - |
+| 2. Player Linemate Detail | 3/7 | In Progress | - |
 | 3. Unit Event Stats | 0/TBD | Not started | - |
