@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Player Linemate Detail
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-10-12T19:36:55.116Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-10-12T19:42:39.070Z"
 last_activity: 2026-10-12
 last_activity_desc: Phase 02 execution started
-state_head: beb74ce2f36c3d966c3233100dc082a43750063b
+state_head: 3a4f205801cce1212f36c8aa50db99322b3be229
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-12)
 ## Current Position
 
 Phase: 02 (Player Linemate Detail) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-10-12 — Phase 02 execution started
 
@@ -69,6 +69,7 @@ Progress: [███░░░░░░░] 33% (1 of 3 phases; 9/9 Phase 1 plans
 | Phase 02 P02 | 3 min | 2 tasks | 4 files |
 | Phase 02 P03 | 25 min | 3 tasks | 7 files |
 | Phase 02 P04 | 3 min | 2 tasks | 5 files |
+| Phase 02 P05 | 25 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-02: StripPopover is the single popover for both strips; heading line shown first, title muted only when a heading is set
 - [Phase 02]: 02-03: name links drop all, so a newly opened player starts capped; aria-current applied wherever the selected player appears
 - [Phase 02]: 02-04: Escape dismiss is a data-dismissed flag + group-data-[dismissed]/cell:hidden variant (no blur); pointer leave keeps a pin but clears dismissed; aria-expanded removed (WR-10 fixed)
+- [Phase 02]: 02-05: emptyReason no-chart is judged over charted games the selected player dressed for, so unknown is never reported as no time (D-24)
+- [Phase 02]: 02-05: legend line 2 says 'in the games they both played' (D-25 wording); no-chart empty state shows only the message and tabs, other empty reasons still show the amber note when games lack a chart
 
 ### Pending Todos
 
@@ -124,6 +127,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12T19:36:55.072Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-10-12T19:42:39.028Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
