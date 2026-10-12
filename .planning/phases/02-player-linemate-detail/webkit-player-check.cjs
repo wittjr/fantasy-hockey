@@ -400,6 +400,213 @@ async function findPlayer(context) {
   throw new HarnessError(`no player with linemate data for ${TEAM}; set CHECK_TEAM`);
 }
 
+/** Tab from `start` to the first square in `scope`, then Escape, Tab away and Shift+Tab back (WR-10). */
+async function escapeCheck(page, start, scope) {
+  await page.mouse.move(1, 1);
+  await start.focus();
+  let found = null;
+  for (let n = 1; n <= 12 && found === null; n++) {
+    await page.keyboard.press("Tab");
+    const i = await page.evaluate((s) => window.__pc.list(s).indexOf(document.activeElement), scope);
+    if (i >= 0) found = i;
+  }
+  if (found === null) return { ok: false, details: { error: "no square reached within 12 Tab presses" } };
+  const state = () => page.evaluate(([s, i]) => window.__pc.state(window.__pc.list(s)[i]), [scope, found]);
+  await settle(page);
+  const onFocus = await state();
+  await page.keyboard.press("Escape");
+  await settle(page);
+  const afterEscape = await state();
+  await page.keyboard.press("Tab");
+  await settle(page);
+  const nextTabLandedOn = await page.evaluate((s) => window.__pc.list(s).indexOf(document.activeElement), scope);
+  await page.keyboard.press("Shift+Tab");
+  await settle(page);
+  const refocused = await state();
+  const hasNext = await page.evaluate(([s, i]) => i + 1 < window.__pc.list(s).length, [scope, found]);
+  const ok =
+    onFocus.shown &&
+    !afterEscape.shown && afterEscape.focused && afterEscape.dismissed && !afterEscape.expanded &&
+    (!hasNext || nextTabLandedOn === found + 1) &&
+    refocused.shown && refocused.focused && !refocused.dismissed;
+  return { ok, details: { square: found, onFocus, afterEscape, nextTabLandedOn, refocused } };
+}
+
+async function heatStripChecks(context, player) {
+  const page = await openPanel(context, 5, player.id);
+  const G = await page.evaluate(() => {
+    const row = [...document.querySelectorAll("#player-detail tbody tr")].find((tr) => tr.querySelector("[data-state]"));
+    return row.querySelectorAll("[data-state]").length;
+  });
+  const COL = Math.min(1, G - 1);
+  const flag = (i, attr) => page.evaluate(([n, a]) => window.__pc.list("panel")[n].hasAttribute(a), [i, attr]);
+
+  await check("H1", "every square in the panel's first strip row is at least 20x20 and neighbours are at least 24px apart centre to centre", async () => {
+    const boxes = await page.evaluate(() => {
+      const row = [...document.querySelectorAll("#player-detail tbody tr")].find((tr) => tr.querySelector("[data-state]"));
+      return [...row.querySelectorAll("[data-state]")].map((s) => {
+        const r = s.getBoundingClientRect();
+        return { w: r.width, h: r.height, cx: r.x + r.width / 2, cy: r.y + r.height / 2 };
+      });
+    });
+    const small = boxes.filter((b) => b.w < 20 || b.h < 20).map((b) => [b.w, b.h]);
+    const pitch = boxes.slice(1).map((b, i) => Math.hypot(b.cx - boxes[i].cx, b.cy - boxes[i].cy));
+    return { ok: boxes.length > 1 && small.length === 0 && pitch.every((d) => d >= 24), details: { squares: boxes.length, small, minPitch: Math.min(...pitch) } };
+  });
+
+  await check("H2", "hover shows the popover and leaving hides it; a click pins it past the pointer leaving; a second click unpins", async () => {
+    await resetPointer(page);
+    await panelSq(page, COL).hover();
+    await settle(page);
+    const hovered = await call(page, "shown", "panel", COL);
+    const hoverPinned = await flag(COL, "data-open");
+    await resetPointer(page);
+    const afterLeave = await call(page, "shown", "panel", COL);
+    await panelSq(page, COL).click();
+    const b = await blankPoint(page);
+    await page.mouse.move(b.x, b.y);
+    await settle(page);
+    const pinnedShown = await call(page, "shown", "panel", COL);
+    const pinned = await flag(COL, "data-open");
+    await panelSq(page, COL).click();
+    await page.mouse.move(b.x, b.y);
+    await settle(page);
+    const unpinnedShown = await call(page, "shown", "panel", COL);
+    const unpinned = !(await flag(COL, "data-open"));
+    return {
+      ok: hovered && !hoverPinned && !afterLeave && pinnedShown && pinned && !unpinnedShown && unpinned,
+      details: { hovered, hoverPinned, afterLeave, pinnedShown, pinned, unpinnedShown, unpinned },
+    };
+  });
+
+  await check("H3", "Tab from the Situation nav reaches a square and shows its popover; Escape hides it, keeps focus, sets data-dismissed, no aria-expanded; Shift+Tab back re-arms it (WR-10)", async () => {
+    await resetPointer(page);
+    return escapeCheck(page, page.locator(`${SITUATION_NAV} a[aria-current="true"]`), "panel");
+  });
+
+  await check("H4", "pinning a square and then pressing the pointer on a blank area closes the popover", async () => {
+    await resetPointer(page);
+    await panelSq(page, COL).click();
+    const b = await blankPoint(page);
+    await page.mouse.move(1, 1);
+    const pinned = await call(page, "shown", "panel", COL);
+    await page.mouse.move(b.x, b.y);
+    await page.mouse.down();
+    await page.mouse.up();
+    await page.mouse.move(1, 1);
+    await settle(page);
+    const shown = await call(page, "shown", "panel", COL);
+    const stillPinned = await flag(COL, "data-open");
+    return { ok: pinned && !shown && !stillPinned, details: { pinned, shown, stillPinned } };
+  });
+
+  await check("H6", "Escape on a square of the Ice-time trends Per game strip hides the popover and keeps focus (WR-10, second strip)", async () => {
+    await resetPointer(page);
+    return escapeCheck(page, page.locator(NAME_LINKS).nth(0), "trend");
+  });
+  await page.close();
+
+  const page20 = await openPanel(context, 20, player.id);
+  await check("H5", "pinned popovers are not clipped at Last 20 (last forward row and last defense row, leftmost and rightmost squares)", async () => {
+    const groups = await page20.evaluate(() => {
+      const squares = window.__pc.list("panel");
+      const bodies = [...document.querySelectorAll("#player-detail table tbody")];
+      const res = {};
+      ["forwards", "defense"].forEach((name, k) => {
+        const rows = bodies[k] ? [...bodies[k].querySelectorAll("tr")].filter((tr) => tr.querySelector("[data-state]")) : [];
+        const last = rows.length ? rows[rows.length - 1] : null;
+        const cells = last ? [...last.querySelectorAll("[data-state]")] : [];
+        res[name] = cells.length ? { left: squares.indexOf(cells[0]), right: squares.indexOf(cells[cells.length - 1]) } : null;
+      });
+      return res;
+    });
+    const results = [];
+    const skipped = [];
+    for (const [name, g] of Object.entries(groups)) {
+      if (!g) {
+        skipped.push(name);
+        console.log(`INFO H5 ${name} has no rows for this player; group skipped`);
+        continue;
+      }
+      for (const side of ["left", "right"]) {
+        const i = g[side];
+        await page20.evaluate(([n, s]) => {
+          const w = window.__pc.list("panel")[n].closest(".overflow-x-auto");
+          w.scrollLeft = s === "left" ? 0 : w.scrollWidth;
+        }, [i, side]);
+        await panelSq(page20, i).click();
+        await page20.mouse.move(1, 1);
+        await settle(page20);
+        const shown = await call(page20, "shown", "panel", i);
+        const inside = await call(page20, "inside", "panel", i);
+        await panelSq(page20, i).click();
+        await page20.mouse.move(1, 1);
+        await settle(page20);
+        const closed = !(await call(page20, "shown", "panel", i));
+        results.push({ name, side, shown, closed, ...inside });
+      }
+    }
+    if (results.length === 0) return { skip: true, details: { reason: "no linemate rows at Last 20", skipped } };
+    const bad = results.filter((x) => !(x.shown && x.inside && x.closed));
+    return { ok: bad.length === 0, details: bad.length ? { bad } : { checked: results.length, skipped } };
+  });
+  await page20.close();
+}
+
+/** H7: light and dark screenshots into an OS temp directory, and a check that the dark surface still shows distinct shades. */
+async function colourChecks(pw, player) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "player-check-shots-"));
+  const browser = await pw.webkit.launch();
+  const files = [];
+  let darkResult = null;
+  try {
+    for (const scheme of ["light", "dark"]) {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: scheme });
+      await context.addInitScript(PAGE_HELPERS);
+      try {
+        const page = await openPanel(context, 5, player.id);
+        const shot = async (locator, name) => {
+          const file = path.join(dir, `${scheme}-${name}.png`);
+          await locator.screenshot({ path: file });
+          files.push(file);
+        };
+        await shot(page.locator("#player-detail"), "panel");
+        const selectedRow = (p) => p.locator(`${TRENDS} tbody tr`, { has: p.locator('a[aria-current="true"]') }).first();
+        await shot(selectedRow(page), "selected-row");
+        const mover = await page.evaluate(() => {
+          const tr = document.querySelector("tr.bg-green-100, tr.bg-red-100");
+          const a = tr && tr.querySelector("td:first-child a");
+          const id = a && (/player=(\d+)/.exec(a.getAttribute("href") || "") || [])[1];
+          return id ? { id, tone: tr.classList.contains("bg-green-100") ? "green" : "red" } : null;
+        });
+        if (mover) {
+          const moverPage = await openPanel(context, 5, mover.id);
+          await shot(selectedRow(moverPage), `selected-${mover.tone}-row`);
+        } else {
+          console.log(`INFO H7 no green or red row on ${TEAM} to show the selected-row bar on (${scheme})`);
+        }
+        if (scheme === "dark") {
+          darkResult = await page.evaluate(() => ({
+            dark: matchMedia("(prefers-color-scheme: dark)").matches,
+            opacities: [...document.querySelectorAll('#player-detail [data-state="together"] > span:not([aria-hidden])')].map((s) => Number(getComputedStyle(s).opacity)),
+          }));
+        }
+      } finally {
+        await context.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+  console.log(`INFO H7 screenshots ${files.join(" ")} (team ${TEAM}, player ${player.name})`);
+  await check("H7", "dark mode: together squares have computed opacities within 0.2-1 and at least two distinct shades", async () => {
+    const o = darkResult.opacities;
+    const distinct = [...new Set(o.map((v) => v.toFixed(2)))];
+    const inRange = o.every((v) => v >= 0.2 - 1e-6 && v <= 1 + 1e-6);
+    return { ok: darkResult.dark && o.length > 0 && inRange && distinct.length >= 2, details: { dark: darkResult.dark, squares: o.length, distinct: distinct.length, min: Math.min(...o), max: Math.max(...o) } };
+  });
+}
+
 async function main() {
   const pw = findPlaywright();
   if ((await answers(`${BASE}/`)) !== null) die(`port ${PORT} busy`);
@@ -435,16 +642,18 @@ async function main() {
       process.exitCode = 2;
       return;
     }
+    let player;
     const browser = await pw.webkit.launch();
     try {
       const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
       await context.addInitScript(PAGE_HELPERS);
       await navigationChecks(context);
-      const player = await findPlayer(context);
-      void player; // Task 2 adds the heat-strip checks that use this player
+      player = await findPlayer(context);
+      await heatStripChecks(context, player);
     } finally {
       await browser.close();
     }
+    await colourChecks(pw, player);
     completed = true;
   } catch (err) {
     if (err instanceof HarnessError) {
