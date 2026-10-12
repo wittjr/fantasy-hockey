@@ -7,8 +7,10 @@ import {
   effectiveSort,
   moverDirection,
   nextSort,
+  parseAll,
   parsePlayer,
   parseSit,
+  playerHref,
   parseSort,
   recentDelta,
   researchHref,
@@ -472,4 +474,25 @@ test("effectiveSort leaves other sorts and larger windows unchanged", () => {
   assert.deepEqual(effectiveSort({ key: "ppShare", dir: "asc" }, 1), { key: "ppShare", dir: "asc" });
   assert.deepEqual(effectiveSort({ key: "avgToi", dir: "asc" }, 1), { key: "avgToi", dir: "asc" });
   assert.deepEqual(effectiveSort({ key: "toiDelta", dir: "asc" }, 5), { key: "toiDelta", dir: "asc" });
+});
+
+test("parseAll is on only for the exact string 1", () => {
+  assert.equal(parseAll("1"), true);
+  for (const v of ["0", "true", "", ["1"], undefined, "__proto__"]) assert.equal(parseAll(v), false, String(v));
+});
+
+test("playerHref builds the name-link URL with the panel hash", () => {
+  assert.equal(playerHref("MTL", 5, DEFAULT_SORT, { player: 8478402 }), "/research?team=MTL&games=5&player=8478402#player-detail");
+  assert.equal(
+    playerHref("MTL", 5, { key: "toiDelta", dir: "asc" }, { player: 1, sit: "pp" }),
+    "/research?team=MTL&games=5&sort=toiDelta&dir=asc&player=1&sit=pp#player-detail",
+  );
+});
+
+test("playerHref is researchHref plus the hash for any arguments", () => {
+  for (const sort of [DEFAULT_SORT, { key: "ppShare", dir: "desc" } as const, { key: "ppDelta", dir: "asc" } as const]) {
+    for (const sit of ["ev", "pp", "sh"] as const) {
+      assert.equal(playerHref("EDM", 10, sort, { player: 7, sit }), researchHref("EDM", 10, sort, { player: 7, sit }) + "#player-detail");
+    }
+  }
 });
