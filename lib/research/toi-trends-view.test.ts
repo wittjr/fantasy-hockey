@@ -183,13 +183,13 @@ test("the legend explains the strip", () => {
   assert.ok(render(research(threeGames())).includes("Squares are team games, oldest to newest."));
 });
 
-test("every strip cell is focusable, role img, and carries the full detail as its aria-label", () => {
+test("every strip cell is a focusable button and carries the full detail as its aria-label", () => {
   const html = render(research(threeGames()));
   const tags = cells(html);
   assert.equal(tags.length, 9);
   for (const c of tags) {
     assert.ok(c.tag.includes('tabindex="0"'), c.tag);
-    assert.ok(c.tag.includes('role="img"'), c.tag);
+    assert.ok(c.tag.includes('role="button"'), c.tag);
     assert.ok(/aria-label="[^"]+"/.test(c.tag), c.tag);
   }
   assert.ok(html.includes('aria-label="Oct 1 vs BOS · W 3–2 · TOI 20:00 · PP 1:00 (50% of team PP) · SH 0:10"'));
@@ -427,7 +427,8 @@ test("every strip square shows a pointer cursor, is a named group and starts clo
   for (const c of squares) {
     const tokens = classTokens(c.tag);
     assert.ok(tokens.includes("cursor-pointer") && tokens.includes("group/cell") && tokens.includes("relative"), c.tag);
-    assert.ok(c.tag.includes('tabindex="0"') && c.tag.includes('role="img"'), c.tag);
+    assert.ok(c.tag.includes('tabindex="0"') && c.tag.includes('role="button"'), c.tag);
+    assert.ok(c.tag.includes('aria-expanded="false"'), c.tag);
     assert.ok(!c.tag.includes("data-open"), c.tag);
   }
 });
