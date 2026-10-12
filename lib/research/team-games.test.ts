@@ -111,13 +111,11 @@ test("a failed shift chart keeps the game with boxscore TOI and no line data", a
   assert.equal(third.toi.get(8), 900);
 });
 
-test("an OT game with a failed shift chart is kept but has unknown regulation TOI", async (t) => {
+test("an OT game with a failed shift chart is left out and reported as unavailable", async (t) => {
   stubNhl(t, { shiftChartFails: [3], lastPeriod: { 3: "OT" } });
   const research = await loadTeamResearch("MTL", 5);
-  const third = research.games[2];
-  assert.equal(third.overtime, "OT");
-  assert.equal(third.lines, null);
-  assert.equal(third.regulationToi, null);
+  assert.equal(research.games.length, 2);
+  assert.deepEqual(research.unavailableDates, ["2026-10-05"]);
 });
 
 test("a failed shift chart is logged server-side with its game id", async (t) => {

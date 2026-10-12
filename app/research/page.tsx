@@ -123,7 +123,7 @@ function LastGameLines({ research }: { research: TeamResearch }) {
         <span className="text-neutral-500">{resultLabel(game)}</span>
       </h2>
       {!game.lines ? (
-        <p className="text-sm text-neutral-500">The NHL hasn&apos;t published shift charts for this game yet.</p>
+        <p className="text-sm text-neutral-500">No shift chart is available for this game (not published yet, or it failed to load).</p>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           {(["ev", "pp", "sh"] as const).flatMap((situation) =>

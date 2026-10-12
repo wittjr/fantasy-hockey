@@ -70,12 +70,13 @@ async function loadGame(
   team: string,
   gameId: number,
 ): Promise<{ game: ResearchGame; players: Map<number, ResearchPlayer> }> {
-  // A failed shift chart behaves like an unpublished one: boxscore TOI only, no PP/SH.
+  // A failed shift chart (null) is not the same as an unpublished one ([]): a regulation game falls back to boxscore
+  // TOI with no PP/SH, but an OT/SO game needs the chart for its regulation TOI, so it fails below.
   const [box, shifts] = await Promise.all([
     getBoxscore(gameId),
     getShiftCharts(gameId).catch((err: unknown) => {
       console.error(`Loading shift chart for game ${gameId} (${team}) failed`, err);
-      return [];
+      return null;
     }),
   ]);
   const home = box.homeTeam.abbrev === team;
@@ -93,7 +94,11 @@ async function loadGame(
     if (secs) toi.set(p.playerId, secs);
   }
 
-  const shiftInputs = shifts.flatMap((s) => {
+  const outcome = box.gameOutcome?.lastPeriodType;
+  const overtime = outcome === "OT" || outcome === "SO" ? outcome : null;
+  if (overtime && shifts === null) throw new Error(`Shift chart for OT/SO game ${gameId} failed to load`);
+
+  const shiftInputs = (shifts ?? []).flatMap((s) => {
     const startSec = parseClock(s.startTime);
     const endSec = parseClock(s.endTime);
     return startSec === null || endSec === null
@@ -101,8 +106,6 @@ async function loadGame(
       : [{ playerId: s.playerId, team: s.teamAbbrev, period: s.period, startSec, endSec }];
   });
 
-  const outcome = box.gameOutcome?.lastPeriodType;
-  const overtime = outcome === "OT" || outcome === "SO" ? outcome : null;
   const regulationToi = !overtime ? toi : shiftInputs.length > 0 ? regulationSeconds(team, shiftInputs) : null;
 
   const us = home ? box.homeTeam : box.awayTeam;

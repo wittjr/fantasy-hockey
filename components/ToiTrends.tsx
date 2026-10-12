@@ -154,7 +154,7 @@ export function ToiTrends({
         </p>
         {noChartDates.length > 0 && (
           <p className="text-amber-600 dark:text-amber-400">
-            No PP/SH data for {noChartDates.join(", ")}: the NHL hasn&apos;t published shift charts for those games yet.
+            No PP/SH data for {noChartDates.join(", ")}: no shift chart is available for those games (not published yet, or it failed to load).
           </p>
         )}
       </div>
