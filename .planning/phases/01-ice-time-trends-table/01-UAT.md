@@ -1,9 +1,9 @@
 ---
-status: partial
+status: complete
 phase: 01-ice-time-trends-table
 source: [01-VERIFICATION.md]
 started: 2026-10-11T23:20:00Z
-updated: 2026-10-12T14:54:17.666Z
+updated: 2026-10-12T14:59:56.465Z
 ---
 
 ## Current Test
@@ -24,9 +24,8 @@ severity: major
 
 ### 3. Tap on touch devices
 expected: Tapping a strip square on iOS Safari and Android Chrome shows the popover (if not, add a minimal client wrapper).
-result: blocked
-blocked_by: physical-device
-reason: "I\'m testing on MacOS not mobile"
+result: skipped
+reason: "Out of scope: the site targets laptop browsers, not phones (user, 2026-10-12). Emulated iPhone tap also passed in the WebKit check."
 
 ### 4. Sort header interaction
 expected: Clicking Avg TOI, TOI Δ, PP share and PP share Δ headers updates the sort arrow and order; the sort survives reload; forwards stay above defense; the sort carries across team and window links; the spinner shows while pending without layout shift.
@@ -56,8 +55,8 @@ total: 8
 passed: 5
 issues: 2
 pending: 0
-skipped: 0
-blocked: 1
+skipped: 1
+blocked: 0
 
 ## Gaps
 
