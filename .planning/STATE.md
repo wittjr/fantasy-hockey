@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 02
 current_phase_name: Player Linemate Detail
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-10-12T19:33:12.771Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-10-12T19:36:55.116Z"
 last_activity: 2026-10-12
 last_activity_desc: Phase 02 execution started
-state_head: 0a9d25786c8732a4134cd91d897d1307ee14eba9
+state_head: beb74ce2f36c3d966c3233100dc082a43750063b
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 16
-  completed_plans: 12
+  completed_plans: 13
   percent: 33
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-10-12)
 ## Current Position
 
 Phase: 02 (Player Linemate Detail) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-10-12 — Phase 02 execution started
 
@@ -68,6 +68,7 @@ Progress: [███░░░░░░░] 33% (1 of 3 phases; 9/9 Phase 1 plans
 | Phase 02 P01 | 4 min | 2 tasks | 13 files |
 | Phase 02 P02 | 3 min | 2 tasks | 4 files |
 | Phase 02 P03 | 25 min | 3 tasks | 7 files |
+| Phase 02 P04 | 3 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-02: LinemateRowView exported so the dash window share (unreachable through the full panel) is testable
 - [Phase 02]: 02-02: StripPopover is the single popover for both strips; heading line shown first, title muted only when a heading is set
 - [Phase 02]: 02-03: name links drop all, so a newly opened player starts capped; aria-current applied wherever the selected player appears
+- [Phase 02]: 02-04: Escape dismiss is a data-dismissed flag + group-data-[dismissed]/cell:hidden variant (no blur); pointer leave keeps a pin but clears dismissed; aria-expanded removed (WR-10 fixed)
 
 ### Pending Todos
 
@@ -122,6 +124,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12T19:33:12.730Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-10-12T19:36:55.072Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
