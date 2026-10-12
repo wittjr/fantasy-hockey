@@ -61,7 +61,7 @@ const openTag = (cell: string) => cell.match(/^<[a-z]+\b[^>]*>/)?.[0] ?? "";
 const nameCell = (html: string, name: string) => tds(rowHtml(html, name))[0];
 const nameAnchor = (html: string, name: string) => nameCell(html, name).match(/<a\b[^>]*>/)?.[0] ?? "";
 const headerCell = (html: string, label: string) =>
-  [...html.matchAll(/<th[^>]*>[\s\S]*?<\/th>/g)].map((m) => m[0]).find((h) => h.replace(/<[^>]*>/g, "").trim().startsWith(label)) ?? "";
+  [...html.matchAll(/<th\b[^>]*>[\s\S]*?<\/th>/g)].map((m) => m[0]).find((h) => h.replace(/<[^>]*>/g, "").trim().startsWith(label)) ?? "";
 const BAR = ["shadow-[inset_4px_0_0_0]", "shadow-neutral-900", "dark:shadow-neutral-100"];
 
 test("the selected row's name cell has the neutral bar, a Selected note, and a font-medium #player-detail anchor", () => {

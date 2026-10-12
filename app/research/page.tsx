@@ -8,7 +8,7 @@ import { NHL_TEAM_ABBREVS, type NhlTeamAbbrev } from "@/lib/nhl/client";
 import type { Situation, Unit } from "@/lib/research/lines";
 import { formatClock, formatDate, gameLabel, resultLabel } from "@/lib/research/format";
 import { loadTeamResearch, type TeamResearch } from "@/lib/research/team-games";
-import { parsePlayer, parseSit, parseSort, researchHref } from "@/lib/research/toi-trends";
+import { parseAll, parsePlayer, parseSit, parseSort, researchHref } from "@/lib/research/toi-trends";
 
 const GAME_COUNTS = [1, 3, 5, 10, 20];
 const DEFAULT_GAME_COUNT = 5;
@@ -27,7 +27,7 @@ export default async function ResearchPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const { team: teamParam, games: gamesParam, sort: sortParam, dir: dirParam, player: playerParam, sit: sitParam } = await searchParams;
+  const { team: teamParam, games: gamesParam, sort: sortParam, dir: dirParam, player: playerParam, sit: sitParam, all: allParam } = await searchParams;
   const team = (NHL_TEAM_ABBREVS as readonly string[]).includes(String(teamParam).toUpperCase())
     ? (String(teamParam).toUpperCase() as NhlTeamAbbrev)
     : null;
@@ -36,6 +36,7 @@ export default async function ResearchPage({
   const sort = parseSort(sortParam, dirParam);
   const player = parsePlayer(playerParam);
   const sit = parseSit(sitParam);
+  const all = parseAll(allParam);
 
   let research: TeamResearch | null = null;
   let loadFailed = false;
@@ -113,7 +114,7 @@ export default async function ResearchPage({
             <PlayerLinemates research={research} playerId={player} sit={sit} team={team} gameCount={gameCount} sort={sort} />
           )}
           <LastGameLines research={research} />
-          <ToiTrends research={research} sort={sort} team={team} gameCount={gameCount} />
+          <ToiTrends research={research} sort={sort} team={team} gameCount={gameCount} selected={player} sit={sit} all={all} />
         </>
       )}
 

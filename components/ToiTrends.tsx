@@ -1,6 +1,8 @@
 import { PendingLink } from "@/components/PendingLink";
+import { PlayerLink } from "@/components/PlayerLink";
 import { ToiGameStrip } from "@/components/ToiGameStrip";
 import { formatClock, formatDate, formatSignedClock, formatSignedPoints } from "@/lib/research/format";
+import type { Situation } from "@/lib/research/lines";
 import type { TeamResearch } from "@/lib/research/team-games";
 import {
   buildTrendRows,
@@ -27,19 +29,26 @@ export function ToiTrends({
   sort: requestedSort,
   team,
   gameCount,
+  selected = null,
+  sit = "ev",
+  all = false,
 }: {
   research: TeamResearch;
   sort: SortSpec;
   /** The requested team and window, kept in the sort links. */
   team: string;
   gameCount: number;
+  /** The player whose panel is open, his tab and the panel's show-all state; the row is marked and sort links keep all three. */
+  selected?: number | null;
+  sit?: Situation;
+  all?: boolean;
 }) {
   const sort = effectiveSort(requestedSort, research.games.length);
   const rows = sortRows(buildTrendRows(research.players.values(), research.games), sort);
   const showTrend = research.games.length > 1;
   const muted = "text-neutral-400 dark:text-neutral-500";
   const overtime = research.games.map((g) => g.overtime !== null);
-  const sortProps = { sort, team, gameCount };
+  const sortProps = { sort, team, gameCount, selected, sit, all };
   const noChartDates = research.games.filter((g) => !g.lines).map((g) => formatDate(g.date));
 
   return (
@@ -57,7 +66,7 @@ export function ToiTrends({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
-                <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Player</th>
+                <th scope="col" className="py-1 pl-2 pr-3 font-medium whitespace-nowrap">Player</th>
                 <th scope="col" className="py-1 pr-3 font-medium whitespace-nowrap">Pos</th>
                 <SortHeader label="Avg TOI" title="Average regulation ice time per game played" sortKey="avgToi" {...sortProps} />
                 {showTrend && <SortHeader label="TOI Δ" title="Average of the team's last 2 games minus the player's earlier games in the window" sortKey="toiDelta" {...sortProps} />}
@@ -78,8 +87,22 @@ export function ToiTrends({
                     i > 0 && rows[i - 1].player.group !== row.player.group ? "border-t-2 border-t-neutral-300 dark:border-t-neutral-700" : ""
                   } ${row.mover === "up" ? "bg-green-100 dark:bg-green-900/40" : row.mover === "down" ? "bg-red-100 dark:bg-red-900/40" : ""}`}
                 >
-                  <td className="py-1 pr-3 whitespace-nowrap">
-                    {row.player.name}
+                  <td
+                    className={`py-1 pl-2 pr-3 whitespace-nowrap ${
+                      row.player.id === selected ? "shadow-[inset_4px_0_0_0] shadow-neutral-900 dark:shadow-neutral-100" : ""
+                    }`}
+                  >
+                    <PlayerLink
+                      playerId={row.player.id}
+                      name={row.player.name}
+                      sit={sit}
+                      selectedSit={row.player.id === selected ? sit : null}
+                      team={team}
+                      gameCount={gameCount}
+                      sort={sort}
+                      title={`Show who ${row.player.name} plays with`}
+                    />
+                    {row.player.id === selected && <span className="sr-only">Selected</span>}
                     {row.mover && <span className="sr-only">{row.mover === "up" ? "Moving up" : "Moving down"}</span>}
                     {row.dnpLast2 && (
                       <span className="ml-2 rounded border border-neutral-300 px-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-400">
@@ -170,6 +193,9 @@ function SortHeader({
   sort,
   team,
   gameCount,
+  selected,
+  sit,
+  all,
 }: {
   label: string;
   title: string;
@@ -177,6 +203,9 @@ function SortHeader({
   sort: SortSpec;
   team: string;
   gameCount: number;
+  selected: number | null;
+  sit: Situation;
+  all: boolean;
 }) {
   const active = sort.key === sortKey;
   return (
@@ -186,7 +215,7 @@ function SortHeader({
       className="py-1 pr-3 text-right font-medium whitespace-nowrap"
     >
       <PendingLink
-        href={researchHref(team, gameCount, nextSort(sort, sortKey))}
+        href={researchHref(team, gameCount, nextSort(sort, sortKey), { player: selected, sit, all })}
         title={title}
         scroll={false}
         className={`justify-end ${active ? "font-medium text-neutral-900 dark:text-neutral-100" : "hover:underline"}`}
