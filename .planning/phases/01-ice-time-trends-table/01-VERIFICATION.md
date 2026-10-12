@@ -1,7 +1,7 @@
 ---
 phase: 01-ice-time-trends-table
-verified: 2026-10-12T02:00:00Z
-status: human_needed
+verified: 2026-10-12T16:00:00Z
+status: passed
 score: 9/9 must-haves verified
 covered_files:
   - .planning/phases/01-ice-time-trends-table/01-01-PLAN.md
@@ -33,111 +33,102 @@ covered_files:
   - lib/research/team-games.ts
   - lib/research/toi-trends-view.test.ts
   - lib/research/toi-trends.ts
-covered_digest: "v3:sha256:8b969bc16de9738559a3f129fa5c50b2b39edc37e6a5c2a0f9a7316c0a5fe0d2"
+covered_digest: "v3:sha256:a1d4610b6a9e928dd883b4c13e5796d5c73224bbc4219135c004a6cf91968cf3"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
   previous_status: human_needed
-  previous_score: 6/6
+  previous_score: 9/9
   gaps_closed:
-    - "G-01-2: popover could not be opened (hover/focus only, no click or tap, no affordance, open popover covered squares below)"
-    - "G-01-5: Per game strip read as one segmented bar (12x16 cells, 1px gap, 4px radius, no border, no hint)"
-    - "G-01-1b: Pos cell read 'C5/5 GP'"
+    - "Previously pending human checks (own-browser retest of UAT 2/5, visual judgment of the Per game squares) were confirmed by the user in UAT tests 6, 7, 8 (all pass)"
+    - "G-01-7b: mover row tint too faint in dark mode (bc35e65, 0425a38)"
+    - "WR-09: Pos text below AA on the tinted mover rows (f55f465)"
   gaps_remaining: []
   regressions: []
 advisory:
   - finding: "WR-05: a failed shift-chart request is worded as 'the NHL hasn't published shift charts'; for an OT/SO game the affected game drops out of Avg TOI/Delta"
     category: other
-    reason: "Degraded-path copy is inaccurate on a transient upstream failure. A shown number is never wrong (the game is excluded or shown as no-PP/SH) and the cause is logged server-side. Unchanged since the previous verification; does not stop a user seeing who is gaining or losing time."
+    reason: "Degraded-path copy is inaccurate on a transient upstream failure. A shown number is never wrong (the game is excluded or shown as no-PP/SH) and the cause is logged server-side. Unchanged."
     evidence_status: "reasoned from code (team-games.ts, ToiTrends.tsx legend); not exercised"
   - finding: "WR-06: when the newest game fails to load, 'Last game' and the 'last 2 games' Delta re-anchor to the newest loaded games"
     category: other
-    reason: "Partially disclosed by the amber banner naming the missing date. Needs a failed boxscore on the newest game. Unchanged since the previous verification."
+    reason: "Partially disclosed by the amber banner naming the missing date. Needs a failed boxscore on the newest game. Unchanged."
     evidence_status: "reasoned from code (team-games.ts, page.tsx); not exercised"
   - finding: "WR-07: Per game square is focusable and clickable but exposed as role=img; Enter/Space do nothing, no aria-expanded, no Escape dismissal (WCAG 1.4.13)"
     category: other
-    reason: "Keyboard users still get the popover: Tab focus opens it through CSS focus-visible (WebKit check D10 passes) and Tab away closes it. What is missing is Enter/Space activation, Escape, and an announced expanded state. The aria-label already carries the full per-game detail for assistive tech. Accessibility polish on a secondary drill-down, not the scan-the-table goal. Worth fixing before calling the feature accessible."
-    evidence_status: "code read (ToiStripCell.tsx:35-45); keyboard-open behaviour exercised by webkit-strip-check D10"
+    reason: "Tab focus still opens the popover via CSS focus-visible and Tab away closes it; the aria-label carries the full per-game detail. Accessibility polish on a secondary drill-down, not the scan-the-table goal. Worth a small keydown handler in a maintenance pass."
+    evidence_status: "code read (ToiStripCell.tsx); keyboard-open exercised by webkit-strip-check D10 in the previous verification"
   - finding: "WR-08: toggle / outside-click / blur / listener-cleanup behaviour of ToiStripCell has no test in npm test (static markup only)"
     category: other
-    reason: "Test-coverage gap, not a behaviour gap. The behaviour is proven in a real WebKit engine by the re-runnable webkit-strip-check.cjs, which this verifier re-ran (15/15). A regression would not be caught by npm test, only by re-running that script."
-    evidence_status: "webkit-strip-check.cjs re-run by this verifier, 15 passed 0 failed"
-human_verification:
-  - test: "Signed in, in your own Safari (and Chrome), open /research?team=MTL&games=5. Click a Per game square, click it again, click elsewhere, then open another square. Hover a square. Tab onto a square. Repeat at games=20 on the last forward row and the last defense row, and on a team with an OT game"
-    expected: "Click opens that square's popover under it, a second click or an outside click closes it, opening another closes the first, hover and Tab also open it, and nothing is clipped. This is the macOS check that failed in UAT tests 2 and 5; the WebKit check runs Playwright's WebKit with the auth gate stripped, not your signed-in Safari"
-    why_human: "/research is Discord-auth-gated and the automated engine is not the user's installed browser; UAT tests 2 and 5 were failed on exactly this path"
-  - test: "Tap a Per game square on iOS Safari and Android Chrome"
-    expected: "Tap opens the popover, tapping elsewhere or another square closes it. (UAT test 3 was blocked: no physical device)"
-    why_human: "Only an emulated iPhone 13 (no hover, touch events) was driven; a physical device was never available"
-  - test: "Look at the Per game column at games=5 and games=20, light and dark mode, including rows whose games are shaded very lightly"
-    expected: "Each game reads as its own separate bordered square (not a segmented bar); dashed grey = did not play, dashed sky = OT with no shift data, sky ring = OT/SO; the 'Per game (click a square)' hint is noticed"
-    why_human: "Whether it reads as separate squares to a person was the substance of UAT G-01-5. The code now makes it objectively separate (20x20, 4px gap, 1px border on every square, measured at >=20px size and 24px pitch in WebKit) but the judgment is visual"
+    reason: "Coverage gap, not a behaviour gap. The behaviour passed UAT test 6 in the user's own browser and the re-runnable webkit-strip-check.cjs (15/15 in the previous verification; not re-run here, optional)."
+    evidence_status: "UAT test 6 (human) plus prior WebKit run"
+  - finding: "IN-09 / IN-10: tests pin the literal light tint shade and do not cover the dark:bg-*-900/40 classes; text-green-700 on bg-green-100 is 4.56:1, just above AA"
+    category: other
+    reason: "Hygiene on the post-UAT tint fix. The tint is confirmed visible by the user (UAT G-01-7b resolved); delta text is also coloured and the row is announced 'Moving up/down', so colour is never the only signal."
+    evidence_status: "code read (ToiTrends.tsx:79, :232-234); review 01-REVIEW.md"
 ---
 
 # Phase 1: Ice-Time Trends Table Verification Report
 
 **Phase Goal:** User can scan a team's ice-time section as a trends table and immediately see which players are gaining or losing TOI and power-play time
 **Verified:** 2026-10-12
-**Status:** human_needed
-**Re-verification:** Yes, after the second gap-closure round (plans 01-08 and 01-09, from UAT gaps G-01-2, G-01-5, G-01-1b)
+**Status:** passed
+**Re-verification:** Yes, refresh after UAT completion and three post-UAT fixes (bc35e65, 0425a38, f55f465)
 
 ## Goal Achievement
 
-All three UAT gaps are closed in the code and demonstrated in a real WebKit engine on the real page with live NHL data. All earlier truths still hold: since the previous verification only `components/ToiGameStrip.tsx`, `components/ToiTrends.tsx`, the new `components/ToiStripCell.tsx` and the view test changed, and no file under `lib/` other than the test moved, so the data layer (CR-01 dedupe, loader isolation, sorting, deltas) is untouched. `npm test` 186 pass / 0 fail, `tsc --noEmit` exit 0, scoped eslint exit 0. The status stays `human_needed` because the user failed UAT tests 2 and 5 in their own macOS Safari, a signed-in environment this verifier cannot reproduce; they must re-run those and the physical-touch check (test 3) themselves. No blocker found.
+The goal holds. Since the previous verification, exactly two covered source files changed: `components/ToiTrends.tsx` (two class-string edits) and `lib/research/toi-trends-view.test.ts` (test strings updated to match). `git diff b661c65 HEAD -- app lib components` confirms nothing else under `app/`, `lib/` or `components/` moved, so the data layer (CR-01 dedupe, loader isolation, deltas, sorting) and the strip popover (`ToiStripCell.tsx`, `ToiGameStrip.tsx`) are byte-identical to what the prior verification and the UAT re-tests covered.
 
-### UAT Gap Closure
+The two edits, read in the code:
 
-| Gap | Status | Evidence |
-| --- | ------ | -------- |
-| G-01-2 popover unreachable (hover/focus only) | CLOSED in code and in WebKit | `ToiStripCell.tsx` (new `"use client"`): `onClick` toggles `data-open`, `pointerdown` listener (added only while open) closes on outside press, `onBlur` closes; `tabIndex=0`. `ToiGameStrip.tsx` popover shown by `group-hover/cell`, `group-focus-visible/cell` or `group-data-[open]/cell`, and carries `pointer-events-none` so it cannot block squares under it; squares carry `cursor-pointer` and a hover outline. Re-ran `webkit-strip-check.cjs`: D3 click opens and stays open, D4 second click closes, D5 outside click closes, D6 opening another closes the first, D7 popover does not block the square below, D8 hover, D9 sweeping 21 rows shows exactly each row's own popover, D10 Tab opens and Tab away closes, T2-T4 tap open/close in emulated iPhone |
-| G-01-5 strip read as one segmented bar | CLOSED in code (visual judgment left to human) | `ToiGameStrip.tsx`: container `flex gap-1`; each square `h-5 w-5 rounded-xs border`, border solid neutral (played), dashed grey (DNP), dashed sky (OT without shift data), `ring-1 ring-sky-500` for played OT/SO. `ToiTrends.tsx` header now `Per game (click a square)`, intro ends "click, tap or hover a square", legend says dashed / blue ring. WebKit S1: every row-0 square is at least 20x20 and neighbours at least 24px apart. Popover OT half: D12 shows the OT tag and "Total (incl. OT)" with the no-shift-data note |
-| G-01-1b "C5/5 GP" | CLOSED | `ToiTrends.tsx` Pos cell: `{row.player.position}{" "}<span className="ml-1 ...">{gamesPlayed}/{games} GP`. Text is "C 3/3 GP"; `toi-trends-view.test.ts:69` asserts `posText(...) === "C 3/3 GP"` |
+- `ToiTrends.tsx:79` mover tint: `bg-green-50 dark:bg-green-950/30` / `bg-red-50 dark:bg-red-950/30` became `bg-green-100 dark:bg-green-900/40` / `bg-red-100 dark:bg-red-900/40`. Still applied only when `row.mover === "up"` or `"down"`; flat rows get an empty string. The mover announcement ("Moving up/down") and the green/red delta text (`ToiTrends.tsx:232-234`, with dark variants) are untouched, so colour is not the only signal.
+- `ToiTrends.tsx:90` Pos cell: `text-neutral-500` became `text-neutral-600 dark:text-neutral-400`, matching the GP span already in that cell. The `{position}{" "}<span>{n}/{N} GP` structure from 01-09 is intact.
 
-The two UAT items that passed (test 1 layout, test 4 sort) were not changed in behaviour; the header test (`toi-trends-view.test.ts:50`) still pins the column set and sort arrow.
+No regression. The tests were updated in lockstep (`bg-green-100` / `bg-red-100`, including the negative assertions for flat rows, mixed-sign movers, DNP rows and one-game windows), so they still prove tint appears only on true movers.
+
+Human items from the previous report are resolved by UAT (`01-UAT.md`, status complete): test 1 layout pass, test 4 sort pass, test 6 click/tap popover pass in the user's own browser (G-01-2), test 7 separate bordered squares pass (G-01-5), test 8 "C 5/5 GP" pass (G-01-1b). Tests 2 and 5 were the failures and are resolved by 01-08/01-09 and confirmed by tests 6 and 7. Test 3 (phone tap) is a recorded deferred follow-up: the site targets laptop browsers only per the user, and the emulated-iPhone tap passed in the WebKit check. It is not pending verification.
 
 ### Observable Truths
 
 | #   | Truth | Status | Evidence |
 | --- | ----- | ------ | -------- |
-| 1 | SC1: one row per player with Avg TOI, PP share, SH, trend arrow and sparkline, F then D, per-game numeric grid gone (TRND-01) | VERIFIED | Header row: Player, Pos, Avg TOI, TOI Delta, PP share, PP share Delta, SH, Per game (click a square), TOI trend; header test passes; UAT test 1 passed |
-| 2 | SC2: exact per-game TOI/PP/SH readable without the grid; OT visibly flagged (TRND-02, TRND-04) | VERIFIED (visual re-confirmation in the user's browser pending) | Click/tap/hover/focus open the popover (WebKit D3-D12, T2-T4); popover content unchanged and shared with aria-label via `gameDetail`; OT ring, OT tag, "OT excluded" / "Total (incl. OT)" shown (D12) |
+| 1 | SC1: one row per player with Avg TOI, PP share, SH, trend arrow and sparkline, F then D, per-game numeric grid gone (TRND-01) | VERIFIED | Header test passes; UAT test 1 pass |
+| 2 | SC2: exact per-game TOI/PP/SH readable without the grid; OT visibly flagged (TRND-02, TRND-04) | VERIFIED | UAT tests 6 and 7 pass in the user's own browser (click, hover, Tab, OT popover with OT tag and "OT excluded"/"Total (incl. OT)") |
 | 3 | SC3: recent-vs-window Delta for TOI and PP share (TRND-03) | VERIFIED | `toi-trends.ts` unchanged; delta tests pass |
-| 4 | SC4: below-minimum players show no trend with GP visible; missed games never 0; OT flagged (TRND-04) | VERIFIED | Unchanged logic; Pos cell now "C 3/3 GP" with a real separator; tests pass |
-| 5 | SC5: sort by trend, Avg TOI or PP share, kept in the URL, F/D kept (TRND-05) | VERIFIED | `sortRows`/`researchHref`/`PendingLink` unchanged; UAT test 4 passed |
-| 6 | PP share / PP Delta / SH / tint are correct for games with a shift chart (CR-01) | VERIFIED | `uniqueShifts` still used by `regulationSeconds` and `analyzeGameLines` (lines.ts:22, 38, 92); lib not modified since the live-data check in the previous verification |
-| 7 | 01-08: click or tap opens a square's popover, it persists after the pointer leaves, a second click / outside press / focus loss closes it, opening another closes the first; hover and keyboard focus still work; a mouse click's leftover focus does not pin it open | VERIFIED | `ToiStripCell.tsx` logic read; real WebKit D3-D6, D8, D10, T2-T4 all PASS (re-run by this verifier). Behavioural evidence is the WebKit script, not `npm test` (see WR-08) |
-| 8 | 01-08: an open popover never blocks the squares under it; every square has a pointer cursor; aria-label unchanged and popover aria-hidden; only `ToiStripCell` is client code | VERIFIED | `pointer-events-none`, `cursor-pointer`, `aria-hidden="true"` in `ToiGameStrip.tsx`; D7 and D9 PASS; `ToiGameStrip`/`ToiTrends` have no hooks or `"use client"`; props crossing the boundary are `label`, `state`, `className` and server-rendered children |
-| 9 | 01-09: separate bordered 20x20 squares on a 24px pitch, header/intro/legend copy, Pos cell separator, UI-SPEC revised to what ships | VERIFIED | Classes and copy read in code; S1 PASS in WebKit; `01-UI-SPEC.md` has a Revisions entry (2026-10-11) naming G-01-2, G-01-5, G-01-1b and the shipped sizes/reveal/copy |
+| 4 | SC4: below-minimum players show no trend with GP visible; missed games never 0; OT flagged (TRND-04) | VERIFIED | Logic unchanged; Pos cell "C 3/3 GP" asserted by view test; UAT test 8 pass |
+| 5 | SC5: sort by trend, Avg TOI or PP share, kept in the URL, F/D kept (TRND-05) | VERIFIED | `sortRows`/`researchHref` unchanged; UAT test 4 pass |
+| 6 | PP share / PP Delta / SH / tint correct for games with a shift chart (CR-01) | VERIFIED | `uniqueShifts` still used by `regulationSeconds` and `analyzeGameLines`; `lib/` non-test files unmodified |
+| 7 | 01-08: click/tap opens a square's popover, persists, second click/outside press/blur closes, opening another closes the first; hover and keyboard focus still work | VERIFIED | `ToiStripCell.tsx` unchanged since the real-engine WebKit run (15/15) and UAT test 6 pass in the user's browser. Behavioural evidence is human plus the WebKit script, not `npm test` (WR-08) |
+| 8 | 01-08: open popover never blocks squares under it; pointer cursor; aria-label unchanged; only `ToiStripCell` is client code | VERIFIED | `ToiGameStrip.tsx` unchanged; UAT test 6 "sweeping down a column shows each row's own popover" pass |
+| 9 | 01-09: separate bordered 20x20 squares on a 24px pitch, header/intro/legend copy, Pos separator, UI-SPEC revised | VERIFIED | Unchanged; UAT tests 7 and 8 pass in light and dark mode |
 
-**Score:** 9/9 truths verified (0 present, behavior-unverified). Truths 7 and 8 are behaviour-dependent (state transition, cancellation/close ordering); they are VERIFIED on a real-engine behavioural run rather than on symbol presence.
+**Score:** 9/9 truths verified (0 present, behavior-unverified). Truths 7 and 8 are behaviour-dependent and are VERIFIED on behavioural evidence (human run in the user's browser, plus a prior real-engine script), not on symbol presence.
 
 ### Required Artifacts
 
-| Artifact | Expected | Status | Details |
-| -------- | -------- | ------ | ------- |
-| `components/ToiStripCell.tsx` | Client wrapper with click/outside/blur close | VERIFIED | 49 lines, substantive, imported and rendered by `ToiGameStrip` |
-| `components/ToiGameStrip.tsx` | Bordered 20x20 squares, popover classes | VERIFIED | `h-5 w-5`, `rounded-xs`, `gap-1`, `group-data-[open]/cell:block`, `pointer-events-none` |
-| `components/ToiTrends.tsx` | Pos separator, Per game hint, intro/legend copy | VERIFIED | Present in rendered markup and view tests |
-| `lib/research/toi-trends-view.test.ts` | Markup tests for the above | VERIFIED | Pos text, header, square classes, popover classes asserted; passing |
-| `.planning/phases/01-ice-time-trends-table/webkit-strip-check.cjs` | Re-runnable WebKit check | VERIFIED | Re-run: 15 passed, 0 failed, 0 skipped, exit 0 |
-| `.planning/phases/01-ice-time-trends-table/01-UI-SPEC.md` | Revised strip contract | VERIFIED | Revisions section present |
+| Artifact | Status | Details |
+| -------- | ------ | ------- |
+| `components/ToiTrends.tsx` | VERIFIED | Substantive, rendered by `app/research/page.tsx`; tint and Pos edits present |
+| `components/ToiGameStrip.tsx` | VERIFIED | Unchanged, wired from `ToiTrends` |
+| `components/ToiStripCell.tsx` | VERIFIED | Unchanged, wired from `ToiGameStrip` |
+| `lib/research/toi-trends-view.test.ts` | VERIFIED | Updated for new tint shade, passing |
+| `lib/research/{toi-trends,team-games,lines,game-strip,format}.ts`, `lib/nhl/client.ts`, `app/research/page.tsx` | VERIFIED | Unchanged since the prior verification |
+| `webkit-strip-check.cjs` | VERIFIED (exists) | Optional re-run skipped per instructions |
 
 ### Key Link Verification
 
 | From | To | Via | Status |
 | ---- | -- | --- | ------ |
-| ToiGameStrip | ToiStripCell | per-square `<ToiStripCell>` with label/state/className and popover children | WIRED |
-| ToiStripCell `data-open` | popover visibility | `group-data-[open]/cell:block` on the popover, `group/cell` on the square | WIRED (compiled CSS works: D3 PASS in WebKit on the real page) |
-| ToiTrends Per game header | ToiStripCell click | "(click a square)" hint | WIRED |
 | ToiTrends | ToiGameStrip | per-row `<ToiGameStrip>` | WIRED |
-| (earlier plans) team-games/lines/client/toi-trends/page | unchanged | see previous report | WIRED, no files changed |
+| ToiGameStrip | ToiStripCell | per-square wrapper | WIRED |
+| `row.mover` | row tint and "Moving up/down" | `ToiTrends.tsx:79` conditional class | WIRED |
+| page.tsx / loaders / toi-trends | ToiTrends | unchanged | WIRED |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data | Source | Real data | Status |
 | -------- | ---- | ------ | --------- | ------ |
-| ToiGameStrip squares and popover | `row.perGame`, `game`, `gameDetail(cell, game)` | `buildTrendRows` over `loadTeamResearch` (NHL boxscore + shift chart) | Yes: WebKit run on live MTL data shows OT popover text and 21 rows of squares | FLOWING |
-| ToiTrends numeric columns | `row.avgToi`, `ppShare`, deltas | unchanged | Yes | FLOWING |
+| ToiTrends rows, tint, strip | `row.avgToi`, deltas, `row.mover`, `row.perGame` | `buildTrendRows` over `loadTeamResearch` (NHL boxscore + shift chart) | Yes; UAT used live MTL data | FLOWING |
 
 ### Behavioral Spot-Checks
 
@@ -146,48 +137,45 @@ The two UAT items that passed (test 1 layout, test 4 sort) were not changed in b
 | Full test suite | `npm test` | 186 pass, 0 fail | PASS |
 | Types | `npx tsc --noEmit` | exit 0 | PASS |
 | Scoped lint | `npx eslint app/research lib/research lib/nhl components/ToiTrends.tsx components/ToiGameStrip.tsx components/ToiStripCell.tsx` | exit 0, no output | PASS |
-| Strip popover in WebKit (desktop + emulated iPhone) on real page with live data | `node .planning/phases/01-ice-time-trends-table/webkit-strip-check.cjs` | "strip-check: 15 passed, 0 failed, 0 skipped", exit 0; scratch server on 3101 stopped, port 3000 untouched | PASS |
-
-Scope of the WebKit evidence: it is Playwright's bundled WebKit against a scratch copy with the three auth-gate lines removed, plus an emulated iPhone 13. It is not the user's signed-in Safari and not a physical touch device.
+| WebKit strip check | `webkit-strip-check.cjs` | Not re-run (optional; strip files unchanged; UAT 6/7 cover it in the user's browser) | SKIPPED |
 
 ### Probe Execution
 
-Step 7c: SKIPPED (no probes declared; the WebKit script is covered under Behavioral Spot-Checks).
+Step 7c: SKIPPED (no probes declared).
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
 | ----------- | ----------- | ----------- | ------ | -------- |
 | TRND-01 | 01-01 | Trends table, primary columns, grid removed | SATISFIED | truth 1 |
-| TRND-02 | 01-02, 01-08, 01-09 | Exact per-game TOI/PP/SH reachable | SATISFIED in code and WebKit; user's own-browser re-check pending | truths 2, 7, 8, 9 |
+| TRND-02 | 01-02, 01-08, 01-09 | Exact per-game TOI/PP/SH reachable | SATISFIED | truths 2, 7, 8, 9; UAT 6, 7 |
 | TRND-03 | 01-03 | Recent-vs-window delta for TOI and PP share | SATISFIED | truth 3 |
 | TRND-04 | 01-01, 01-02, 01-03, 01-09 | Minimum games, missed not 0, OT flagged | SATISFIED | truths 4, 9 |
-| TRND-05 | 01-04 | Sort by trend/Avg TOI/PP share, URL, F/D kept | SATISFIED | truth 5 |
+| TRND-05 | 01-04 | Sort by trend/Avg TOI/PP share, URL, F/D kept | SATISFIED | truth 5; UAT 4 |
 
-All five IDs are declared in PLAN frontmatter, defined in REQUIREMENTS.md and mapped to Phase 1; no orphaned requirements. REQUIREMENTS.md still shows TRND-02, 03, 05 unchecked and "Gaps Found" in its traceability table, and TRND-01/04 as complete. That file is stale relative to the code. This verifier did not edit it; update it after the human checks pass.
+All five IDs are declared in PLAN frontmatter, defined in REQUIREMENTS.md and mapped to Phase 1; no orphaned requirements. Housekeeping: REQUIREMENTS.md is stale relative to the code. It still shows TRND-02, TRND-03 and TRND-05 unchecked and "Gaps Found" in the traceability table. This verifier did not edit it; the orchestrator should tick those three and mark all five Complete now that the phase passes.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | ---- | ---- | ------- | -------- | ------ |
-| `components/ToiStripCell.tsx` | 35-45 | `role="img"` on a clickable, focusable span; no Enter/Space, no `aria-expanded`, no Escape (WR-07) | Warning | Keyboard open via Tab/focus works; activation and dismissal semantics are incomplete. Not a goal blocker |
-| `lib/research/toi-trends-view.test.ts` | 423-445 | Click/outside/blur behaviour covered only by the external WebKit script, not `npm test` (WR-08) | Warning | Regression would not fail `npm test` |
-| `lib/research/team-games.ts` | 73-80, 133-146 | WR-05, WR-06 (open since the previous verification) | Warning | Only on upstream API failure; amber banner and server log partly disclose; no wrong number shown for a loaded game |
-| `components/ToiTrends.tsx` | 56 | `pb-28 -mb-24` fixed popover reserve (IN-05) | Info | WebKit D11 checked first, last-forward and last rows at Last 20, leftmost and rightmost squares: not clipped. Largest (OT no-shift) popover on the last defense row was not singled out |
-| `ToiTrends.tsx` / `ToiStripCell.tsx` | 48-51 / 43 | IN-06 (hard-coded thresholds in copy), IN-07 (on desktop a second click on a hovered square shows no visible change; hover keeps the popover up), IN-08 (accepted, ~200 tab stops) | Info | Copy drift and a mildly misleading desktop affordance; none changes what the user learns from the table |
-| other | n/a | IN-01..IN-04 | Info | Edge-case hygiene, unchanged |
+| `components/ToiStripCell.tsx` | 35-45 | `role="img"` on a clickable, focusable span; no Enter/Space, `aria-expanded`, Escape (WR-07) | Warning | Keyboard open via focus works; activation/dismissal semantics incomplete. Not a goal blocker |
+| `lib/research/toi-trends-view.test.ts` | 423-445 | Click/outside/blur behaviour not covered by `npm test` (WR-08) | Warning | Regression would not fail `npm test` |
+| `lib/research/team-games.ts` | 73-80, 133-146 | WR-05, WR-06 | Warning | Only on upstream API failure; banner and log partly disclose |
+| `components/ToiTrends.tsx` | 56 | `pb-28 -mb-24` fixed popover reserve (IN-05) | Info | User confirmed no clipping on last defense row and Last 20 in UAT 6 |
+| `ToiTrends.tsx` / tests | various | IN-06, IN-07, IN-09, IN-10 | Info | Copy drift, mild affordance quirk, test pins on tint shade, 4.56:1 contrast margin |
 
-No TBD, FIXME or XXX markers in phase source files.
+No TBD, FIXME or XXX markers in phase source files (grep over `app/research/page.tsx`, `components/Toi*.tsx`, `lib/research/*.ts`, `lib/nhl/client.ts`).
 
-Weighing WR-07 and WR-08 against the goal: the phase goal is scanning a trends table to see who is gaining or losing TOI and PP time, which is delivered by columns, deltas, tint, sparkline and sort, all unaffected. The strip popover is the TRND-02 drill-down. WR-07 is real accessibility debt (Escape dismissal and Enter/Space), but the popover opens on keyboard focus, closes on blur, and the aria-label already exposes the same content; it does not make the drill-down unreachable. WR-08 is a coverage gap; the behaviour it would test was demonstrated end to end in a real browser engine in this verification. Neither is a blocker; both are recorded as advisory. I recommend fixing WR-07 (a small keydown handler) in the next maintenance pass rather than adding a plan to this phase. IN-07 is worth a glance during the human check because it is the very desktop path (hover, then click) the user exercises.
+Weighing the open warnings against the goal: the goal is scanning a trends table to see who is gaining or losing TOI and PP time. Columns, deltas, tint, sparkline and sort deliver that and are unaffected by WR-05..WR-08. None makes a shown number wrong or the drill-down unreachable; they are recorded as advisory.
 
 ### Human Verification Required
 
-See the `human_verification` list in the frontmatter (3 items): the user's own signed-in Safari retest of UAT tests 2 and 5, a physical-device tap (UAT test 3, previously blocked), and a visual judgment that the Per game squares now read as separate squares (G-01-5). None was run by this verifier; the rendering evidence above is Playwright WebKit, not the user's Safari.
+None pending. The previous report's three human items are satisfied by UAT tests 6, 7 and 8 (pass). Phone/touch testing (UAT test 3) is a recorded deferred follow-up, not a pending check, because the site targets laptop browsers only.
 
 ### Gaps Summary
 
-No gaps. UAT gaps G-01-2, G-01-5 and G-01-1b are closed in code and in a real WebKit engine on live data; earlier truths show no regression (no data-layer file changed, full suite green). Remaining work is the user's own-browser, physical-touch and visual confirmation, plus optional follow-up on WR-05..WR-08.
+No gaps. All five requirements are satisfied, all nine must-haves hold, the post-UAT tint and Pos-text fixes introduced no regression (two class strings changed, tests updated consistently, suite 186/186, tsc and scoped eslint clean), and the UAT human-verification items passed.
 
 ---
 
