@@ -17,6 +17,18 @@ created: "2026-10-11"
 
 ---
 
+## Revisions
+
+**2026-10-11 (plans 01-08 and 01-09; UAT gaps G-01-2, G-01-5, G-01-1b).** The strip and popover contract below was revised to match what ships:
+- The popover anchor moved from the strip `<td>` to the square (01-07): the square is `relative`, the popover is `absolute right-0 top-full`, right-aligned under the square.
+- A click or tap opens the popover through the `ToiStripCell` client wrapper (01-08); mouse hover and keyboard focus still reveal it. The popover takes no pointer events.
+- Squares are 20x20 (`h-5 w-5`) with a 4px gap (`gap-1`), 2px corners (`rounded-xs`), a 1px border on every square and a pointer cursor.
+- The Per game header reads `Per game (click a square)`; the intro and legend line 1 copy changed; the Pos cell has a real space between position and games played (`C 5/5 GP`).
+
+Cause (G-01-5): 12x16 squares with a 1px gap, Tailwind 4's 4px small radius and no per-square border read as one line and were hard to find and hit, and touch had no way in.
+
+---
+
 ## Design System
 
 | Property | Value |
@@ -44,7 +56,7 @@ Declared values (multiples of 4), applied through existing Tailwind units:
 |-------|-------|---------------------|
 | xs | 4px | Row vertical padding (`py-1`), header vertical padding, popover offset from strip (`mt-1`), arrow-slot gap |
 | sm | 8px | Popover padding (`p-2`), gap between delta number and its arrow cluster, gap between name and DNP marker (`gap-2`) |
-| md | 16px | Strip cell height (`h-4`), arrow slot width (`w-4`), gap before legend |
+| md | 16px | Arrow slot width (`w-4`), gap before legend |
 | lg | 24px | (unused in table; section stack uses existing `gap-3` = 12px) |
 | xl | 32px | Page-level `gap-8` between sections (existing, unchanged) |
 | 2xl | 48px | not used |
@@ -52,12 +64,12 @@ Declared values (multiples of 4), applied through existing Tailwind units:
 
 Exceptions (all intentional, none new to the page):
 - **12px** column gutter (`pr-3`) and section gap (`gap-3`): already used by the existing table and section; it is a multiple of 4.
-- **Strip cell: 12px wide x 16px tall, 1px gap** (`w-3 h-4 gap-px`): 12px is a multiple of 4; the 1px gap is a hairline separator, not a spacing token. 20 games = 259px, which fits inside the existing `max-w-6xl` page with horizontal scroll as the safety net.
+- **Strip cell: 20px x 20px squares** (`h-5 w-5`), **4px gap** (`gap-1`), **2px corners** (`rounded-xs`), **1px border on every square**: a 24px pitch, which meets the WCAG 2.5.8 spacing rule. 20 games = 476px, with horizontal scroll as the safety net.
 - **Hairlines** (1px borders, 2px focus outline/outline-offset, 2px F/D divider `border-t-2`): not spacing.
 - **Popover clearance 112px** (`pb-28`, see Pitfall 3 in RESEARCH): needed so a downward popover on the last row is not clipped by `overflow-x-auto`.
 - **Sparkline** keeps its existing 80x20px SVG.
 
-**Row density (discretion):** keep the existing `py-1` (4px) row padding. With the 16px strip cell, a row is ~28px tall: one line per player (CONTEXT preference), ~20 skaters fit in about 560px. The user's "numbers run together" complaint came from stacked multi-line cells, not row height, so more padding is not needed; separation comes from one-number-per-cell and right-aligned `tabular-nums` columns.
+**Row density (discretion):** keep the existing `py-1` (4px) row padding. The 20px square matches the 20px text line, so a row stays ~28px tall: one line per player (CONTEXT preference), ~20 skaters fit in about 560px. The user's "numbers run together" complaint came from stacked multi-line cells, not row height, so more padding is not needed; separation comes from one-number-per-cell and right-aligned `tabular-nums` columns.
 
 ---
 
@@ -112,7 +124,7 @@ Nothing else is green or red: not the slope arrows (always muted neutral), not s
 - OT is conveyed by outline/hollow shape, not hue alone, and by "OT" text in the popover and legend.
 - DNP / excluded cells are conveyed by dashed border (shape), not color.
 
-**Strip cell fill (not a direction cue, so neutral ink, not green/red):** fill = `bg-neutral-800 dark:bg-neutral-200` with inline `style={{ opacity }}`; `opacity = 0.2 + 0.8 * clamp((toi - avgToi + 120) / 240, 0, 1)` (+/-2:00 around the player's own average saturates). The minimum 0.2 keeps a played-but-short game visibly "filled" and distinct from a dashed DNP cell. The fill lives on an inner element so the popover child is never faded (RESEARCH "Caveat"). Shading is redundant with the popover (exact values), so it is exempt from 3:1 non-text contrast.
+**Strip cell fill (not a direction cue, so neutral ink, not green/red):** fill = `bg-neutral-800 dark:bg-neutral-200` with inline `style={{ opacity }}`; `opacity = 0.2 + 0.8 * clamp((toi - avgToi + 120) / 240, 0, 1)` (+/-2:00 around the player's own average saturates). The minimum 0.2 keeps a played-but-short game visibly "filled" and distinct from a dashed DNP cell. A played square also carries a solid `border-neutral-300 dark:border-neutral-700` hairline (a neutral track, not a direction cue). The opacity formula is unchanged. The fill lives on an inner element so the popover child is never faded (RESEARCH "Caveat"). Shading is redundant with the popover (exact values), so it is exempt from 3:1 non-text contrast.
 
 ---
 
@@ -132,13 +144,13 @@ Numeric columns are **right-aligned** with `tabular-nums` (discretion: aligned d
 | # | Header | Align | Cell content | Sortable (`?sort=`) |
 |---|--------|-------|--------------|--------------------|
 | 1 | Player | left | Player name; if DNP last 2, a trailing marker (see States) | no |
-| 2 | Pos | left | Position, then muted `text-xs tabular-nums` `{dressed}/{teamGames} GP` (e.g. `C  5/5 GP`) | no |
+| 2 | Pos | left | Position, then muted `text-xs tabular-nums` `{dressed}/{teamGames} GP` (e.g. `C 5/5 GP`, with a literal space between position and games played) | no |
 | 3 | Avg TOI | right | Regulation TOI average `m:ss`, `font-medium` | `avgToi` |
 | 4 | TOI Δ | right | Signed delta `+1:12` / `−0:48` + arrow slot | `toiDelta` |
 | 5 | PP share | right | `Math.round(ppShare)%` | `ppShare` |
 | 6 | PP share Δ | right | Signed integer points `+18` / `−7` + arrow slot | `ppDelta` |
 | 7 | SH | right | Average SH TOI per game `m:ss`, `text-xs` muted | no |
-| 8 | Per game | left | Game strip (see Component Contract) | no |
+| 8 | Per game (click a square) | left | Game strip (see Component Contract); the parenthetical is `font-normal` in the header's neutral-500 | no |
 | 9 | TOI trend | left | 80x20 sparkline | no |
 
 Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP share trend" text columns (`m:ss/gm`, `pts/gm`) are removed.
@@ -162,21 +174,21 @@ Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP 
 - Sort headers carry a `title` for mouse users (the legend repeats it for everyone): Avg TOI "Average regulation ice time per game played"; TOI Δ "Average of the team's last 2 games minus the player's earlier games in the window"; PP share "Player's share of the team's power-play time over the window"; PP share Δ "Same comparison, in percentage points".
 
 ### Per-game strip and popover (D-10, D-12, D-13, TRND-02)
-- Same contract as RESEARCH Pattern 4, restated here as the visual rule: CSS-only, no client component.
-- The strip `<td className="relative py-1 pr-3">` is the popover anchor; the strip itself is `<div role="group" aria-label="Per-game ice time, oldest to newest" className="flex gap-px">`.
-- One cell per **team game in the window**, oldest left to newest right (same order as the sparkline). Each cell: `<span role="img" tabIndex={0} aria-label="{same text as popover, single line}" className="group/cell block h-4 w-3 ...">`. The cell itself is **not** `relative`, so the popover anchors to the `<td>`.
-- Cell size 12x16px, `rounded-sm`, `outline-offset-2`; `focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-900 dark:focus-visible:outline-neutral-100` (focus ring uses the foreground color, not sky, so it cannot be confused with the OT marker); `hover:outline hover:outline-1 hover:outline-neutral-400` as the hover cue.
+- The strip `<td className="py-1 pr-3">` is not positioned; the strip itself is `<div role="group" aria-label="Per-game ice time, oldest to newest" className="flex gap-1">`.
+- One square per **team game in the window**, oldest left to newest right (same order as the sparkline). Each square is rendered by the `ToiStripCell` client component: `data-state`, `tabIndex={0}`, `role="img"` and the full-detail `aria-label`. Its class list is `group/cell relative cursor-pointer block h-5 w-5 rounded-xs border outline-offset-2 hover:outline hover:outline-1 hover:outline-neutral-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-900 dark:focus-visible:outline-neutral-100`, followed by the state classes below.
+- Click or tap toggles `data-open`. A second click, a pointerdown outside the square, or blur closes it; one click-opened popover is open at a time. Mouse hover and keyboard focus-visible still reveal it through CSS.
+- The focus ring uses the foreground color, not sky, so it cannot be confused with the OT marker; `hover:outline hover:outline-1 hover:outline-neutral-400` is the hover cue; `cursor-pointer` and the border on every square signal that it is interactive.
 - Cell states:
 
 | State | Visual | Included in avg / delta / slope |
 |-------|--------|---------------------------------|
-| Played, regulation game | Solid neutral fill, opacity by TOI vs player's average (formula above) | yes |
-| Played, OT game with shift data | Same fill (by regulation TOI) + `ring-1 ring-sky-500` ring | yes (regulation TOI only, D-13) |
-| Played, OT game, no shift data | No fill, `border border-dashed border-sky-500` | no (excluded) |
-| Did not play (not in boxscore) | No fill, `border border-dashed border-neutral-400 dark:border-neutral-600` | no (never 0) |
-| Played, game has no shift chart (not OT) | Same fill as played (boxscore TOI); PP/SH shown as `—` in popover | yes for TOI; no for PP/SH (D-12) |
+| Played, regulation game | Solid neutral fill, opacity by TOI vs player's average (formula above); solid `border-neutral-300 dark:border-neutral-700` | yes |
+| Played, OT game with shift data | Same fill (by regulation TOI) + `ring-1 ring-sky-500` ring outside the border | yes (regulation TOI only, D-13) |
+| Played, OT game, no shift data | No fill, dashed `border-sky-500` (1px border) | no (excluded) |
+| Did not play (not in boxscore) | No fill, dashed `border-neutral-400 dark:border-neutral-600` (1px border) | no (never 0) |
+| Played, game has no shift chart (not OT) | Same fill and border as played (boxscore TOI); PP/SH shown as `—` in popover | yes for TOI; no for PP/SH (D-12) |
 
-- Popover (`aria-hidden`, shown by `hidden group-hover/cell:block group-focus/cell:block`): `absolute left-0 top-full z-10 mt-1 w-max max-w-xs rounded-md border border-neutral-200 bg-white p-2 text-xs text-neutral-900 shadow-md dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100`. It opens **below** the strip, left-aligned to the strip column.
+- Popover (`aria-hidden`, shown by `group-hover/cell:block`, `group-focus-visible/cell:block` and `group-data-[open]/cell:block`): `pointer-events-none absolute right-0 top-full z-10 mt-1 hidden w-max max-w-xs rounded-md border border-neutral-200 bg-white p-2 text-xs text-neutral-900 shadow-md group-hover/cell:block group-focus-visible/cell:block group-data-[open]/cell:block dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100`. It opens **below** the square, right-aligned to it, so it grows left over the table and never runs past the scroll wrapper's right edge. It takes no pointer events, so it never blocks the squares under it.
 - Popover content, label/value two-column grid (`grid grid-cols-[auto_auto] gap-x-3`, labels `text-neutral-600 dark:text-neutral-400`, values `tabular-nums text-right`):
   1. Title line (`font-medium`, spans both columns): `Oct 8 vs TOR · W 3–2` (uses existing `formatDate`, `gameLabel`, `resultLabel`; omit result if not final). If OT: append ` · OT` (or ` · SO`) as a bordered `rounded border border-sky-500 px-1` tag.
   2. `TOI` `16:20`. For OT games with shift data the value is **regulation** TOI and a muted line `OT excluded` `+1:05` follows (so it reconciles with NHL.com's total). For OT games without shift data: `TOI` `—` and a muted full-width line `Excluded from averages: no shift data for overtime`; also `Total (incl. OT)` `21:05` from the boxscore.
@@ -218,9 +230,9 @@ Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP 
 | Element | Copy |
 |---------|------|
 | Section heading | `Ice-time trends` (was "Ice time by game") |
-| Intro paragraph | `Average regulation ice time per game played, and how each player's last 2 games compare with his earlier games in the window. Rows tinted green or red moved by 2:00 or more of TOI or 15 or more points of power-play share. Click Avg TOI, TOI Δ, PP share or PP share Δ to sort; hover or focus a square for exact per-game times.` |
+| Intro paragraph | `Average regulation ice time per game played, and how each player's last 2 games compare with his earlier games in the window. Rows tinted green or red moved by 2:00 or more of TOI or 15 or more points of power-play share. Click Avg TOI, TOI Δ, PP share or PP share Δ to sort; click, tap or hover a square for exact per-game times.` |
 | Primary CTA | None. The primary interaction is the sort headers: `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ` |
-| Legend line 1 | `Squares are team games, oldest to newest. Darker means more ice time than that player's own average. Dashed means did not play (or overtime with no shift data). Outlined means overtime; OT minutes are excluded.` |
+| Legend line 1 | `Squares are team games, oldest to newest. Darker means more ice time than that player's own average. Dashed means did not play (or overtime with no shift data). A blue ring means overtime; OT minutes are excluded.` |
 | Legend line 2 | `Δ compares the team's last 2 games with the player's earlier games and needs 3 or more games played. ▲ ▼ show the direction of the whole-window trend and can disagree with Δ.` |
 | Last game note (window 1) | `Deltas and trends need 2 or more games. Choose Last 3 or more.` (muted `text-xs text-neutral-500`, in the footnotes block) |
 | No PP/SH note | `No PP/SH data for {Oct 8, Oct 10}: the NHL hasn't published shift charts for those games yet.` (`text-xs text-amber-600 dark:text-amber-400`, lists dates via `formatDate`; omitted when every game has data) |
@@ -228,7 +240,7 @@ Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP 
 | Empty state body | If the window has games but no skater rows: `No skaters played in this window.` (`text-sm text-neutral-500`). Page-level copy `{team} hasn't finished a regular-season game yet this season.` and `Pick a team to see its latest line combinations and ice-time trends.` are unchanged. |
 | Error state | Page-level error banner (rose) is unchanged: `Couldn't load NHL data for {team}: {error}`. This phase adds no new fetch, so no new error state. Invalid `sort`/`dir` never errors; it falls back to the default sort. |
 | Destructive confirmation | none: no destructive actions in this phase |
-| Header labels | `Player`, `Pos`, `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ`, `SH`, `Per game`, `TOI trend` |
+| Header labels | `Player`, `Pos`, `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ`, `SH`, `Per game (click a square)`, `TOI trend` |
 | DNP marker | `DNP last 2` |
 | OT tag | `OT` (or `SO` for shootout games) |
 | Sort indicator | `↓` descending, `↑` ascending, on the active header only |
@@ -255,11 +267,12 @@ Probe run 2026-10-11 after checker approval: 5 elements (E1 trends table, E2 sor
 - E3 empty: A game the player missed renders an empty dashed cell; its popover/`aria-label` says the player did not play.
 - E3 loading: No loading state (server-rendered; popover content is in the markup).
 - E3 error: No error state; missing data is expressed as "—" fields inside the popover (see E3 partial).
-- E3 populated: One 12x16 cell per team game in the window, shaded by TOI relative to the player's own window average; hover or keyboard focus shows date, opponent, TOI, PP, PP share, SH (and "OT" / "+m:ss OT excluded" for OT games).
+- E3 populated: One 20x20 square per team game in the window, shaded by TOI relative to the player's own window average; click or tap, hover or keyboard focus shows date, opponent, TOI, PP, PP share, SH (and "OT" / "+m:ss OT excluded" for OT games).
 - E3 partial: Games without shift charts keep TOI shading from the boxscore and show PP/SH "—" in the popover.
-- E3 overflow: "Last 20" yields a ~259px strip inside the horizontally scrolling table; the popover is anchored to the `<td>` and opens below the strip.
+- E3 overflow: "Last 20" yields a 476px strip inside the horizontally scrolling table; the popover is anchored to the square and opens below it.
 - E3 zero-one-many: A 1-game window renders a single cell; cells always equal the number of team games in the window.
-- E3 a11y (keyboard): Every strip cell is `tabIndex={0}` with an `aria-label` carrying the full detail text; the resulting number of tab stops (~100+ on a full roster) is accepted by the user for CSS-only detail, to be revisited with roving focus only if it proves annoying.
+- E3 a11y (keyboard): Every strip cell is `tabIndex={0}` with an `aria-label` carrying the full detail text; the resulting number of tab stops (~100+ on a full roster) is accepted by the user for per-square detail, to be revisited with roving focus only if it proves annoying.
+- Known limitation (touch): hover does not exist on touch screens, so tapping a square opens its popover through ToiStripCell's click handler and tapping elsewhere closes it.
 - E4 empty: Fewer than 3 included games, or no included game in either part, shows "—" with an empty arrow slot (States table).
 - E4 loading: No loading state (server-rendered).
 - E4 error: No error state; unknown values render "—", never 0:00 or 0%.
@@ -275,7 +288,7 @@ Probe run 2026-10-11 after checker approval: 5 elements (E1 trends table, E2 sor
 
 ### Backstop (visual / manual checks)
 - { statement: "The strip popover is fully visible (not clipped by the overflow wrapper) on the last forward row, the last defense row, and with the Last 20 window", verification: backstop }
-- { statement: "Tapping a strip cell on a touch device (iOS Safari, Android Chrome) shows its popover; if it does not, add a minimal client wrapper rather than changing the desktop behavior", verification: backstop }
+- { statement: "Tapping a square opens its popover through ToiStripCell's click handler, and tapping elsewhere closes it; checked by `webkit-strip-check.cjs` in iPhone emulation until a device is available", verification: backstop }
 
 ---
 
@@ -289,11 +302,11 @@ All project-local. The planner may keep them in `page.tsx` or move to `app/resea
 | `SortHeader` | new (thin) | `<th scope="col" aria-sort>` + `PendingLink scroll={false}` per Interaction Contract; alignment prop. |
 | `DeltaCell` | new | Props: delta value, mover threshold, formatter, slope value + slope threshold. Renders number (colored + `font-medium` if crossing), arrow slot, `sr-only` texts. `—` when delta is null. |
 | `TrendArrow` | replaces `Slope` | Glyph only, always neutral muted; no number. The old `Slope` colored text and `m:ss/gm` / `pts/gm` format are removed. |
-| `GameStrip` / `StripCell` | new | Per Interaction Contract; builds one shared `detailText()` string used for both `aria-label` and popover (test target for TRND-02). |
+| `ToiGameStrip` (server) + `ToiStripCell` (client) | new | Per Interaction Contract; `ToiStripCell` takes only `label`, `state`, `className`, `children` (no Maps or row objects); `ToiGameStrip` builds one shared `detailText()` string used for both `aria-label` and popover (test target for TRND-02). |
 | `Sparkline` | extend | Add OT hollow dots; plots regulation TOI. |
 | `PendingLink` | reuse unchanged | Sort headers. |
 
-No new dependencies. No client components besides the existing `PendingLink`.
+No new dependencies. No client components besides `PendingLink` and `ToiStripCell`.
 
 ---
 
