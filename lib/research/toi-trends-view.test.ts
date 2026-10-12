@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { nextOpen, type CellEvent } from "@/components/ToiStripCell";
 import { ToiTrends } from "@/components/ToiTrends";
 import type { ResearchGame, ResearchPlayer, TeamResearch } from "./team-games";
 import { DEFAULT_SORT, researchHref, type SortSpec } from "./toi-trends";
@@ -42,6 +43,12 @@ const threeGames = () => [
   fixtureGame("2026-10-03", { 1: 1250, 2: 950, 3: 1350 }),
   fixtureGame("2026-10-05", { 1: 1300, 2: 1000, 3: 1400 }),
 ];
+const classTokens = (tag: string) => (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+// Opening tags of the hover popovers, independent of attribute order.
+const popoverTags = (html: string) =>
+  [...html.matchAll(/<span\b[^>]*>/g)]
+    .map((m) => m[0])
+    .filter((t) => t.includes('aria-hidden="true"') && classTokens(t).includes("group-hover/cell:block"));
 const headers = (html: string) =>
   [...html.matchAll(/<th[^>]*>(.*?)<\/th>/g)].map((m) => m[1].replace(/<[^>]*>/g, "").trim());
 
@@ -197,8 +204,11 @@ test("every strip cell is a focusable button and carries the full detail as its 
 
 test("the popover holds the same values and is hidden from assistive tech", () => {
   const html = rowHtml(render(research(threeGames())), "Alpha Forward");
-  const popovers = [...html.matchAll(/<span[^>]*aria-hidden="true"[^>]*>[\s\S]*?<\/span><\/span>/g)]
-    .map((m) => m[0])
+  // Each chunk after the first starts inside a popover; cut it off where the next square begins.
+  const popovers = html
+    .split('aria-hidden="true"')
+    .slice(1)
+    .map((chunk) => chunk.split("data-state=")[0])
     .filter((p) => p.includes("Oct"));
   assert.ok(popovers.length >= 3);
   assert.ok(popovers[0].includes("Oct 1") && popovers[0].includes("20:00") && popovers[0].includes("1:00"));
@@ -366,8 +376,6 @@ test("the section intro is the approved copy", () => {
 });
 
 // WR-01: the popover anchors to the hovered square, not the strip's <td>.
-const classTokens = (tag: string) => (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
-
 test("every strip square is the popover's containing block", () => {
   const squares = cells(render(research(threeGames())));
   assert.equal(squares.length, 9);
@@ -376,7 +384,7 @@ test("every strip square is the popover's containing block", () => {
 
 test("every popover opens below and to the left of its square, never at the strip's left edge", () => {
   const html = render(research(threeGames()));
-  const popovers = [...html.matchAll(/<span aria-hidden="true" class="([^"]*group-hover\/cell:block[^"]*)"/g)].map((m) => m[1].split(/\s+/));
+  const popovers = popoverTags(html).map(classTokens);
   assert.equal(popovers.length, 9);
   for (const tokens of popovers) {
     assert.ok(tokens.includes("absolute") && tokens.includes("right-0") && tokens.includes("top-full"), tokens.join(" "));
@@ -435,7 +443,7 @@ test("every strip square shows a pointer cursor, is a named group and starts clo
 
 test("every popover opens on click, hover or keyboard focus and takes no pointer events", () => {
   const html = render(research(threeGames()));
-  const popovers = [...html.matchAll(/<span aria-hidden="true" class="([^"]*group-hover\/cell:block[^"]*)"/g)].map((m) => m[1].split(/\s+/));
+  const popovers = popoverTags(html).map(classTokens);
   assert.equal(popovers.length, 9);
   for (const tokens of popovers) {
     for (const want of ["group-data-[open]/cell:block", "group-focus-visible/cell:block", "pointer-events-none", "hidden", "absolute", "right-0", "top-full", "z-10"]) {
@@ -493,4 +501,22 @@ test("legend line 1 names the dashed and blue-ring marks and no longer says outl
     ),
   );
   assert.ok(!html.includes("Outlined"));
+});
+
+// WR-08: the client component's open/close transitions, tested without a DOM (no DOM test library is installed).
+test("a click toggles the popover and blur, Escape and an outside pointerdown always close it", () => {
+  assert.equal(nextOpen(false, "click"), true);
+  assert.equal(nextOpen(nextOpen(false, "click"), "click"), false);
+  const closing: CellEvent[] = ["blur", "escape", "outside"];
+  for (const event of closing) {
+    assert.equal(nextOpen(true, event), false, event);
+    assert.equal(nextOpen(false, event), false, event);
+  }
+});
+
+test("Enter and Space toggle the popover like a click", () => {
+  for (const event of ["enter", "space"] as const) {
+    assert.equal(nextOpen(false, event), true, event);
+    assert.equal(nextOpen(true, event), false, event);
+  }
 });
