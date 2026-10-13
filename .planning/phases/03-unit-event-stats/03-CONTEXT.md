@@ -52,6 +52,11 @@ Not in this phase: event stats outside the last-game unit tables, event trends, 
 - **D-17:** Threshold starts at **95% match**, one named constant; the fixture spike measures real games and may tune it. Penalty-shot events are expected mismatches and should not count against a game.
 - **D-18:** If the **last game has no play-by-play** (just finished, unpublished or failed), unit tables still show the units with Time/% columns; **event columns show "—" with a note**. **No fallback** to an earlier game.
 
+### Answers to research open questions (2026-10-13)
+- **D-19:** A cold "Last 20" taking **about 10 s is acceptable**; ship the paced loader from research.
+- **D-20:** **+/- shows `0`** when a unit had shot attempts but no goals; "—" only when the unit had no events at all (research A3).
+- **D-21:** **Pulled-goalie (empty-net) stretches go to "Other", not to exclusions.** Every event while either team's goalie is out of the net (6v5 or 5v6, defending-goalie or shooting-team goalie digit `0` in `situationCode`) is counted in that situation's "Other" row and in Total, and is never attributed to a listed unit. This replaces research A4 and supersedes "empty-net" in the D-14 exclusions note and the D-15 legend: the legend says pulled-goalie events are in Other; exclusions remain shootout, penalty-shot and teammate-blocked attempts.
+
 ### Claude's Discretion
 - Concurrency cap and retry/backoff details for DATA-01 (research suggests ~6 concurrent; verify 429 behaviour in dev before production).
 - Penalty shots: research says exclude them from unit attribution but keep them in team-level reconciliation. Follow that, and decide whether they appear in the D-14 exclusions note.
