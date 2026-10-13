@@ -84,6 +84,29 @@ test("a verbatim-duplicated shift row is counted once", () => {
   assert.deepEqual(together.get(1)?.get(2), { ev: 60, pp: 0, sh: 0 });
 });
 
+test("a player's overlapping differing rows do not inflate the skater count, so 5v5 stays even strength", () => {
+  // Skater 1 has two differing rows overlapping 30-60; counted raw that is 6 skaters + goalie, which would read as a power play.
+  const input = [
+    ...shifts("BUF", [1], 0, 60),
+    ...shifts("BUF", [1], 30, 60),
+    ...shifts("BUF", [2, 3, 11, 12, 20], 0, 60),
+    ...shifts("OPP", [101, 102, 103, 104, 105, 120], 0, 60),
+  ];
+  const { self, together } = pairSeconds("BUF", input, positions);
+  assert.deepEqual(self.get(1), { ev: 60, pp: 0, sh: 0 });
+  assert.deepEqual(together.get(1)?.get(2), { ev: 60, pp: 0, sh: 0 });
+});
+
+test("an opponent's overlapping differing rows do not turn even strength into a short-handed second", () => {
+  const input = [
+    ...shifts("BUF", [1, 2, 3, 11, 12, 20], 0, 60),
+    ...shifts("OPP", [101, 102, 103, 104, 105, 120], 0, 60),
+    ...shifts("OPP", [101], 30, 60),
+  ];
+  const { self } = pairSeconds("BUF", input, positions);
+  assert.deepEqual(self.get(1), { ev: 60, pp: 0, sh: 0 });
+});
+
 test("the goalie is in neither own seconds, time together nor groups", () => {
   const { self, together, groups } = pairSeconds("BUF", evPpSh, positions);
   assert.equal(self.has(20), false);

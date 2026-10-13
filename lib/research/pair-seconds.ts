@@ -1,5 +1,6 @@
 // Regulation-only seconds each skater, and each pair of teammates, spent on ice per situation.
 // A second pass over the same on-ice seconds as analyzeGameLines, classified by the same situationFor.
+// Unlike analyzeGameLines, a player with two overlapping differing rows counts once before strength is classified.
 import {
   bucketOnIce,
   PERIOD_SECONDS,
@@ -22,6 +23,9 @@ export interface GamePairs {
 
 const NO_ONE: OnIce = { skaters: [], goalie: false };
 
+/** One entry per player, so overlapping rows for the same player cannot inflate the skater count that decides strength. */
+const dedupe = (onIce: OnIce): OnIce => ({ skaters: [...new Set(onIce.skaters)], goalie: onIce.goalie });
+
 const emptyRecord = (): Record<Situation, number> => ({ ev: 0, pp: 0, sh: 0 });
 
 /** Regulation-only (periods 1-3) own and pair seconds for `team`; overtime seconds are skipped in every situation. */
@@ -36,13 +40,13 @@ export function pairSeconds(
 
   for (const [t, byTeam] of bucketOnIce(shifts, positions)) {
     if (t >= REGULATION_PERIODS * PERIOD_SECONDS) continue;
-    const mine = byTeam.get(team);
-    if (!mine || mine.skaters.length === 0) continue;
-    const opp = [...byTeam].find(([abbrev]) => abbrev !== team)?.[1] ?? NO_ONE;
+    const rawMine = byTeam.get(team);
+    if (!rawMine || rawMine.skaters.length === 0) continue;
+    const mine = dedupe(rawMine);
+    const opp = dedupe([...byTeam].find(([abbrev]) => abbrev !== team)?.[1] ?? NO_ONE);
     const situation = situationFor(mine, opp);
 
-    // Two differing rows for one player can overlap; he is still only one skater on the ice.
-    const skaters = [...new Set(mine.skaters)];
+    const skaters = mine.skaters;
     for (const a of skaters) {
       let own = self.get(a);
       if (!own) self.set(a, (own = emptyRecord()));
