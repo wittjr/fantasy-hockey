@@ -165,7 +165,7 @@ function linemateTag(games: readonly LinemateGame[], cells: readonly LinemateCel
   return crossing === -1 ? "Fading" : null;
 }
 
-/** Linemates of one skater in one situation: forwards and defense, highest window share first (D-12, D-13), tagged and capped (D-11, D-26). */
+/** Linemates of one skater in one situation: forwards and defense, highest window share first (D-28, D-13), tagged and capped (D-11, D-26). */
 export function buildLinemateView(
   games: readonly LinemateGame[],
   players: ReadonlyMap<number, ResearchPlayer>,
