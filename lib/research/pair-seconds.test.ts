@@ -41,6 +41,20 @@ test("own seconds equal analyzeGameLines' per-skater seconds when the game has n
   for (const [id, record] of lines.playerSeconds) assert.deepEqual(self.get(id), record, `skater ${id}`);
 });
 
+test("own seconds equal analyzeGameLines' per-skater seconds on a chart with overlapping differing rows (oracle)", () => {
+  const input = [
+    ...evPpSh,
+    ...shifts("BUF", [1], 30, 60), // own overlap at even strength
+    ...shifts("OPP", [101], 70, 90), // opponent overlap during the BUF power play
+    ...shifts("BUF", [13], 100, 120), // own overlap while short-handed
+  ];
+  const { self } = pairSeconds("BUF", input, positions);
+  const lines = analyzeGameLines("BUF", input, positions);
+  assert.deepEqual(lines.situationSeconds, { ev: 60, pp: 30, sh: 30 });
+  assert.equal(self.size, lines.playerSeconds.size);
+  for (const [id, record] of lines.playerSeconds) assert.deepEqual(self.get(id), record, `skater ${id}`);
+});
+
 test("time together is symmetric and counts the seconds both skaters were on ice", () => {
   const { together } = pairSeconds("BUF", evPpSh, positions);
   assert.equal(together.get(1)?.get(2)?.ev, 60);

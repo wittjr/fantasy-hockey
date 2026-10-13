@@ -176,3 +176,40 @@ test("with duplicates, no player's PP or SH seconds exceed the team's", () => {
     assert.ok(rec.sh <= lines.situationSeconds.sh);
   }
 });
+
+test("a player's overlapping differing rows do not inflate the skater count, so 5v5 stays even strength", () => {
+  // Counted raw, skater 1's two rows make 6 skaters plus a goalie, which reads as a power play.
+  const input = [
+    ...shifts("BUF", [1], 0, 60),
+    ...shifts("BUF", [1], 30, 60),
+    ...shifts("BUF", [2, 3, 11, 12, 20], 0, 60),
+    ...shifts("OPP", [101, 102, 103, 104, 105, 120], 0, 60),
+  ];
+  const lines = analyzeGameLines("BUF", input, positions);
+  assert.deepEqual(lines.situationSeconds, { ev: 60, pp: 0, sh: 0 });
+  assert.deepEqual(lines.playerSeconds.get(1), { ev: 60, pp: 0, sh: 0 });
+  assert.deepEqual(lines.units.ev.F, [{ playerIds: [1, 2, 3], seconds: 60, pct: 100 }]);
+  assert.deepEqual(lines.units.pp.F, []);
+});
+
+test("an opponent's overlapping differing rows do not turn even strength into a short-handed second", () => {
+  const input = [
+    ...shifts("BUF", [1, 2, 3, 11, 12, 20], 0, 60),
+    ...shifts("OPP", [101, 102, 103, 104, 105, 120], 0, 60),
+    ...shifts("OPP", [101], 30, 60),
+  ];
+  const lines = analyzeGameLines("BUF", input, positions);
+  assert.deepEqual(lines.situationSeconds, { ev: 60, pp: 0, sh: 0 });
+  assert.deepEqual(lines.playerSeconds.get(1), { ev: 60, pp: 0, sh: 0 });
+});
+
+test("a player's overlapping differing rows on the power play count once in his seconds and in the unit", () => {
+  const input = [
+    ...shifts("BUF", [4, 5, 6, 1, 13, 20], 0, 30),
+    ...shifts("BUF", [4], 10, 30),
+    ...shifts("OPP", [101, 102, 103, 104, 120], 0, 30),
+  ];
+  const lines = analyzeGameLines("BUF", input, positions);
+  assert.deepEqual(lines.units.pp.F, [{ playerIds: [1, 4, 5, 6], seconds: 30, pct: 100 }]);
+  assert.deepEqual(lines.playerSeconds.get(4), { ev: 0, pp: 30, sh: 0 });
+});
