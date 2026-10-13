@@ -124,7 +124,7 @@ export function PlayerLinemates({
         <PendingLink
           href={closeHref}
           scroll={false}
-          aria-label={`Close ${name} detail`}
+          aria-label={`Close player detail: ${name}`}
           className="text-sm text-neutral-500 hover:underline"
         >
           <span aria-hidden>×</span> Close player detail
