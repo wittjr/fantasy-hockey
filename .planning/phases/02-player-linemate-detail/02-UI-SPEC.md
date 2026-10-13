@@ -160,7 +160,7 @@ Column 4 and the tag logic are **hidden when the window is 1 game** (D-15, no ta
 | PP | 4 | 3 | `0:30` |
 | SH | 4 | 3 | `0:30` |
 
-Order is recent time first, then window total (D-12), applied before the cap. `?all=1` lifts the cap but never the minimum.
+Order is window share, highest first, then window total (D-28, superseding D-12's recent-first order), applied before the cap. `?all=1` lifts the cap but never the minimum.
 
 ### Trends-table changes (D-02, D-06)
 

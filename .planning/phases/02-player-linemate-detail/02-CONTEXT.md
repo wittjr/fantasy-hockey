@@ -55,6 +55,7 @@ The existing Last game unit tables must keep showing the same TOI and share valu
 ### Follow-up decisions (after phase research, 2026-10-12)
 - **D-25:** **Window share counts only the games where both players dressed and a shift chart exists.** A linemate's missed games are blank and do not dilute his share (the UI-SPEC "absent" rule). This refines D-09's "across the games the player played".
 - **D-26:** **Tagged linemates bypass the list cap.** Rows tagged New, Rising, Fading or Out are always listed, even past the ~6F/4D (EV) or 4F/3D (PP/SH) cap; on real data this adds about 1 row on average. The minimum-time filter still applies. "Show all" still lists everyone above the minimum.
+- **D-28 (UAT, 2026-10-12, supersedes D-12 ordering):** Rows are ordered by **window share**, highest first, then window total. The New tag, not row position, signals a line change (review W-03).
 - **D-27:** **Keep ±15 share points** for Rising/Fading (D-16 confirmed after research showed tags on about a third of EV rows). It is one named constant, to be raised to ±20 if UAT finds the tags noisy.
 
 ### Claude's Discretion
