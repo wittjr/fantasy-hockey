@@ -347,6 +347,16 @@ for (const n of [2, 3, 5]) {
   });
 }
 
+// Window share (not recency) orders rows: the 3 earlier games give 10/11 a 30% share against 20% for 12/13, and ties fall back to id.
+test("line change in a 5-game window: rows are ordered by window share, then id", () => {
+  const dressed = [1, 10, 11, 12, 13];
+  const games = Array.from({ length: 5 }, (_, i) =>
+    game(i + 1, dressed, i < recentStart(5)! ? pairs(600, { 10: 300, 11: 300, 12: 0, 13: 0 }) : pairs(600, { 10: 0, 11: 0, 12: 300, 13: 300 })),
+  );
+  const view = buildLinemateView(games, wide, PLAYER, "ev");
+  assert.deepEqual(view.forwards.map((r) => [r.player.id, r.tag]), [[10, "Fading"], [11, "Fading"], [12, "New"], [13, "New"]]);
+});
+
 test("line change: old linemates who did not dress in the recent games are Out, not Fading", () => {
   const games = [
     game(1, [1, 10, 11, 12], pairs(600, { 10: 300, 11: 300, 12: 0 })),
