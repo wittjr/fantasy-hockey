@@ -99,7 +99,7 @@ export function ToiTrends({
                       selectedSit={row.player.id === selected ? sit : null}
                       team={team}
                       gameCount={gameCount}
-                      sort={sort}
+                      sort={requestedSort}
                       title={`Show who ${row.player.name} plays with`}
                     />
                     {row.player.id === selected && <span className="sr-only">Selected</span>}

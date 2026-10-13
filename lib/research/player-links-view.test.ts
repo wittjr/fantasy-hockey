@@ -112,6 +112,12 @@ test("sort headers keep the selection, tab and show-all state", () => {
   assert.equal(href, researchHref("MTL", 5, { key: "toiDelta", dir: "desc" }, { player: 1, sit: "pp", all: true }));
 });
 
+test("in a 1-game window a requested Δ sort stays in the name links but not in the sort headers", () => {
+  const html = renderTrends(research([threeGames()[0]]), { sort: { key: "toiDelta", dir: "desc" }, gameCount: 1 });
+  assert.equal(attr(nameAnchor(html, "Bravo Forward"), "href"), "/research?team=MTL&games=1&sort=toiDelta&player=2#player-detail");
+  assert.equal(attr(headerCell(html, "Avg TOI").match(/<a\b[^>]*>/)?.[0] ?? "", "href"), researchHref("MTL", 1, { key: "avgToi", dir: "asc" }));
+});
+
 test("a mover row keeps its tint and its screen-reader text, and the name link comes first", () => {
   const toi = [1000, 1000, 1000, 1200, 1200];
   const games = toi.map((t, i) => fixtureGame(`2026-10-0${i + 1}`, { 1: t, 2: 900, 3: 1300 }));
