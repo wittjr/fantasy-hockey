@@ -237,7 +237,7 @@ export function PlayerLinemates({
 
       {!view.emptyReason && view.cappedCount < view.total && (
         <p className="text-xs text-neutral-500">
-          {all ? `Showing all ${view.total} linemates. ` : `Showing ${view.cappedCount} of ${view.total} linemates, most recent time together first. `}
+          {all ? `Showing all ${view.total} linemates. ` : `Showing ${view.cappedCount} of ${view.total} linemates, highest share of time together first. `}
           <PendingLink href={showAllHref} scroll={false} className="text-xs underline">
             {all ? "Show fewer" : `Show all ${view.total}`}
           </PendingLink>

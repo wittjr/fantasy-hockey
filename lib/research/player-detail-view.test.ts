@@ -586,7 +586,7 @@ test("the SC4 line change lists the New linemate above the Fading one in the for
 test("a capped list says how many are shown and links to Show all with all=1 kept on the other params", () => {
   const html = renderPanel(research(crowdGames()));
   const line = html.match(/<p class="text-xs text-neutral-500">Showing [\s\S]*?<\/p>/)?.[0] ?? "";
-  assert.equal(stripTags(line), "Showing 10 of 15 linemates, most recent time together first. Show all 15");
+  assert.equal(stripTags(line), "Showing 10 of 15 linemates, highest share of time together first. Show all 15");
   const link = line.match(/<a\b[^>]*>/)?.[0] ?? "";
   assert.equal(unescape(link.match(/href="([^"]*)"/)?.[1] ?? ""), researchHref("MTL", 5, DEFAULT_SORT, { player: 1, all: true }));
   assert.ok(classTokens(link).includes("underline") && classTokens(link).includes("text-xs"), link);
