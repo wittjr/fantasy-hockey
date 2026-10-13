@@ -3,10 +3,10 @@ phase: 02-player-linemate-detail
 fixed_at: 2026-10-12T00:00:00Z
 review_path: .planning/phases/02-player-linemate-detail/02-REVIEW.md
 iteration: 1
-findings_in_scope: 3
-fixed: 3
-skipped: 0
-status: all_fixed
+findings_in_scope: 9
+fixed: 8
+skipped: 1
+status: partial
 ---
 
 # Phase 2: Code Review Fix Report
@@ -16,32 +16,71 @@ status: all_fixed
 **Iteration:** 1
 
 **Summary:**
-- Findings in scope: 3 (0 critical, 3 warning; Info excluded by fix_scope)
-- Fixed: 3
-- Skipped: 0
+- Findings in scope: 9 (0 critical, 1 warning, 8 info; fix_scope all; IN-06 is accepted by design and not in this review)
+- Fixed: 8
+- Skipped: 1
 
-**Verification:** Edits and per-fix tests ran in an isolated worktree (node_modules resolved from the main checkout). After the fast-forward onto `gsd/phase-1-ice-time-trends-table`, `npx tsc --noEmit` (exit 0) and `tsx --test lib/research/*.test.ts` (267 pass, 0 fail) were re-run in the main checkout. Running tsc inside the worktree alone reported `LayoutProps` missing in `app/layout.tsx`, which is a generated Next type absent from a fresh worktree and not related to these changes.
+**Verification:** Edits and per-fix `tsx --test lib/research/*.test.ts` ran in an isolated worktree (node_modules resolved from the main checkout). After the fast-forward onto `gsd/phase-1-ice-time-trends-table`, the gates were re-run in the main checkout: `npx tsc --noEmit` clean, `npx eslint components lib/research` clean, and `tsx --test lib/research/*.test.ts` 273 pass, 0 fail (271 before, plus 2 new tests).
+
+**Browser spot-check suggested** (UI behaviour touched): IN-02 (Escape over a hovered strip square), IN-03 (close link accessible name, no visual change), IN-04 (name-link URLs in a 1-game window with a delta sort), WR-05 (footnote wording).
 
 ## Fixed Issues
 
-### WR-01: pairSeconds classifies strength from a duplicate-inflated skater count, then deduplicates only the credited seconds
-
-**Files modified:** `lib/research/pair-seconds.ts`, `lib/research/pair-seconds.test.ts`
-**Commit:** d935cc1
-**Applied fix:** Deduplicated the on-ice skaters before calling `situationFor`, for both own team and opponent (an opponent's overlapping rows would flip strength the same way). Removed the later per-loop `new Set`. Updated the file header to say this deliberately differs from `analyzeGameLines`, which still classifies from the raw count. `analyzeGameLines` was left unchanged (outside the finding's scope), so the oracle test still holds only for clean charts. Added two fixture tests: a player with two overlapping differing rows, and an opponent with the same. Both fail on the old code (own seconds split ev 30 / pp 30) and pass now (ev 60).
-**Status:** fixed. Follow-up resolved 2026-10-12: the user chose to give `analyzeGameLines` the same dedupe. Quick task 261012-tph (`53f510b`, `1a5d2f5`) added a shared `dedupeOnIce` in `lib/research/lines.ts`, applied it in both passes, and extended the oracle test to charts with overlapping rows, so the two passes agree again. The header note above about `pairSeconds` differing no longer applies.
-
-### WR-02: "no-earlier-data" tag note states a false cause
+### WR-05: Window-share footnote still says linemates are "ordered by the team's last 2 games, then by the whole window"
 
 **Files modified:** `components/PlayerLinemates.tsx`, `lib/research/player-detail-view.test.ts`
-**Commit:** 0cb6e26
-**Applied fix:** Reworded the note to "has no {situation} time with a shift chart in the earlier games of this window to compare with", matching what the `no-earlier-data` reason actually checks. Updated the pinned string in the view test.
+**Commit:** 44ae424
+**Applied fix:** The footnote now says linemates are "ordered by window share, highest first"; the pinned string in the view test was updated to match.
 
-### WR-04: Footer still says linemates are sorted "most recent time together first" after D-28
+### IN-02: Escape cannot dismiss a popover that is open by mouse hover alone
 
-**Files modified:** `components/PlayerLinemates.tsx`, `lib/research/player-detail-view.test.ts`
-**Commit:** 379c17c
-**Applied fix:** Changed the capped-list footer to "highest share of time together first" and updated the expected string in the view test.
+**Files modified:** `components/ToiStripCell.tsx`
+**Commit:** 2574b76
+**Applied fix:** The square tracks hover (`onPointerEnter` / `onPointerLeave`). While hovered, a `document` `keydown` listener applies the existing `escape` transitions (`nextOpen`, `nextDismissed`), so Escape hides a hover-only popover without needing focus. No unit test covers the effect (the repo has no DOM test harness); the pure transition functions are unchanged. Needs a browser spot-check.
+
+### IN-03: Close link's accessible name does not contain its visible text
+
+**Files modified:** `components/PlayerLinemates.tsx`
+**Commit:** 5410486
+**Applied fix:** `aria-label` is now `Close player detail: ${name}`, which contains the visible text "Close player detail". The UI-SPEC copywriting row still lists the old label; it may want a matching edit.
+
+### IN-04: Name links get different `sort` values depending on which table they are in
+
+**Files modified:** `components/ToiTrends.tsx`, `lib/research/player-links-view.test.ts`
+**Commit:** 8b7ba09
+**Applied fix:** Chose the raw requested sort everywhere for name links: the trends-table `PlayerLink` now gets `requestedSort`, matching `LastGameLines` and `PlayerLinemates`. Sort-header links still use the effective sort (they must, to flip direction on the visible column). Added a test for a 1-game window with `sort=toiDelta`; it fails without the change.
+
+### IN-05: Duplicated situation labels and an export with no consumers
+
+**Files modified:** `components/LastGameLines.tsx`
+**Commit:** f48d638
+**Applied fix:** Removed the local `SITUATION_LABELS` and imported `SITUATION_ABBREV` from `lib/research/linemates.ts`. Not applied: removing the `LinemateRowView` export, because `lib/research/player-detail-view.test.ts` imports it, so the "no consumers" claim does not hold. Not applied: the double `buildTrendRows` call, which the review marks as a duplication note only.
+
+### IN-07: Line-change tests no longer assert ordering
+
+**Files modified:** `lib/research/linemates.test.ts`
+**Commit:** 3b33d35
+**Applied fix:** Added a 5-game line-change test asserting the full ordered `[id, tag]` list (10, 11, 12, 13) by window share then id.
+
+### IN-08: `regulationSeconds` still double-counts overlapping differing rows, so OT-game TOI no longer matches the line passes
+
+**Files modified:** `lib/research/lines.ts`
+**Commit:** 657e73f
+**Applied fix:** Took the review's documentation option rather than adding interval-merge code for an anomalous-feed, OT/SO-only case. The `regulationSeconds` doc comment now states that non-identical overlapping rows are summed and that the result can exceed the line passes' per-player total by the overlap. Behaviour is unchanged. Status: fixed (documented as deliberate).
+
+### IN-09: `analyzeGameLines` doc comment now describes only the dedupe, not the function
+
+**Files modified:** `lib/research/lines.ts`
+**Commit:** 657e73f (shared with IN-08, same file)
+**Applied fix:** The JSDoc now leads with what the function returns (per-situation seconds, EV/PP/SH units, per-skater seconds), then keeps the dedupe note. The optional move of the dedupe into `bucketOnIce` was not done.
+
+## Skipped Issues
+
+### IN-01: Sort/tab links carry `sit` and `all` when no player is selected
+
+**File:** `components/ToiTrends.tsx:218`, `app/research/page.tsx:64`
+**Reason:** Skipped as a design decision, not a defect. The UI-SPEC (Interaction section) says team links "keep `sit`", and the close link keeps `sit`. `player-detail-view.test.ts` pins that ("the close link keeps the team, games and situation"). Emitting `sit`/`all` only when a player is set would reverse that spec and break the pinned tests, which goes beyond the finding. The review itself calls the extra params harmless and allowlisted. If the user wants cleaner URLs, change the spec first, then `researchHref`.
+**Original issue:** `researchHref` emits `sit` and `all` even when no `player` is set, so stale `?all=1` / `?sit=pp` persist through sort and team links.
 
 ---
 
