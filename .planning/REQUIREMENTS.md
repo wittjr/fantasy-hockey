@@ -23,17 +23,17 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Player Detail
 
-- [ ] **PLYR-01**: User can click a player row to open that player's detail; the selection is in the URL (`?player=<id>`) so it survives reload and can be shared
-- [ ] **PLYR-02**: User can see a linemate heat strip for the player — rows are linemates, columns are games, shading is minutes together — split by situation (EV/PP/SH) and by forward linemates vs D partners
-- [ ] **PLYR-03**: User can see time together as a share of the player's own situation TOI
-- [ ] **PLYR-04**: User can see linemates tagged New / Rising / Fading based on time together only (no quality scoring)
+- [x] **PLYR-01**: User can click a player row to open that player's detail; the selection is in the URL (`?player=<id>`) so it survives reload and can be shared
+- [x] **PLYR-02**: User can see a linemate heat strip for the player — rows are linemates, columns are games, shading is minutes together — split by situation (EV/PP/SH) and by forward linemates vs D partners
+- [x] **PLYR-03**: User can see time together as a share of the player's own situation TOI
+- [x] **PLYR-04**: User can see linemates tagged New / Rising / Fading based on time together only (no quality scoring)
 
 ### Unit Event Stats
 
 - [ ] **UNIT-01**: User can see SF/SA, GF/GA, CF/CA raw counts on every last-game unit table (EV, PP, SH; forwards and defense)
 - [ ] **UNIT-02**: User can see SF%, CF% and +/- on unit tables, showing "—" when a unit has no events
 - [ ] **UNIT-03**: User can read a legend defining the stats and exclusions (empty-net, shootout, teammate-blocked attempts are excluded), with an "other" row so unit totals reconcile with team totals
-- [ ] **UNIT-04**: User can click a player name in a unit table to open that player's detail
+- [x] **UNIT-04**: User can click a player name in a unit table to open that player's detail
 
 ## v2 Requirements
 
@@ -81,14 +81,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRND-03 | Phase 1 | Complete |
 | TRND-04 | Phase 1 | Complete |
 | TRND-05 | Phase 1 | Complete |
-| PLYR-01 | Phase 2 | Pending |
-| PLYR-02 | Phase 2 | Pending |
-| PLYR-03 | Phase 2 | Pending |
-| PLYR-04 | Phase 2 | Pending |
+| PLYR-01 | Phase 2 | Complete |
+| PLYR-02 | Phase 2 | Complete |
+| PLYR-03 | Phase 2 | Complete |
+| PLYR-04 | Phase 2 | Complete |
 | UNIT-01 | Phase 3 | Pending |
 | UNIT-02 | Phase 3 | Pending |
 | UNIT-03 | Phase 3 | Pending |
-| UNIT-04 | Phase 2 | Pending |
+| UNIT-04 | Phase 2 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total

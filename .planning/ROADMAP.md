@@ -13,7 +13,7 @@ This milestone refines the existing Line research page (`/research`) into a tool
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Ice-Time Trends Table** - Replace the per-game ice-time grid with a sortable trends table that shows who is moving up or down (completed 2026-10-12)
-- [ ] **Phase 2: Player Linemate Detail** - Click any player to see a per-game linemate heat strip by situation, with New/Rising/Fading tags
+- [x] **Phase 2: Player Linemate Detail** - Click any player to see a per-game linemate heat strip by situation, with New/Rising/Fading tags (completed 2026-10-12)
 - [ ] **Phase 3: Unit Event Stats** - Show boxscore-reconciled shots, goals and Corsi on every last-game unit table
 
 ## Phase Details
@@ -76,7 +76,7 @@ Plans:
   4. Linemates are tagged New, Rising or Fading from time together alone (no quality scoring); a forward moved to a new line in the latest game shows the new linemates as New and the old ones as Fading
   5. Games whose shift chart is missing show as unknown ("—" or blank) in the heat strip, never 0, and do not count toward shares or tags; the existing last-game unit tables still show the same TOI and share values as before this phase
 
-**Plans:** 7/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 **Wave 1**
@@ -124,5 +124,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
-| 2. Player Linemate Detail | 7/7 | In Progress | - |
+| 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
 | 3. Unit Event Stats | 0/TBD | Not started | - |
