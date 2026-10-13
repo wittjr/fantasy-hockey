@@ -31,7 +31,9 @@ export function uniqueShifts(shifts: readonly ShiftInput[]): ShiftInput[] {
 
 /**
  * Seconds each of `team`'s players was on ice in periods 1-3.
- * Equals boxscore TOI minus OT for a complete shift chart. Identical rows are dropped by `uniqueShifts`.
+ * Equals boxscore TOI minus OT for a complete shift chart. Identical rows are dropped by `uniqueShifts`, but a player's
+ * overlapping rows that are not identical are summed. The line passes (`analyzeGameLines`, `pairSeconds`) count each such
+ * second once, so on an anomalous OT/SO chart this can exceed the same player's `playerSeconds` total by the overlap.
  */
 export function regulationSeconds(team: string, shifts: ShiftInput[]): Map<number, number> {
   const seconds = new Map<number, number>();
@@ -111,6 +113,7 @@ export function bucketOnIce(
 }
 
 /**
+ * Per-situation seconds, the EV/PP/SH forward and defense units, and each skater's seconds by situation for `team`.
  * Repeated shift rows are dropped by `uniqueShifts`, and a player with overlapping rows that are not
  * identical counts once per second via `dedupeOnIce`. So neither can inflate the on-ice skater count
  * (which decides EV/PP/SH), double a player's seconds, or put an id in a unit twice.
