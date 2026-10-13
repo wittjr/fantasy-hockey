@@ -656,7 +656,7 @@ test("a player with no earlier game to compare with gets a note", () => {
   const g = fixtureGames()[0];
   const games = [mkGame(11, "2026-10-01", [2], null), mkGame(12, "2026-10-02", [2], null), mkGame(13, "2026-10-03", [2], null), { ...g, id: 14, date: "2026-10-04" }, { ...g, id: 15, date: "2026-10-05" }];
   const notes = footnotes(renderPanel(research(games))).map((n) => n.text);
-  assert.ok(notes.includes("No tags: Alpha Center has no earlier games in this window to compare with."), notes.join("|"));
+  assert.ok(notes.includes("No tags: Alpha Center has no even-strength time with a shift chart in the earlier games of this window to compare with."), notes.join("|"));
 });
 
 test("the tag notes are not amber", () => {

@@ -96,7 +96,7 @@ export function PlayerLinemates({
     "played-fewer-than-2": `No tags: ${name} played only ${view.tags.dressedGames} ${view.tags.dressedGames === 1 ? "game" : "games"} in this window.`,
     "missed-recent": `No tags: ${name} missed the team's ${recentGames}.`,
     "no-recent-data": `No tags: ${name} has no ${SITUATION_WORDS[sit]} time with a shift chart in the team's ${recentGames}.`,
-    "no-earlier-data": `No tags: ${name} has no earlier games in this window to compare with.`,
+    "no-earlier-data": `No tags: ${name} has no ${SITUATION_WORDS[sit]} time with a shift chart in the earlier games of this window to compare with.`,
   };
   const tagNote = view.tags.reason ? tagNotes[view.tags.reason] : undefined;
   const showAllHref = researchHref(team, gameCount, sort, { player: playerId, sit, all: !all });
