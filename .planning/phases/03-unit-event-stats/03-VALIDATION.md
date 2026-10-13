@@ -51,7 +51,7 @@ Filled in by the planner (2026-10-13); renumbered the same day when the fixture 
 | 03-01-T2 | DATA-02 / DATA-03 | `buildGameEvents` returns null (unknown, never zeros) for an empty shift list, a null play-by-play or one with no plays | unit | same | ❌ W0 | ⬜ pending |
 | 03-01-T2 | DATA-03 | Mapper: shootout by `periodType`, penalty-shot codes, pulled-goalie flag from either goalie digit (incl. blocked shots), teammate-blocked, owner = shooter, unknown reason ignored, missing `details` tolerated | unit | `npx tsx --test lib/research/play-events.test.ts` | ❌ W0 | ⬜ pending |
 | 03-01-T3 | SC1 / Phase 2 regression (D-13, D-22) | `analyzeGameLines` unchanged after extracting `unitKey()` except that unit Time credits pulled-goalie, opponent-missing, 4-on-4 and 3-on-3 seconds to Other; player seconds and pair seconds unchanged | unit (existing, additive) | `npx tsx --test lib/research/lines.test.ts lib/research/events.test.ts lib/research/pair-seconds.test.ts lib/research/linemates.test.ts` | ✅ assertions only added | ⬜ pending |
-| 03-02-T1 | DATA-03 / SC1 (gate, part 2) | Team SOG and every skater's plus-minus reproduce on the overtime, shootout, empty-net and penalty-shot fixtures (one named, pinned exemption on 2025020500); missing-chart fixture 2026020026 gives `events === null` | fixture | `npx tsx --test lib/research/events.test.ts lib/research/play-events.test.ts` | ✅ (from 03-01) | ⬜ pending |
+| 03-02-T1 | DATA-03 / SC1 (gate, part 2) | Team SOG reproduces on the overtime, shootout, empty-net and penalty-shot fixtures, and every skater's plus-minus with one documented, cause-checked exception (2025020500, A. Panarin; see Known Exceptions); missing-chart fixture 2026020026 gives `events === null` | fixture | `npx tsx --test lib/research/events.test.ts lib/research/play-events.test.ts` | ✅ (from 03-01) | ⬜ pending |
 | 03-02-T2 | DATA-03 | Exclusion counters on real games (shootout attempts on 2026020075, one penalty shot each on 2025020528 and 2025020500); the gate set is pinned to the six games | fixture | same | ✅ | ⬜ pending |
 | 03-03-T1 | DATA-02 (D-16, D-17) | Match quality: good fixtures >= 0.95; removing period 2 falls below; shootout and penalty shots not counted | fixture + unit | `npx tsx --test lib/research/events.test.ts` | ✅ (from 03-01) | ⬜ pending |
 | 03-03-T2 | DATA-03 (D-23) | Shift-chart sanity check flags 2025020565 and no gate fixture; its repeated and foreign shift rows change no count | fixture | `npx tsx --test lib/research/events.test.ts` | ✅ | ⬜ pending |
@@ -60,14 +60,26 @@ Filled in by the planner (2026-10-13); renumbered the same day when the fixture 
 | 03-04-T3 | DATA-02 / SC4 | Missing shift chart gives `events === null`; play-by-play failure or empty play-by-play keeps the game with `events === null` and `lines` intact | integration (stubbed fetch) | `npx tsx --test lib/research/team-games.test.ts` | ✅ extend | ⬜ pending |
 | 03-05-T1 | UNIT-01 / UNIT-02 / SC2 | View-model: counts per unit, SF%/CF% "—" at 0, +/- with U+2212 (`0` with attempts but no goals, "—" with no events, D-20), null events → all "—"; 13 columns and group headers in markup | unit + markup | `npx tsx --test lib/research/unit-events-view.test.ts` | ❌ W0 | ⬜ pending |
 | 03-05-T2 | UNIT-03 / SC3 | Other and Total rows: listed + Other == Total for time and every count; omitted rows; F and D Totals equal | unit + markup | same | ✅ | ⬜ pending |
-| 03-05-T3 | UNIT-03 / DATA-02 | Exclusions note (singular/plural, none → no line), legend lines (pulled-goalie events in Other, D-21), amber notes D-18/D-23/D-16/D-05; live render check | unit + markup + live smoke | same; `npx tsx .planning/phases/03-unit-event-stats/live-events-smoke.ts` | ✅ | ⬜ pending |
+| 03-05-T3 | UNIT-03 / DATA-02 | Exclusions note (singular/plural, none → no line), legend lines (pulled-goalie events in Other, D-21), amber notes D-18/D-23/D-16/D-05 (the live render check moved to 03-07-T1 U3) | unit + markup | same | ✅ | ⬜ pending |
 | 03-06-T1 | DATA-01 | TTL tier: under 48 h → 3600, older → 2592000, missing start → 3600; passed to boxscore, play-by-play and shift chart; 429 with short `Retry-After` retries, long fails fast, at most 2 retries; empty re-requests uncached | unit (stub fetch, Retry-After "0") | `npx tsx --test lib/nhl/client.test.ts` | ✅ extend | ⬜ pending |
 | 03-06-T2 | DATA-01 | Pool: never more than N in flight, output order preserved, one rejection does not stop others, newest-first start order, per-game cache tier | unit | `npx tsx --test lib/research/team-games.test.ts` | ✅ extend | ⬜ pending |
 | 03-06-T3 | DATA-01 / SC5 | Cold Last 20 for three teams back to back (no fetch cache): no 429, no unavailable date | live | `npx tsx .planning/phases/03-unit-event-stats/cold-last20-check.ts` | ❌ (script created by the task) | ⬜ pending |
-| 03-07-T1 | DATA-01 / SC5, UNIT-01..03 backstops | In-app cold Last 20 for three teams, warm reload with no api-web call, table structure, UNIT-04 links, 1024px light/dark, dividers and Total row | WebKit | `node .planning/phases/03-unit-event-stats/webkit-units-check.cjs` | ❌ (script created by the task) | ⬜ pending |
+| 03-07-T1 | DATA-01 / SC5, UNIT-01..03 backstops | In-app cold Last 20 for three teams, warm reload with no api-web call, table structure rendered from live data with no negative Other count (U3, the phase's live render evidence), UNIT-04 links, 1024px light/dark, dividers and Total row | WebKit | `node .planning/phases/03-unit-event-stats/webkit-units-check.cjs` | ❌ (script created by the task) | ⬜ pending |
 | 03-07-T2 | Phase 2 regression + end of phase | Phase 2 harness passes with N8 updated (out-of-phase file, rationale in 03-07-PLAN.md); live smoke; full suite; human check | WebKit + live + manual | `node .planning/phases/02-player-linemate-detail/webkit-player-check.cjs`; full suite command | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+---
+
+## Known Exceptions
+
+Carried into phase verification. Each is pinned by a test and must be reported, never silently counted as a pass.
+
+| Requirement / SC | Exception | Cause | Pinned by |
+|------------------|-----------|-------|-----------|
+| DATA-03 / SC1 (plus-minus) | Game 2025020500, A. Panarin: official 0, reproduced -1. The only skater in the six gate fixtures whose plus-minus does not match | His P1 shift 15:28-16:18 ends on the P1 goal at 16:18; the locked `start < t <= end` rule counts him on ice for it and the official record does not (research Pitfall 4). The rule is not changed for him | Plan 03-02: the single `KNOWN_BOXSCORE_DISAGREEMENTS` entry and its cause test in `lib/research/events.test.ts`; reported in 03-02-SUMMARY.md `## Known exceptions` |
+
+SC1 is therefore reported as "team SOG reproduces on every gate game; every skater's plus-minus reproduces with one documented exception", not as "all skaters reconcile".
 
 ---
 
