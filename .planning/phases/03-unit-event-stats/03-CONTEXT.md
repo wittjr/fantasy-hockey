@@ -26,7 +26,7 @@ Not in this phase: event stats outside the last-game unit tables, event trends, 
 
 ### Caching and throttling (DATA-01)
 - **D-01:** Goal is **fewer NHL calls** using Next's existing fetch cache. No Neon persistence (stays out of scope per REQUIREMENTS).
-- **D-02:** **Tiered TTL by game age** for finished-game data (boxscore, shift chart, play-by-play): games **under 48 hours old revalidate every 1 hour; older games every 1 week**. Named constants. The existing empty-shift-chart uncached re-request (`getShiftCharts`) stays.
+- **D-02:** **Tiered TTL by game age** for finished-game data (boxscore, shift chart, play-by-play): games **under 48 hours old revalidate every 1 hour; older games every 30 days**. Named constants. The existing empty-shift-chart uncached re-request (`getShiftCharts`) stays.
 - **D-03:** **No manual refresh / cache-bypass control** on the page.
 - **D-04:** When requests still fail after bounded concurrency + 429 retry, the **page always renders**; games that failed are left out and named in the existing banner (Phase 1 01-06 pattern).
 - **D-05:** **Play-by-play-only failure keeps the game.** If the boxscore and shift chart loaded but play-by-play failed or is unpublished, the game stays in TOI trends and the linemate strip; only its event columns show "—", and the page notes that play-by-play is missing for that date. Same spirit as a failed shift chart today.

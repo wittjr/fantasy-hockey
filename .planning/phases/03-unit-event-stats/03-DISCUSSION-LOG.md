@@ -25,7 +25,7 @@
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| <48h: 1h, older: 1 week | Recent games refresh hourly | ✓ |
+| <48h: 1h, older: 1 week | Recent games refresh hourly | ✓ (later changed to 30 days) |
 | <24h: 1h, older: 1 day | More conservative | |
 | You decide | | |
 
@@ -101,3 +101,5 @@ Last game without PBP: **'—' with a note, no fallback** (vs fall back to previ
 ## Deferred Ideas
 
 None.
+
+**Follow-up (2026-10-13):** User changed the older-game TTL from 1 week to 30 days.
