@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: WR-01
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "pairSeconds classifies strength from a duplicate-inflated skater count, then deduplicates only the credited seconds"
   - id: WR-02
     severity: warning
@@ -13,7 +13,7 @@ findings:
     title: "\"no-earlier-data\" tag note states a false cause"
   - id: WR-04
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Footer still says linemates are sorted \"most recent time together first\" after D-28"
   - id: IN-01
     severity: info
@@ -43,18 +43,18 @@ findings:
     severity: info
     disposition: open
     title: "Line-change tests no longer assert ordering"
-open: 9
+open: 7
 total: 10
-recorded: 2026-10-13T01:17:50.086Z
+recorded: 2026-10-13T01:18:00.753Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-01 | warning | open | - |
+| WR-01 | warning | fixed | 02-REVIEW-FIX.md |
 | WR-02 | warning | fixed | 02-REVIEW-FIX.md |
-| WR-04 | warning | open | - |
+| WR-04 | warning | fixed | 02-REVIEW-FIX.md |
 | IN-01 | info | open | - |
 | IN-02 | info | open | - |
 | IN-03 | info | open | - |
