@@ -46,6 +46,9 @@ export default async function DashboardPage({
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 p-8">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Your leagues</h1>
+        <Link href="/research" className="ml-auto mr-4 text-sm hover:underline">
+          Line research
+        </Link>
         <form
           action={async () => {
             "use server";

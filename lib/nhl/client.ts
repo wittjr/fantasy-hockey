@@ -3,8 +3,8 @@
 
 const NHL_BASE = "https://api-web.nhle.com/v1";
 
-async function nhlGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${NHL_BASE}/${path}`, { headers: { Accept: "application/json" } });
+async function nhlGet<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${NHL_BASE}/${path}`, { ...init, headers: { Accept: "application/json" } });
   if (!res.ok) {
     throw new Error(`NHL API ${path} failed: ${res.status} ${res.statusText}`);
   }
@@ -79,4 +79,74 @@ interface ScheduleWeekResponse {
 export async function getScheduleWeek(date: string): Promise<Array<{ date: string; games: NhlGame[] }>> {
   const data = await nhlGet<ScheduleWeekResponse>(`schedule/${date}`);
   return data.gameWeek;
+}
+
+export interface NhlClubGame extends NhlGame {
+  gameState: string; // "FUT" | "PRE" | "LIVE" | "CRIT" | "FINAL" | "OFF"
+}
+
+/** Current-season schedule for one team, all game types, cached for 10 minutes. */
+export async function getClubScheduleNow(team: NhlTeamAbbrev): Promise<NhlClubGame[]> {
+  const data = await nhlGet<{ games: NhlClubGame[] }>(`club-schedule-season/${team}/now`, { next: { revalidate: 600 } });
+  return data.games;
+}
+
+export interface NhlBoxscoreSkater {
+  playerId: number;
+  name: { default: string };
+  position: string;
+  toi: string; // "MM:SS"
+}
+
+export interface NhlBoxscoreTeamStats {
+  forwards: NhlBoxscoreSkater[];
+  defense: NhlBoxscoreSkater[];
+  goalies: NhlBoxscoreSkater[];
+}
+
+export interface NhlBoxscore {
+  id: number;
+  gameDate: string;
+  awayTeam: { abbrev: string; score?: number };
+  homeTeam: { abbrev: string; score?: number };
+  playerByGameStats: { awayTeam: NhlBoxscoreTeamStats; homeTeam: NhlBoxscoreTeamStats };
+  gameOutcome?: { lastPeriodType: "REG" | "OT" | "SO" };
+}
+
+// Finished games only change for stat corrections; an hour keeps them fresh enough.
+const FINISHED_GAME_CACHE = { next: { revalidate: 3600 } };
+
+export async function getBoxscore(gameId: number): Promise<NhlBoxscore> {
+  return nhlGet<NhlBoxscore>(`gamecenter/${gameId}/boxscore`, FINISHED_GAME_CACHE);
+}
+
+export interface NhlShift {
+  playerId: number;
+  teamAbbrev: string;
+  period: number;
+  startTime: string; // "MM:SS" elapsed in period
+  endTime: string | null;
+  typeCode: number; // 517 = shift; 505 = goal marker
+}
+
+const SHIFT_TYPE_CODE = 517;
+
+async function fetchShiftCharts(gameId: number, init: RequestInit): Promise<NhlShift[]> {
+  const res = await fetch(`https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp=gameId=${gameId}`, {
+    ...init,
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`NHL shift charts ${gameId} failed: ${res.status} ${res.statusText}`);
+  const data = (await res.json()) as { data: NhlShift[] };
+  return data.data.filter((s) => s.typeCode === SHIFT_TYPE_CODE);
+}
+
+/**
+ * Every shift in a game, from the separate NHL stats API. Can be empty for a short while after a
+ * game ends, until the league publishes shift charts. An empty cached result is re-requested
+ * uncached so it is not pinned for the hour; a published chart stays in the hour cache.
+ */
+export async function getShiftCharts(gameId: number): Promise<NhlShift[]> {
+  const shifts = await fetchShiftCharts(gameId, FINISHED_GAME_CACHE);
+  return shifts.length > 0 ? shifts : fetchShiftCharts(gameId, { cache: "no-store" });
 }
