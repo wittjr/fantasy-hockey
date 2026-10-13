@@ -29,7 +29,7 @@ status: all_fixed
 **Files modified:** `lib/research/pair-seconds.ts`, `lib/research/pair-seconds.test.ts`
 **Commit:** d935cc1
 **Applied fix:** Deduplicated the on-ice skaters before calling `situationFor`, for both own team and opponent (an opponent's overlapping rows would flip strength the same way). Removed the later per-loop `new Set`. Updated the file header to say this deliberately differs from `analyzeGameLines`, which still classifies from the raw count. `analyzeGameLines` was left unchanged (outside the finding's scope), so the oracle test still holds only for clean charts. Added two fixture tests: a player with two overlapping differing rows, and an opponent with the same. Both fail on the old code (own seconds split ev 30 / pp 30) and pass now (ev 60).
-**Status:** fixed: requires human verification (logic change). Decide whether `analyzeGameLines` should get the same dedupe so the two passes agree.
+**Status:** fixed. Follow-up resolved 2026-10-12: the user chose to give `analyzeGameLines` the same dedupe. Quick task 261012-tph (`53f510b`, `1a5d2f5`) added a shared `dedupeOnIce` in `lib/research/lines.ts`, applied it in both passes, and extended the oracle test to charts with overlapping rows, so the two passes agree again. The header note above about `pairSeconds` differing no longer applies.
 
 ### WR-02: "no-earlier-data" tag note states a false cause
 
