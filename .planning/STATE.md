@@ -4,10 +4,10 @@ current_phase: 3
 current_phase_name: Unit Event Stats
 status: planning
 stopped_at: Phase 2 complete, ready to plan Phase 3
-last_updated: "2026-10-13T01:11:44.948Z"
+last_updated: "2026-10-13T01:29:42.889Z"
 last_activity: 2026-10-12
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
-state_head: 7e339526691995d7d7356553ecff8cf4ac0738a4
+state_head: 67949f387f6d10ead5a77dd158e37f9db996ac87
 progress:
   total_phases: 3
   completed_phases: 2
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-12)
 Phase: 3 — Unit Event Stats
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-12 — Phase 2 complete, transitioned to Phase 3
+Last activity: 2026-10-12 - Completed quick task 261012-tph: WR-01 follow-up: dedupe on-ice skaters before strength classification in analyzeGameLines
 
 Progress: [███████░░░] 67% (2 of 3 phases; 16/16 planned plans done)
 
@@ -121,6 +121,12 @@ None yet.
 - [All phases]: Site targets laptop browsers; no phone/touch UAT
 - [Phase 3]: Decide whether SF%/CF% appear on PP/SH tables (research warns PP/SH "against" counts are easily misread as quality)
 - [Phase 3]: NHL API returned HTTP 429 at ~40 concurrent requests; verify the bounded-concurrency cap in dev before production
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261012-tph | WR-01 follow-up: dedupe on-ice skaters before strength classification in analyzeGameLines | 2026-10-12 | 67949f3 | [261012-tph-wr-01-follow-up-dedupe-skaters-before-st](./quick/261012-tph-wr-01-follow-up-dedupe-skaters-before-st/) |
 
 ## Deferred Items
 
