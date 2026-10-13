@@ -24,7 +24,7 @@ status: all_fixed
 
 ## Fixed Issues
 
-### WR-01: pairSeconds classifies strength from a duplicate-inflated skater count
+### WR-01: pairSeconds classifies strength from a duplicate-inflated skater count, then deduplicates only the credited seconds
 
 **Files modified:** `lib/research/pair-seconds.ts`, `lib/research/pair-seconds.test.ts`
 **Commit:** d935cc1
@@ -37,7 +37,7 @@ status: all_fixed
 **Commit:** 0cb6e26
 **Applied fix:** Reworded the note to "has no {situation} time with a shift chart in the earlier games of this window to compare with", matching what the `no-earlier-data` reason actually checks. Updated the pinned string in the view test.
 
-### WR-04: Footer still says "most recent time together first" after D-28
+### WR-04: Footer still says linemates are sorted "most recent time together first" after D-28
 
 **Files modified:** `components/PlayerLinemates.tsx`, `lib/research/player-detail-view.test.ts`
 **Commit:** 379c17c
