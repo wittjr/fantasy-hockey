@@ -78,7 +78,16 @@ export interface OnIce {
   goalie: boolean;
 }
 
-/** Every on-ice second of the game (key: seconds since the start of period 1), per team. */
+/** One entry per player, so overlapping rows for the same player cannot inflate the skater count that decides strength. */
+export function dedupeOnIce(onIce: OnIce): OnIce {
+  return { skaters: [...new Set(onIce.skaters)], goalie: onIce.goalie };
+}
+
+/**
+ * Every on-ice second of the game (key: seconds since the start of period 1), per team.
+ * A player with overlapping rows that are not identical is listed once per row, so callers that count
+ * skaters should pass each OnIce through `dedupeOnIce`.
+ */
 export function bucketOnIce(
   shifts: ShiftInput[],
   positions: Map<number, PositionGroup>,
@@ -102,8 +111,9 @@ export function bucketOnIce(
 }
 
 /**
- * Repeated shift rows are counted once (see `uniqueShifts`), so a duplicate can neither inflate the
- * on-ice skater count (which decides EV/PP/SH) nor double-count a player's seconds.
+ * Repeated shift rows are dropped by `uniqueShifts`, and a player with overlapping rows that are not
+ * identical counts once per second via `dedupeOnIce`. So neither can inflate the on-ice skater count
+ * (which decides EV/PP/SH), double a player's seconds, or put an id in a unit twice.
  */
 export function analyzeGameLines(
   team: string,
@@ -121,9 +131,10 @@ export function analyzeGameLines(
   const playerSeconds = new Map<number, Record<Situation, number>>();
 
   for (const byTeam of seconds.values()) {
-    const mine = byTeam.get(team);
-    if (!mine || mine.skaters.length === 0) continue;
-    const opp = [...byTeam].find(([abbrev]) => abbrev !== team)?.[1] ?? { skaters: [], goalie: false };
+    const rawMine = byTeam.get(team);
+    if (!rawMine || rawMine.skaters.length === 0) continue;
+    const mine = dedupeOnIce(rawMine);
+    const opp = dedupeOnIce([...byTeam].find(([abbrev]) => abbrev !== team)?.[1] ?? { skaters: [], goalie: false });
     const situation = situationFor(mine, opp);
     situationSeconds[situation]++;
 
