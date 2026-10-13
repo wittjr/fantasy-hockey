@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { PlayerLink } from "@/components/PlayerLink";
 import { formatClock, formatDate, gameLabel, resultLabel } from "@/lib/research/format";
 import type { Situation, Unit } from "@/lib/research/lines";
+import { SITUATION_ABBREV } from "@/lib/research/linemates";
 import type { TeamResearch } from "@/lib/research/team-games";
 import type { SortSpec } from "@/lib/research/toi-trends";
 
@@ -10,7 +11,6 @@ const UNIT_LIMITS: Record<Situation, { F: number; D: number }> = {
   pp: { F: 2, D: 2 },
   sh: { F: 3, D: 3 },
 };
-const SITUATION_LABELS: Record<Situation, string> = { ev: "EV", pp: "PP", sh: "SH" };
 
 /** Each name links to that player's panel on the table's own situation tab, so a PP name opens the PP tab. */
 export function LastGameLines({
@@ -47,7 +47,7 @@ export function LastGameLines({
             (["F", "D"] as const).map((group) => (
               <UnitTable
                 key={`${situation}-${group}`}
-                title={`${SITUATION_LABELS[situation]} - ${group === "F" ? "Forwards" : "Defense"}`}
+                title={`${SITUATION_ABBREV[situation]} - ${group === "F" ? "Forwards" : "Defense"}`}
                 units={game.lines!.units[situation][group].slice(0, UNIT_LIMITS[situation][group])}
                 name={name}
                 situation={situation}
@@ -109,7 +109,7 @@ function UnitTable({
                       team={link.team}
                       gameCount={link.gameCount}
                       sort={link.sort}
-                      title={`Show who ${name(id)} plays with at ${SITUATION_LABELS[situation]}`}
+                      title={`Show who ${name(id)} plays with at ${SITUATION_ABBREV[situation]}`}
                     />
                   </Fragment>
                 ))}
