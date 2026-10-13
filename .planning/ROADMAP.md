@@ -111,28 +111,38 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 7 plans
+**Plans:** 11 plans
 
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — Tracer + gate (part 1): one real regulation game → play-by-play mapper → on-ice attribution reproduces boxscore SOG and every skater's plus-minus; pulled-goalie and 4-on-4/3-on-3 time and events go to Other (D-13, D-21, D-22)
+- [ ] 03-01-PLAN.md — Tracer + gate (part 1): one real regulation game → play-by-play mapper → on-ice attribution reproduces boxscore SOG and every skater's plus-minus; mapper exclusion and pulled-goalie rules pinned
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-02-PLAN.md — Gate (part 2): overtime, shootout, empty-net, penalty-shot and missing-shift-chart fixtures reproduce boxscore SOG and every skater's plus-minus (one pinned exemption); exclusion counters
+- [ ] 03-02-PLAN.md — Gate (part 2): attribution rules pinned on every fixture (start < t <= end, pulled goalie, 4-on-4/3-on-3, accounting, listed ≤ Total, purity); unit Time follows the same creditsUnit rule (D-13, D-21, D-22)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-03-PLAN.md — Reliability flags: shift-vs-situationCode match quality (95% threshold) and corrupted shift chart detection with the 2025020565 fixture (D-16, D-17, D-23)
-- [ ] 03-04-PLAN.md — Play-by-play on every game load: getPlayByPlay, ResearchGame.events (null = unknown), play-by-play failure keeps the game (D-05), live boxscore reconciliation smoke
+- [ ] 03-03-PLAN.md — Gate (part 3): overtime, shootout, empty-net, penalty-shot and missing-shift-chart fixtures reproduce boxscore SOG and every skater's plus-minus (one pinned exemption); exclusion counters
 
-**Wave 4** *(blocked on Wave 3 completion; 03-05 is the gated event-column plan)*
-- [ ] 03-05-PLAN.md — Unit tables: GF GA +/- | SF SA SF% | CF CA CF% on all six stacked tables, Other and Total rows, legend, exclusions note, amber notes
-- [ ] 03-06-PLAN.md — Last 20 without throttling: tiered finished-game cache (1 h / 30 d), short Retry-After 429 retry, paced newest-first pool, measured cold Last 20
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 03-04-PLAN.md — Reliability flags: shift-vs-situationCode match quality (95% threshold) and corrupted shift chart detection with the 2025020565 fixture (D-16, D-17, D-23)
+- [ ] 03-05-PLAN.md — Play-by-play on every game load: getPlayByPlay, ResearchGame.events (null = unknown), play-by-play failure keeps the game (D-05), live boxscore reconciliation smoke
 
-**Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 03-07-PLAN.md — WebKit check of the tables and in-app cold/warm Last 20, Phase 2 regression run, end-of-phase human check
+**Wave 5** *(blocked on Wave 4 completion; 03-06 is the gated event-column plan)*
+- [ ] 03-06-PLAN.md — Unit tables: GF GA +/- | SF SA SF% | CF CA CF% on all six stacked tables, Other and Total rows
+- [ ] 03-07-PLAN.md — Last 20 without throttling: tiered finished-game cache (1 h / 30 d), short Retry-After 429 retry, paced newest-first pool
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 03-08-PLAN.md — Unit tables: legend, exclusions note and amber reliability notes (D-05, D-14 to D-16, D-18, D-21, D-23)
+- [ ] 03-09-PLAN.md — Last 20 measured: cold three-team CLI check tunes the pacing; WebKit harness with in-app cold and warm Last 20 (U1, U2)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 03-10-PLAN.md — WebKit checks of the unit tables on live data: structure and no negative Other (U3), name links (U4), 1024px light/dark (U5), dividers and Total row (U6)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [ ] 03-11-PLAN.md — Phase 2 regression run with N8 updated, live smoke rerun, full suite and end-of-phase human check
 
 **UI hint**: yes
-**Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs. The tests span 03-01 (regulation game) and 03-02 (the other game types); encoded as 03-05 `depends_on: 03-01, 03-02`.
+**Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs. The tests span 03-01 (regulation game and mapper rules), 03-02 (attribution rules on every fixture) and 03-03 (the other game types); encoded as 03-06 `depends_on: 03-01, 03-02, 03-03` (03-08, which adds the notes and legend, lists them too).
 **Research flags**: Needs a fixture-test spike (5-6 real games) before the main build; measure NHL 429 behaviour with the bounded-concurrency loader in dev before deploying to Vercel; decide the per-game on-ice vs `situationCode` match threshold (research suggests 95%) for flagging a game's event stats as unreliable.
 
 ## Progress
@@ -144,4 +154,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 0/6 | Planned | - |
+| 3. Unit Event Stats | 0/11 | Planned | - |

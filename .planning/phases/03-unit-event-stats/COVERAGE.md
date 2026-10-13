@@ -17,7 +17,7 @@
 | play-by-play events hit, giveaway, takeaway | OPT-OUT | not needed: not in the unit-table stat set (D-09) |
 | play-by-play events penalty, delayed-penalty | OPT-OUT | not needed: strength comes from the shift chart through the one shared classifier (locked decision) |
 | play-by-play stoppage, period and game boundary events | OPT-OUT | not needed: periods come from each shot event's periodDescriptor |
-| play-by-play rosterSpots | OPT-OUT | not needed: positions come from the boxscore (dropping the boxscore call is only a fallback if 429s persist, plan 03-06) |
+| play-by-play rosterSpots | OPT-OUT | not needed: positions come from the boxscore (dropping the boxscore call is only a fallback if 429s persist, plan 03-09) |
 | play-by-play shot location and type (xCoord, yCoord, zoneCode, shotType) | OPT-OUT | explicitly out of scope: xG and shot quality (REQUIREMENTS Out of Scope) |
 | play-by-play goalieInNetId | OPT-OUT | not needed: the situationCode goalie digit covers blocked shots too (research) |
 | play-by-play scorer and assist ids | OPT-OUT | not needed: unit counts come from who was on ice, not who scored |
