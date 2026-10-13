@@ -37,7 +37,7 @@ findings:
     title: "Duplicated situation labels and an export with no consumers"
   - id: IN-06
     severity: info
-    disposition: open
+    disposition: deferred
     title: "Window-share ordering favours linemates with few counted games"
   - id: IN-07
     severity: info
@@ -60,7 +60,7 @@ recorded: 2026-10-13T01:18:00.753Z
 | IN-03 | info | open | - |
 | IN-04 | info | open | - |
 | IN-05 | info | open | - |
-| IN-06 | info | open | - |
+| IN-06 | info | deferred | accepted by design, follows from D-28 window-share ordering (user, 2026-10-12); no fix planned |
 | IN-07 | info | open | - |
 
 Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
