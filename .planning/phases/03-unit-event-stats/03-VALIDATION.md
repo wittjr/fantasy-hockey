@@ -1,0 +1,98 @@
+---
+phase: "3"
+slug: "unit-event-stats"
+# status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
+# audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
+status: draft
+nyquist_compliant: false
+wave_0_complete: false
+created: "2026-10-13"
+---
+
+# Phase 3 — Validation Strategy
+
+> Per-phase validation contract for feedback sampling during execution. Derived from `03-RESEARCH.md` § Validation Architecture.
+
+---
+
+## Test Infrastructure
+
+| Property | Value |
+|----------|-------|
+| **Framework** | Node built-in test runner via tsx (`node:test`, `node:assert/strict`). Markup tests use `renderToStaticMarkup(createElement(...))` in `.ts` files |
+| **Config file** | none. The `npm test` script is `tsx --test lib/**/*.test.ts`, which only reaches one directory level, so new tests must sit directly in `lib/research/` or `lib/nhl/`. Fixture JSON can live in `lib/research/fixtures/` (not matched by the glob) |
+| **Quick run command** | `npx tsx --test lib/research/events.test.ts` (per task: list only the test files the task touches, plus `npx tsc --noEmit`) |
+| **Full suite command** | `npm test && npx tsc --noEmit && npm run lint && npm run build` |
+| **Estimated runtime** | ~1 s for `npm test` (baseline 334 pass on 2026-10-13), ~1.5 s typecheck, ~4 s lint, build ~10-20 s |
+
+Note: `npm run lint` passes at baseline since commit 442d4cd (GSD tooling excluded from eslint), so the whole-repo lint is used, not Phase 2's scoped `npx eslint ...` list.
+
+---
+
+## Sampling Rate
+
+- **After every task commit:** the task's own `<automated>` commands (the quick run for the test files it touches) plus `npx tsc --noEmit`
+- **After every plan wave:** the full suite command above
+- **Before `/gsd-verify-work`:** full suite green, then the manual checks below (the cold "Last 20" check is mandatory before deploying to Vercel)
+- **Max feedback latency:** 15 seconds per task, excluding the build
+
+---
+
+## Per-Task Verification Map
+
+Filled in by the planner per task. Requirement coverage target, from research:
+
+| Requirement / SC | Behavior | Test Type | Automated Command | File Exists | Status |
+|------------------|----------|-----------|-------------------|-------------|--------|
+| DATA-03 / SC1 (gate) | Team SOG and every skater's plus-minus reproduce on the regulation, OT, shootout, empty-net and penalty-shot fixtures | fixture | `npx tsx --test lib/research/events.test.ts` | ❌ W0 | ⬜ pending |
+| DATA-03 / SC3 | Unit totals: listed rows + Other == Total per situation and group; included + excluded == all events | unit | same | ❌ W0 | ⬜ pending |
+| DATA-03 | `onIceAt` boundaries: shift ends at t, starts at t, `t <= 0`, period boundary, playoff OT period | unit | same | ❌ W0 | ⬜ pending |
+| DATA-03 | Mapper: shootout by `periodType`, penalty-shot codes, empty-net digit (incl. blocked shots), teammate-blocked, owner = shooter, unknown reason ignored, missing `details` tolerated | unit | `npx tsx --test lib/research/play-events.test.ts` | ❌ W0 | ⬜ pending |
+| DATA-03 | Anomalous shift chart fixture (2025020565) is handled as a negative regression case, not a plus-minus gate | fixture | `npx tsx --test lib/research/events.test.ts` | ❌ W0 | ⬜ pending |
+| DATA-02 / SC4 | Missing shift chart (2026020026 shape) gives `events === null`; play-by-play-only failure keeps the game, `events === null`, `lines` intact | integration (stubbed fetch) | `npx tsx --test lib/research/team-games.test.ts` | ✅ extend | ⬜ pending |
+| DATA-02 | Match quality: good fixtures >= 0.95; removing a period falls below; shootout and penalty shots not counted | unit | `npx tsx --test lib/research/events.test.ts` | ❌ W0 | ⬜ pending |
+| DATA-01 | TTL tier: under 48 h → 3600, older → 2592000, missing start → 3600; passed to boxscore, play-by-play and shift chart | unit | `npx tsx --test lib/nhl/client.test.ts` | ✅ extend | ⬜ pending |
+| DATA-01 | 429 with short `Retry-After` retries then succeeds; long `Retry-After` throws without sleeping; at most 2 retries; empty shift-chart re-request still uncached | unit (stub fetch, injectable sleep) | same | ✅ extend | ⬜ pending |
+| DATA-01 | Pool: never more than N in flight, output order preserved, one rejection does not stop others, newest-first start order | unit | `npx tsx --test lib/research/team-games.test.ts` (or a helper test) | ❌ W0 | ⬜ pending |
+| UNIT-01 / UNIT-02 / SC2 | View-model: counts per unit, SF%/CF% "—" at 0, +/- formatting with U+2212, null events → all "—" | unit | `npx tsx --test lib/research/unit-events-view.test.ts` | ❌ W0 | ⬜ pending |
+| UNIT-03 / SC3 | Other and Total rows, exclusions note text (singular/plural, none → no line), legend text covers shootout, empty-net and teammate-blocked | unit (view-model) + markup | same | ❌ W0 | ⬜ pending |
+| SC1 / Phase 2 regression | `analyzeGameLines` outputs unchanged after extracting a shared `unitKey()` | unit (existing) | `npx tsx --test lib/research/lines.test.ts` | ✅ must pass untouched | ⬜ pending |
+| Types | New `events` field on `ResearchGame` compiles with every test builder | typecheck | `npx tsc --noEmit` | ✅ | ⬜ pending |
+
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+---
+
+## Wave 0 Requirements
+
+- [ ] `lib/research/fixtures/*.json`: trimmed raw-shaped fixtures for the games in `03-RESEARCH.md` § Fixture Spike Results (captured once by a throwaway script that is not committed; only the JSON is committed; shift rows kept verbatim, duplicates included)
+- [ ] `lib/research/play-events.ts` + `lib/research/play-events.test.ts`
+- [ ] `lib/research/events.ts` + `lib/research/events.test.ts`: the DATA-03 gate; must be green before any plan that adds event columns to the unit tables runs
+- [ ] `lib/research/unit-events-view.test.ts`
+- [ ] Add `events: null` to the `ResearchGame` literal builders listed in `03-RESEARCH.md` Pitfall 9
+- No framework install needed.
+
+---
+
+## Manual-Only Verifications
+
+Desktop browser only (laptop target); no phone or touch checks.
+
+| Behavior | Requirement | Why Manual | Test Instructions |
+|----------|-------------|------------|-------------------|
+| A cold "Last 20" loads without NHL throttling failures, even for a second and third team within a minute; a warm reload makes no outbound calls | DATA-01 / SC5 | Needs the live NHL API and its real rate limit | `next dev`, clear `.next/cache`, open `/research?team=<X>&games=20` cold, then two more teams within a minute. Expect no 429 lines in the server log and no amber "Couldn't load" banner. Reload the first team and confirm zero outbound calls. If 429s appear, lower `MAX_CONCURRENT_GAMES` or raise the start gap before changing anything else |
+| Event columns, legend and Other row read correctly on real games; the Total row matches the official boxscore | UNIT-01, UNIT-02, UNIT-03 | Judgment and cross-check against NHL.com on live data | Signed in, open `/research?team=MTL&games=5`; check every Last game table (EV, PP, SH; forwards and defense) has SF/SA, GF/GA, CF/CA, SF%, CF%, +/-; compare the team's shots on goal with the NHL.com boxscore |
+| A game with no shift chart or no play-by-play shows "—" (never 0) and is left out of any average or trend | DATA-02 / SC4 | Needs a real affected game in the window | Pick a team whose window includes a game with no shift chart; confirm "—" in its event stats and that the rest of the page still renders |
+
+---
+
+## Validation Sign-Off
+
+- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
+- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
+- [ ] Wave 0 covers all MISSING references
+- [ ] No watch-mode flags
+- [ ] Feedback latency < 15s
+- [ ] `nyquist_compliant: true` set in frontmatter
+
+**Approval:** pending
