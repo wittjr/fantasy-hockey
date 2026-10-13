@@ -43,7 +43,7 @@ covered_files:
   - lib/research/toi-trends-view.test.ts
   - lib/research/toi-trends.test.ts
   - lib/research/toi-trends.ts
-covered_digest: "v3:sha256:2a47f3acf49e7e5f4ea987113b6168f351dff269f76740203d7907ef888ae57b"
+covered_digest: v3:sha256:30b05d15beff059109e21d517a654248a5464aabda601a74b3d2fbe97e0eb1da
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
