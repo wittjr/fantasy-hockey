@@ -1,14 +1,68 @@
-# Phase 2 — Code Review Disposition
+---
+phase: 02
+review: 02-REVIEW.md
+titles: json
+findings:
+  - id: WR-01
+    severity: warning
+    disposition: open
+    title: "pairSeconds classifies strength from a duplicate-inflated skater count, then deduplicates only the credited seconds"
+  - id: WR-02
+    severity: warning
+    disposition: fixed
+    title: "\"no-earlier-data\" tag note states a false cause"
+  - id: WR-04
+    severity: warning
+    disposition: open
+    title: "Footer still says linemates are sorted \"most recent time together first\" after D-28"
+  - id: IN-01
+    severity: info
+    disposition: open
+    title: "Sort/tab links carry `sit` and `all` when no player is selected"
+  - id: IN-02
+    severity: info
+    disposition: open
+    title: "Escape cannot dismiss a popover that is open by mouse hover alone"
+  - id: IN-03
+    severity: info
+    disposition: open
+    title: "Close link's accessible name does not contain its visible text"
+  - id: IN-04
+    severity: info
+    disposition: open
+    title: "Name links get different `sort` values depending on which table they are in"
+  - id: IN-05
+    severity: info
+    disposition: open
+    title: "Duplicated situation labels and an export with no consumers"
+  - id: IN-06
+    severity: info
+    disposition: open
+    title: "Window-share ordering favours linemates with few counted games"
+  - id: IN-07
+    severity: info
+    disposition: open
+    title: "Line-change tests no longer assert ordering"
+open: 9
+total: 10
+recorded: 2026-10-13T01:17:50.086Z
+---
 
-Source: `02-REVIEW.md` (a325686). Standard depth, 20 files, diff base f6be330; 0 critical, 2 warning, 5 info. Every finding starts `open`; update the disposition when it is fixed, deferred, or accepted.
+# Phase 02: Code Review Disposition
 
-| ID | Severity | Finding | Disposition |
-|----|----------|---------|-------------|
-| WR-01 | warning | `pairSeconds` classifies strength from `mine.skaters` before de-duplicating, so overlapping differing shift rows can turn a 5v5 second into PP and make `pairs.self` diverge from `analyzeGameLines` (same class as Phase 1 CR-01; oracle fixture has no overlapping rows) | open |
-| WR-02 | warning | The `no-earlier-data` note says the player "has no earlier games in this window", but it also fires when earlier games exist and he had no time in that situation (e.g. PP tab) | open |
-| W-03 | warning | (verifier) Line change only in the latest game of a 3+ game window lists old Fading linemates above the New ones, because D-12 orders by the last 2 games then window; contradicts the 02-06 "listed first" truth; no test for this case | fixed after UAT: user chose window-share ordering (D-28); New tag marks the change |
-| IN-01 | info | Sort/tab links carry `sit` and `all` when no player is selected | open |
-| IN-02 | info | Escape cannot dismiss a popover that is open by mouse hover alone | open |
-| IN-03 | info | Close link's `aria-label` does not contain its visible text | open |
-| IN-04 | info | `LastGameLines`/`PlayerLinemates` get raw `sort` while `ToiTrends` uses `effectiveSort` | open |
-| IN-05 | info | `SITUATION_LABELS` duplicates `SITUATION_ABBREV`; `LinemateRowView` exported with no consumers; `buildTrendRows` runs twice per request | open |
+| Finding | Severity | Disposition | Source |
+|---------|----------|-------------|--------|
+| WR-01 | warning | open | - |
+| WR-02 | warning | fixed | 02-REVIEW-FIX.md |
+| WR-04 | warning | open | - |
+| IN-01 | info | open | - |
+| IN-02 | info | open | - |
+| IN-03 | info | open | - |
+| IN-04 | info | open | - |
+| IN-05 | info | open | - |
+| IN-06 | info | open | - |
+| IN-07 | info | open | - |
+
+Dispositions: `open` (recorded, not yet triaged), `fixed`, `skipped`, `deferred`.
+Set `deferred` by hand and put the reason in the Source cell; both are preserved. A `|` in the reason is kept as prose and escaped on the next run.
+Re-running the gate keeps every row it can. A row the current review no longer reports is kept and its Source cell flagged, so a finding does not leave this record silently. ONE exception: when a finding id is REUSED by a different finding, the earlier decision cannot keep a row — the id is taken — and it is dropped. A RECORDED decision (anything but `open`) is named on the console when that happens; a row still at `open` is replaced silently, because `open` records no decision to lose.
