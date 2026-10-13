@@ -56,6 +56,7 @@ Not in this phase: event stats outside the last-game unit tables, event trends, 
 - **D-19:** A cold "Last 20" taking **about 10 s is acceptable**; ship the paced loader from research.
 - **D-20:** **+/- shows `0`** when a unit had shot attempts but no goals; "—" only when the unit had no events at all (research A3).
 - **D-21:** **Pulled-goalie (empty-net) stretches go to "Other", not to exclusions.** Every event while either team's goalie is out of the net (6v5 or 5v6, defending-goalie or shooting-team goalie digit `0` in `situationCode`) is counted in that situation's "Other" row and in Total, and is never attributed to a listed unit. This replaces research A4 and supersedes "empty-net" in the D-14 exclusions note and the D-15 legend: the legend says pulled-goalie events are in Other; exclusions remain shootout, penalty-shot and teammate-blocked attempts.
+- **D-22:** **The unit Time column follows D-21.** Seconds while either goalie is out of the net are credited to the "Other" row (and Total), not to a listed unit, so a unit's Time and its event counts cover the same stretches. Pulled-goalie seconds come from the shift chart (no goalie shift covering that second). This changes the unit tables' Time and % values from Phases 1–2 for games with a pulled goalie; update the affected `lines` tests deliberately. Player TOI totals, the trends table and Phase 2 linemate time are unchanged.
 
 ### Claude's Discretion
 - Concurrency cap and retry/backoff details for DATA-01 (research suggests ~6 concurrent; verify 429 behaviour in dev before production).
