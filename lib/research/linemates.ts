@@ -51,8 +51,6 @@ export interface LinemateRow {
   cells: LinemateCell[];
   /** Seconds together over the player's seconds, both summed over counted games; null when there are none (D-25). */
   windowShare: number | null;
-  /** Seconds together in counted games of the recent part of the window. */
-  recentSeconds: number;
   /** Seconds together in all counted games. */
   totalSeconds: number;
   /** Null when the change is under LINEMATE_TAG_POINTS or tags are unavailable. */
@@ -167,7 +165,7 @@ function linemateTag(games: readonly LinemateGame[], cells: readonly LinemateCel
   return crossing === -1 ? "Fading" : null;
 }
 
-/** Linemates of one skater in one situation: forwards and defense, recent time first (D-12, D-13), tagged and capped (D-11, D-26). */
+/** Linemates of one skater in one situation: forwards and defense, highest window share first (D-12, D-13), tagged and capped (D-11, D-26). */
 export function buildLinemateView(
   games: readonly LinemateGame[],
   players: ReadonlyMap<number, ResearchPlayer>,
@@ -190,12 +188,10 @@ export function buildLinemateView(
     const cells = games.map((g) => linemateCell(g, playerId, id, situation));
     let together = 0;
     let self = 0;
-    let recentSeconds = 0;
-    cells.forEach((c, i) => {
+    cells.forEach((c) => {
       if (c.seconds === null || c.selfSeconds === null) return;
       together += c.seconds;
       self += c.selfSeconds;
-      if (start !== null && i >= start) recentSeconds += c.seconds;
     });
     if (together < LINEMATE_MIN_SECONDS[situation]) continue;
     rows.push({
@@ -203,12 +199,11 @@ export function buildLinemateView(
       group: dominantGroup(games, id, player.group),
       cells,
       windowShare: self > 0 ? together / self : null,
-      recentSeconds,
       totalSeconds: together,
       tag: tags.available && start !== null ? linemateTag(games, cells, id, start) : null,
     });
   }
-  rows.sort((a, b) => b.recentSeconds - a.recentSeconds || b.totalSeconds - a.totalSeconds || a.player.id - b.player.id);
+  rows.sort((a, b) => (b.windowShare ?? 0) - (a.windowShare ?? 0) || b.totalSeconds - a.totalSeconds || a.player.id - b.player.id);
 
   const capped = (group: "F" | "D") =>
     rows.filter((r) => r.group === group).filter((r, i) => i < LINEMATE_CAPS[situation][group] || r.tag !== null);

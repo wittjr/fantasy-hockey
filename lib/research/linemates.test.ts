@@ -165,7 +165,7 @@ test("the listing minimum is 2:00 at EV and 0:30 on special teams", () => {
   assert.equal(allRows(buildLinemateView(pp30, players, PLAYER, "ev")).length, 0);
 });
 
-test("recent time ranks first even with a lower window total (synthetic line change with near-zero earlier overlap)", () => {
+test("rows order by window share, even when a newer linemate has more recent time (W-03)", () => {
   const dressed = [1, 2, 3];
   const games = [
     game(1, dressed, pairs(600, { 2: 600, 3: 0 })),
@@ -175,14 +175,15 @@ test("recent time ranks first even with a lower window total (synthetic line cha
     game(5, dressed, pairs(600, { 2: 0, 3: 400 })),
   ];
   const ids = allRows(buildLinemateView(games, players, PLAYER, "ev")).map((r) => r.player.id);
-  assert.deepEqual(ids, [3, 2]);
+  assert.deepEqual(ids, [2, 3]);
 });
 
-test("equal recent time orders by window total, then by id", () => {
+test("equal window share orders by window total, then by id", () => {
   const dressed = [1, 2, 3, 4];
+  // Linemate 2 missed game 1, so his share (300 / 600) equals 3 and 4 (600 / 1200) on half the seconds.
   const games = [
-    game(1, dressed, pairs(600, { 2: 100, 3: 300, 4: 300 }, { 4: "F" })),
-    game(2, dressed, pairs(600, { 2: 200, 3: 200, 4: 200 }, { 4: "F" })),
+    game(1, [1, 3, 4], pairs(600, { 3: 300, 4: 300 }, { 4: "F" })),
+    game(2, dressed, pairs(600, { 2: 300, 3: 300, 4: 300 }, { 4: "F" })),
   ];
   const ids = allRows(buildLinemateView(games, players, PLAYER, "ev")).map((r) => r.player.id);
   assert.deepEqual(ids, [3, 4, 2]);
@@ -333,7 +334,7 @@ test("tag constants are single named values: 15 points, and New below 10 points 
 
 // Synthetic line change with near-zero earlier overlap: P skated with 10 and 11 earlier and with 12 and 13 in the recent games.
 for (const n of [2, 3, 5]) {
-  test(`line change in a ${n}-game window: the new linemates are New and listed first, the old ones Fading`, () => {
+  test(`line change in a ${n}-game window: the new linemates are New, the old ones Fading`, () => {
     const start = recentStart(n)!;
     const dressed = [1, 10, 11, 12, 13];
     const games = Array.from({ length: n }, (_, i) =>
@@ -341,7 +342,8 @@ for (const n of [2, 3, 5]) {
     );
     const view = buildLinemateView(games, wide, PLAYER, "ev");
     assert.equal(view.tags.available, true);
-    assert.deepEqual(view.forwards.map((r) => [r.player.id, r.tag]), [[12, "New"], [13, "New"], [10, "Fading"], [11, "Fading"]]);
+    const tags = new Map(view.forwards.map((r) => [r.player.id, r.tag]));
+    assert.deepEqual([...tags].sort((a, b) => a[0] - b[0]), [[10, "Fading"], [11, "Fading"], [12, "New"], [13, "New"]]);
   });
 }
 
@@ -352,7 +354,7 @@ test("line change: old linemates who did not dress in the recent games are Out, 
     game(3, [1, 12], pairs(600, { 12: 300 })),
   ];
   const view = buildLinemateView(games, wide, PLAYER, "ev");
-  assert.deepEqual(view.forwards.map((r) => [r.player.id, r.tag]), [[12, "New"], [10, "Out"], [11, "Out"]]);
+  assert.deepEqual(view.forwards.map((r) => [r.player.id, r.tag]), [[10, "Out"], [11, "Out"], [12, "New"]]);
 });
 
 test("a linemate who dressed in none of the recent games is Out even with a 60% earlier share", () => {
