@@ -11,7 +11,7 @@ created: "2026-10-13"
 
 # Phase 3 — Validation Strategy
 
-> Per-phase validation contract for feedback sampling during execution. Derived from `03-RESEARCH.md` § Validation Architecture.
+> Per-phase validation contract for feedback sampling during execution. Derived from `03-RESEARCH.md` § Validation Architecture, then reconciled on 2026-10-13 with CONTEXT.md D-19 to D-23 (recorded after research). Where research and CONTEXT.md differ, CONTEXT.md wins.
 
 ---
 
@@ -46,17 +46,18 @@ Filled in by the planner per task. Requirement coverage target, from research:
 |------------------|----------|-----------|-------------------|-------------|--------|
 | DATA-03 / SC1 (gate) | Team SOG and every skater's plus-minus reproduce on the regulation, OT, shootout, empty-net and penalty-shot fixtures | fixture | `npx tsx --test lib/research/events.test.ts` | ❌ W0 | ⬜ pending |
 | DATA-03 / SC3 | Unit totals: listed rows + Other == Total per situation and group; included + excluded == all events | unit | same | ❌ W0 | ⬜ pending |
+| DATA-03 (D-21) | Every event while either team's goalie is out of the net is counted in that situation's Other row and Total, never in a listed unit | unit | same | ❌ W0 | ⬜ pending |
 | DATA-03 | `onIceAt` boundaries: shift ends at t, starts at t, `t <= 0`, period boundary, playoff OT period | unit | same | ❌ W0 | ⬜ pending |
-| DATA-03 | Mapper: shootout by `periodType`, penalty-shot codes, empty-net digit (incl. blocked shots), teammate-blocked, owner = shooter, unknown reason ignored, missing `details` tolerated | unit | `npx tsx --test lib/research/play-events.test.ts` | ❌ W0 | ⬜ pending |
-| DATA-03 | Anomalous shift chart fixture (2025020565) is handled as a negative regression case, not a plus-minus gate | fixture | `npx tsx --test lib/research/events.test.ts` | ❌ W0 | ⬜ pending |
+| DATA-03 | Mapper: shootout by `periodType`, penalty-shot codes, pulled-goalie flag from either goalie digit of `situationCode` (D-21, incl. blocked shots), teammate-blocked, owner = shooter, unknown reason ignored, missing `details` tolerated | unit | `npx tsx --test lib/research/play-events.test.ts` | ❌ W0 | ⬜ pending |
+| DATA-03 (D-23) | Shift-chart sanity check flags 2025020565 (players from neither team, repeated identical shift rows) and flags no gate fixture; 2025020565 is a negative regression fixture, not a plus-minus gate | fixture | `npx tsx --test lib/research/events.test.ts` | ❌ W0 | ⬜ pending |
 | DATA-02 / SC4 | Missing shift chart (2026020026 shape) gives `events === null`; play-by-play-only failure keeps the game, `events === null`, `lines` intact | integration (stubbed fetch) | `npx tsx --test lib/research/team-games.test.ts` | ✅ extend | ⬜ pending |
 | DATA-02 | Match quality: good fixtures >= 0.95; removing a period falls below; shootout and penalty shots not counted | unit | `npx tsx --test lib/research/events.test.ts` | ❌ W0 | ⬜ pending |
 | DATA-01 | TTL tier: under 48 h → 3600, older → 2592000, missing start → 3600; passed to boxscore, play-by-play and shift chart | unit | `npx tsx --test lib/nhl/client.test.ts` | ✅ extend | ⬜ pending |
 | DATA-01 | 429 with short `Retry-After` retries then succeeds; long `Retry-After` throws without sleeping; at most 2 retries; empty shift-chart re-request still uncached | unit (stub fetch, injectable sleep) | same | ✅ extend | ⬜ pending |
 | DATA-01 | Pool: never more than N in flight, output order preserved, one rejection does not stop others, newest-first start order | unit | `npx tsx --test lib/research/team-games.test.ts` (or a helper test) | ❌ W0 | ⬜ pending |
-| UNIT-01 / UNIT-02 / SC2 | View-model: counts per unit, SF%/CF% "—" at 0, +/- formatting with U+2212, null events → all "—" | unit | `npx tsx --test lib/research/unit-events-view.test.ts` | ❌ W0 | ⬜ pending |
-| UNIT-03 / SC3 | Other and Total rows, exclusions note text (singular/plural, none → no line), legend text covers shootout, empty-net and teammate-blocked | unit (view-model) + markup | same | ❌ W0 | ⬜ pending |
-| SC1 / Phase 2 regression | `analyzeGameLines` outputs unchanged after extracting a shared `unitKey()` | unit (existing) | `npx tsx --test lib/research/lines.test.ts` | ✅ must pass untouched | ⬜ pending |
+| UNIT-01 / UNIT-02 / SC2 | View-model: counts per unit, SF%/CF% "—" at 0, +/- formatting with U+2212 (`0` when the unit had attempts but no goals, "—" only when it had no events, D-20), null events → all "—" | unit | `npx tsx --test lib/research/unit-events-view.test.ts` | ❌ W0 | ⬜ pending |
+| UNIT-03 / SC3 | Other and Total rows, exclusions note text (singular/plural, none → no line); legend says pulled-goalie events are in Other (D-21) and lists the exclusions shootout, penalty-shot and teammate-blocked | unit (view-model) + markup | same | ❌ W0 | ⬜ pending |
+| SC1 / Phase 2 regression (D-22) | `analyzeGameLines` outputs unchanged after extracting a shared `unitKey()`, except that unit Time credits seconds with either goalie out of the net to Other; player TOI totals, trends and linemate time unchanged | unit (existing) | `npx tsx --test lib/research/lines.test.ts` | ✅ only pulled-goalie expectations change, deliberately | ⬜ pending |
 | Types | New `events` field on `ResearchGame` compiles with every test builder | typecheck | `npx tsc --noEmit` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
