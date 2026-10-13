@@ -429,7 +429,7 @@ test("legend line 1 explains the squares and the regulation-only rule; line 2 st
   );
   assert.equal(
     ev[1].text,
-    "Window share is time together divided by Alpha Center's EV time in the games they both played. Linemates are ordered by the team's last 2 games, then by the whole window, and only those with 2:00 or more together are listed.",
+    "Window share is time together divided by Alpha Center's EV time in the games they both played. Linemates are ordered by window share, highest first, and only those with 2:00 or more together are listed.",
   );
   const pp = footnotes(renderPanel(research(), 1, "pp"));
   assert.ok(pp[0].text.includes("Alpha Center's PP time"), pp[0].text);

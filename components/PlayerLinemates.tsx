@@ -255,8 +255,7 @@ export function PlayerLinemates({
               </p>
               <p>
                 Window share is time together divided by {name}&apos;s {abbrev} time in the games they both played. Linemates are
-                ordered by the team&apos;s last 2 games, then by the whole window, and only those with {minimum} or more together
-                are listed.
+                ordered by window share, highest first, and only those with {minimum} or more together are listed.
               </p>
               {showTrend && (
                 <p>
