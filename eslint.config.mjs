@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // GSD tooling written by the npx installer, and GSD planning artifacts (incl. phase check scripts).
+    ".claude/**",
+    ".planning/**",
   ]),
 ]);
 
