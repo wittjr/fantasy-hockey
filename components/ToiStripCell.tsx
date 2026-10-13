@@ -38,6 +38,7 @@ export function ToiStripCell({
 }) {
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
   const send = (event: CellEvent) => {
@@ -56,6 +57,18 @@ export function ToiStripCell({
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [open]);
+
+  // Escape also dismisses a popover that is showing on hover alone, where the square never took focus.
+  useEffect(() => {
+    if (!hovered) return;
+    const escape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen((o) => nextOpen(o, "escape"));
+      setDismissed((d) => nextDismissed(d, "escape"));
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [hovered]);
 
   return (
     <span
@@ -77,7 +90,11 @@ export function ToiStripCell({
         }
       }}
       onBlur={() => send("blur")}
-      onPointerLeave={() => send("leave")}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => {
+        setHovered(false);
+        send("leave");
+      }}
     >
       {children}
     </span>
