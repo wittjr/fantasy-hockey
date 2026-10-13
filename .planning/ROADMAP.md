@@ -111,9 +111,25 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans**: TBD
+**Plans:** 6 plans
+
+Plans:
+**Wave 1**
+- [ ] 03-01-PLAN.md — Tracer + gate: real NHL fixtures → play-by-play mapper → on-ice attribution reproduce boxscore SOG and every skater's plus-minus; pulled-goalie and 4-on-4/3-on-3 time and events go to Other (D-13, D-21, D-22)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 03-02-PLAN.md — Reliability flags: shift-vs-situationCode match quality (95% threshold) and corrupted shift chart detection (D-16, D-17, D-23)
+- [ ] 03-03-PLAN.md — Play-by-play on every game load: getPlayByPlay, ResearchGame.events (null = unknown), play-by-play failure keeps the game (D-05), live boxscore reconciliation smoke
+
+**Wave 3** *(blocked on Wave 2 completion; 03-04 is the gated event-column plan)*
+- [ ] 03-04-PLAN.md — Unit tables: GF GA +/- | SF SA SF% | CF CA CF% on all six stacked tables, Other and Total rows, legend, exclusions note, amber notes
+- [ ] 03-05-PLAN.md — Last 20 without throttling: tiered finished-game cache (1 h / 30 d), short Retry-After 429 retry, paced newest-first pool, measured cold Last 20
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 03-06-PLAN.md — WebKit check of the tables and in-app cold/warm Last 20, Phase 2 regression run, end-of-phase human check
+
 **UI hint**: yes
-**Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs.
+**Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs. Encoded as 03-04 `depends_on: 03-01`.
 **Research flags**: Needs a fixture-test spike (5-6 real games) before the main build; measure NHL 429 behaviour with the bounded-concurrency loader in dev before deploying to Vercel; decide the per-game on-ice vs `situationCode` match threshold (research suggests 95%) for flagging a game's event stats as unreliable.
 
 ## Progress
@@ -125,4 +141,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 0/TBD | Not started | - |
+| 3. Unit Event Stats | 0/6 | Planned | - |
