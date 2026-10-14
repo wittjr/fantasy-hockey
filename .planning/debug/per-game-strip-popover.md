@@ -1,12 +1,14 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "UAT gaps G-01-2, G-01-5, G-01-1b on /research: no popovers on strip squares; Per game strip looks like pieces of a bold line; Pos column reads C5/5 GP"
 goal: find_root_cause_only
 created: 2026-10-12T01:13:33Z
-updated: 2026-10-12T02:15:00Z
+updated: 2026-10-14T19:30:00Z
 ---
 
 ## Current Focus
+
+resolution: "Resolved by gap-closure plans 01-08 (G-01-2, clickable strip popovers) and 01-09 (G-01-5, G-01-1b); all three gaps marked resolved in 01-UAT.md."
 
 bug_class: Bohrbug for G-01-1b and G-01-5 (visual), deterministic. Environment-dependent for the popover half of G-01-2/G-01-5 (works in every engine reproduced; fails only in the user's live session).
 hypothesis: |
