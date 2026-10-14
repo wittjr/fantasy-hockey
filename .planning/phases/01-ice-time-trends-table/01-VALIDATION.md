@@ -59,7 +59,7 @@ Note (planner, 2026-10-11): `npm run lint` is not used — it lints the whole re
 | 01-07-T1 (tracer) | 07 | 7 | TRND-02 | (plan) T-01-04, T-01-14 | — | markup | `npx tsx --test lib/research/toi-trends-view.test.ts lib/research/game-strip.test.ts` | ✅ | ✅ green |
 | 01-07-T2 | 07 | 7 | TRND-03, TRND-05 | (plan) T-01-04, T-01-14 | — | unit + markup | `npx tsx --test lib/research/toi-trends-view.test.ts lib/research/toi-trends.test.ts` | ✅ | ✅ green |
 | 01-08-T1 (tracer) | 08 | 8 | TRND-02 | (plan) T-01-04, T-01-15..17 | — | unit + markup + build CSS check | `npx tsx --test lib/research/toi-trends-view.test.ts lib/research/game-strip.test.ts` | ✅ | ✅ green |
-| 01-08-T2 | 08 | 8 | TRND-02 | (plan) T-01-04, T-01-15..17 | — | browser e2e (WebKit) | `node .planning/phases/01-ice-time-trends-table/webkit-strip-check.cjs` | ✅ | ⚠️ could not run 2026-10-14 (see audit) |
+| 01-08-T2 | 08 | 8 | TRND-02 | (plan) T-01-04, T-01-15..17 | — | browser e2e (WebKit) | `node .planning/phases/01-ice-time-trends-table/webkit-strip-check.cjs` | ✅ | ✅ green (16/16, 2026-10-14) |
 | 01-09-T1 | 09 | 9 | TRND-02, TRND-04 | (plan) T-01-04, T-01-17, T-01-18 | — | markup (+ browser e2e) | `npx tsx --test lib/research/toi-trends-view.test.ts lib/research/game-strip.test.ts` | ✅ | ✅ green |
 | 01-09-T2 | 09 | 9 | TRND-02 | (plan) T-01-04, T-01-17, T-01-18 | — | doc check | grep checks in 01-09-PLAN Task 2 | ✅ | ✅ one-time doc check |
 
@@ -103,7 +103,7 @@ Note (planner, 2026-10-11): `npm run lint` is not used — it lints the whole re
 
 **Approval:** validated 2026-10-14 (validate-phase audit during the phase 01 re-verification)
 
-Audit notes (2026-10-14): the six phase-01 test files (`toi-trends`, `lines`, `toi-trends-view`, `game-strip`, `team-games`, `lib/nhl/client`) ran 176/176 green. `webkit-strip-check.cjs` could not run: its readiness probe aborts each request after 3 s, but `/research?team=MTL&games=5` now takes about 5 s to render (the page fetches more since phase 03), and with a longer probe the npx cache's `playwright-core` 1.64.1 needs WebKit build 2370, while only 2336 is installed. The popover's click, hover and keyboard behaviour therefore stays under Manual-Only above until `npx playwright install webkit` is run and the probe timeout is raised.
+Audit notes (2026-10-14): the six phase-01 test files (`toi-trends`, `lines`, `toi-trends-view`, `game-strip`, `team-games`, `lib/nhl/client`) ran 176/176 green. `webkit-strip-check.cjs` first could not run: its 3 s readiness probe was shorter than the ~5 s render of `/research?team=MTL&games=5` (more fetches since phase 03), and the npx-cached `playwright-core` 1.64.1 needed WebKit build 2370. After `npx playwright install webkit` and raising the probe to 20 s, it passed 16/16 (13 desktop checks, including click, hover, Tab and Escape, plus 3 emulated-touch checks).
 
 ## Validation Audit 2026-10-14
 

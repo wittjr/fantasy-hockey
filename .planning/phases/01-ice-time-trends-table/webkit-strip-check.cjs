@@ -54,7 +54,8 @@ function findPlaywright() {
 
 async function answers(url) {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    // /research takes ~5 s to render in dev since phase 03 added play-by-play fetches.
+    const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
     return res.status;
   } catch {
     return null;

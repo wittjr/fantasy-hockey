@@ -124,7 +124,6 @@ None yet.
 - [Phase 1 → later]: WR-05..WR-08 fixed (1314b03, 88b2299, adb0f61, 888cc03); WR-10 fixed in Phase 02 (5bbb68c). Still open: WR-08 remainder (no DOM test of outside-click/blur), info IN-01..IN-13; see 01-REVIEW-DISPOSITION.md
 - [All phases]: Site targets laptop browsers; no phone/touch UAT
 - [Phase 3]: Last 20 is only verified on 6-8 finished games per team (October); re-check a full 20-game window later in the season
-- [Phase 1]: webkit-strip-check.cjs no longer runs as written: its 3 s readiness probe is shorter than the ~5 s /research render (more NHL fetches since Phase 3), and the npx-cached playwright-core 1.64.1 needs WebKit build 2370 while only 2336 is installed. Raise the probe timeout and run `npx playwright install webkit` before relying on it
 - [Phase 1]: UI re-audit (2026-10-14) scored 19/24, warnings only: muted-dash contrast, all-dash Δ columns at a 2-game window with no UI-SPEC rule, copy drift; see 01-UI-REVIEW.md
 - [GSD tooling]: the code-review disposition step cannot parse the hand-curated 01-REVIEW-DISPOSITION.md; a future phase-01 review would rewrite it to 15 rows and reopen WR-10, so reconcile that ledger by hand
 
