@@ -113,6 +113,35 @@ export function bucketOnIce(
 }
 
 /**
+ * The key of the forward or defense unit among `skaters` (their ids of that group, ascending, joined with ","),
+ * or null when there is none or an even-strength unit is not a full line. Shared by unit seconds and unit events
+ * so both are keyed identically.
+ */
+export function unitKey(
+  situation: Situation,
+  group: "F" | "D",
+  skaters: readonly number[],
+  positions: Map<number, PositionGroup>,
+): string | null {
+  const ids = skaters.filter((id) => positions.get(id) === group).sort((a, b) => a - b);
+  if (ids.length === 0) return null;
+  if (situation === "ev" && ids.length !== EV_UNIT_SIZE[group]) return null;
+  return ids.join(",");
+}
+
+/**
+ * Whether a second (or an event) may credit a listed unit. False when either team has no goalie on ice
+ * (a pulled goalie, D-21/D-22) and, at even strength, when the skaters are not exactly 5 on 5 (4-on-4 and
+ * 3-on-3 go to Other, D-13). An opponent with no shift rows is the no-goalie fallback, so it also returns
+ * false: a second with no opposing shifts has no trustworthy strength. Callers pass `dedupeOnIce` results.
+ */
+export function creditsUnit(situation: Situation, mine: OnIce, opp: OnIce): boolean {
+  if (!mine.goalie || !opp.goalie) return false;
+  if (situation === "ev" && (mine.skaters.length !== 5 || opp.skaters.length !== 5)) return false;
+  return true;
+}
+
+/**
  * Per-situation seconds, the EV/PP/SH forward and defense units, and each skater's seconds by situation for `team`.
  * Repeated shift rows are dropped by `uniqueShifts`, and a player with overlapping rows that are not
  * identical counts once per second via `dedupeOnIce`. So neither can inflate the on-ice skater count
@@ -148,10 +177,8 @@ export function analyzeGameLines(
     }
 
     for (const group of ["F", "D"] as const) {
-      const ids = mine.skaters.filter((id) => positions.get(id) === group).sort((a, b) => a - b);
-      if (ids.length === 0) continue;
-      if (situation === "ev" && ids.length !== EV_UNIT_SIZE[group]) continue;
-      const key = ids.join(",");
+      const key = unitKey(situation, group, mine.skaters, positions);
+      if (key === null) continue;
       const map = unitSeconds[situation][group];
       map.set(key, (map.get(key) ?? 0) + 1);
     }
