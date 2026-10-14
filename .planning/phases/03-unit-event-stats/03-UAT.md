@@ -3,7 +3,7 @@ status: complete
 phase: 03-unit-event-stats
 source: [03-VERIFICATION.md]
 started: 2026-10-14T14:34:47Z
-updated: 2026-10-14T17:59:48.603Z
+updated: 2026-10-14T18:01:05.523Z
 ---
 
 ## Current Test
@@ -55,16 +55,14 @@ result: pass
 
 ### 9. Spacing re-check, light and dark (G-03-3, G-03-7 fixes)
 expected: At /research?team=MTL&games=5, about 1024 px wide, in light then dark: the dash between names is centered with a small even gap; +/- and SF% numbers no longer touch the divider after them; the space after each Goals/Shots/Corsi divider no longer looks oversized
-result: issue
-reported: "the numbers look correct but there is no spacing around the \"-\" for player names"
-severity: cosmetic
-note: "Divider spacing (G-03-3 fix) confirmed. Dash is centered but too tight (G-03-9)."
+result: pass
+note: "First look showed no space around the dash (stale browser cache). After a hard reload (shift+reload) the user confirmed the name spacing looks good; divider spacing also confirmed."
 
 ## Summary
 
 total: 9
-passed: 5
-issues: 4
+passed: 6
+issues: 3
 pending: 0
 skipped: 0
 blocked: 0
@@ -128,18 +126,4 @@ blocked: 0
       issue: "separator <span aria-hidden> – </span> relies on literal spaces for spacing"
   missing:
     - "Render the separator with explicit, symmetric horizontal margin (e.g. mx-1 on the span, no literal spaces) and confirm in light/dark at 1024 px"
-  debug_session: ""
-
-- gap_id: G-03-9
-  truth: "The en dash between player names in a unit row has visible, even spacing on both sides - clearly separated from each name, but less than the original wide gap"
-  status: failed
-  reason: "User reported: the numbers look correct but there is no spacing around the \"-\" for player names"
-  severity: cosmetic
-  test: 9
-  root_cause: "03-13 (G-03-7 fix) set the separator span to mx-1 (4px each side, measured by harness U7). The dash is now centered, but 4px is too tight and reads as no space. The original complaint was a wide (~20px) gap before and ~4px after; the target is in between."
-  artifacts:
-    - path: "components/LastGameLines.tsx"
-      issue: "separator <span aria-hidden className=\"mx-1\"> at line 179 gives only 4px each side"
-  missing:
-    - "Widen the separator margin symmetrically (e.g. mx-2, 8px each side); update the markup test and harness U7 expectation; confirm in light/dark at 1024 px"
   debug_session: ""
