@@ -35,7 +35,12 @@ covered_files:
   - lib/research/unit-events-view.ts
 covered_digest: "v3:sha256:275027172bf534173324e1a2ba2b8f780ba00b770707de2da8dfdb34b1f45d40"
 behavior_unverified: 1
-overrides_applied: 0
+overrides_applied: 1
+overrides:
+  - must_have: "Fixture tests on real games reproduce official team shots on goal and every skater's plus-minus from attributed play-by-play events"
+    reason: "One skater (A. Panarin, 2025020500) differs by 1 because his shift ends on a goal second; pinned by KNOWN_BOXSCORE_DISAGREEMENTS with a cause test; all other skaters in 6 gate games match. Developer: if the shift chart lists him on ice it should count; the official 0 may be a manual league adjustment."
+    accepted_by: "Jamie Witt"
+    accepted_at: "2026-10-14T16:15:00Z"
 behavior_unverified_items:
   - truth: "Selecting Last 20 for any team loads without failing from NHL API throttling (SC5)"
     test: "After deploying to Vercel, open /research?team=X&games=20 for two or three teams within a minute, in mid-season or against a team with 20 finished games"
