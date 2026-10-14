@@ -5,7 +5,17 @@ import type { Situation } from "@/lib/research/lines";
 import { SITUATION_ABBREV } from "@/lib/research/linemates";
 import type { TeamResearch } from "@/lib/research/team-games";
 import type { SortSpec } from "@/lib/research/toi-trends";
-import { buildUnitTable, DASH, type UnitStats, type UnitSummaryRow, type UnitTableView } from "@/lib/research/unit-events-view";
+import {
+  buildUnitTable,
+  DASH,
+  exclusionsNote,
+  missingPlayByPlayNote,
+  topNotes,
+  UNIT_LEGEND,
+  type UnitStats,
+  type UnitSummaryRow,
+  type UnitTableView,
+} from "@/lib/research/unit-events-view";
 
 const DIVIDER = "border-l border-neutral-200 dark:border-neutral-800";
 
@@ -42,6 +52,8 @@ export function LastGameLines({
 }) {
   const game = research.games[research.games.length - 1];
   const name = (id: number) => research.players.get(id)?.name ?? String(id);
+  const exclusions = exclusionsNote(game.events);
+  const olderDates = missingPlayByPlayNote(research.games);
 
   return (
     <section className="flex flex-col gap-3">
@@ -52,21 +64,35 @@ export function LastGameLines({
       {!game.lines ? (
         <p className="text-sm text-neutral-500">No shift chart is available for this game (not published yet, or it failed to load).</p>
       ) : (
-        <div className="flex flex-col gap-6">
-          {(["ev", "pp", "sh"] as const).flatMap((situation) =>
-            (["F", "D"] as const).map((group) => (
-              <div key={`${situation}-${group}`} className="overflow-x-auto">
-                <UnitTable
-                  title={`${SITUATION_ABBREV[situation]} - ${group === "F" ? "Forwards" : "Defense"}`}
-                  view={buildUnitTable(game.lines!, game.events, situation, group)}
-                  name={name}
-                  situation={situation}
-                  link={{ team, gameCount, sort, sit, selected }}
-                />
-              </div>
-            ))
-          )}
-        </div>
+        <>
+          {topNotes(game).map((note) => (
+            <p key={note} className="text-xs text-amber-600 dark:text-amber-400">
+              {note}
+            </p>
+          ))}
+          <div className="flex flex-col gap-6">
+            {(["ev", "pp", "sh"] as const).flatMap((situation) =>
+              (["F", "D"] as const).map((group) => (
+                <div key={`${situation}-${group}`} className="overflow-x-auto">
+                  <UnitTable
+                    title={`${SITUATION_ABBREV[situation]} - ${group === "F" ? "Forwards" : "Defense"}`}
+                    view={buildUnitTable(game.lines!, game.events, situation, group)}
+                    name={name}
+                    situation={situation}
+                    link={{ team, gameCount, sort, sit, selected }}
+                  />
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex flex-col gap-1 text-xs text-neutral-500">
+            {exclusions && <p>{exclusions}</p>}
+            {UNIT_LEGEND.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+            {olderDates && <p className="text-xs text-amber-600 dark:text-amber-400">{olderDates}</p>}
+          </div>
+        </>
       )}
     </section>
   );

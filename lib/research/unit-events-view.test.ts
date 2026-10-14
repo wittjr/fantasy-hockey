@@ -7,7 +7,16 @@ import { emptyCounts, type EventCounts, type GameEvents } from "./events";
 import type { GameLines, Situation, Unit } from "./lines";
 import type { ResearchGame, ResearchPlayer, TeamResearch } from "./team-games";
 import { DEFAULT_SORT } from "./toi-trends";
-import { buildUnitTable, DASH, statCells, UNIT_LIMITS } from "./unit-events-view";
+import {
+  buildUnitTable,
+  DASH,
+  exclusionsNote,
+  missingPlayByPlayNote,
+  statCells,
+  topNotes,
+  UNIT_LEGEND,
+  UNIT_LIMITS,
+} from "./unit-events-view";
 
 const counts = (c: Partial<EventCounts> = {}): EventCounts => ({ ...emptyCounts(), ...c });
 const unit = (playerIds: number[], seconds: number, total: number): Unit => ({ playerIds, seconds, pct: (seconds / total) * 100 });
@@ -399,4 +408,176 @@ test("markup: the F and D tables of one situation print the same Total stats", (
   const tables = tablesOf(render(markupGame(richLines(), richEvents())));
   const stats = (table: string) => cellTexts(rowLabelled(table, "Total")).slice(4);
   assert.deepEqual(stats(tables[0] ?? ""), stats(tables[1] ?? ""));
+});
+
+// --- legend and exclusions note -----------------------------------------------------------------------------------
+
+const excluded = (shootout: number, penaltyShot: number, teammateBlocked: number): GameEvents => ({
+  ...mkEvents(),
+  excluded: { shootout, penaltyShot, teammateBlocked },
+});
+
+test("exclusionsNote lists the non-zero kinds in order, plural by default", () => {
+  assert.equal(
+    exclusionsNote(excluded(2, 1, 3)),
+    "Excluded from these tables: 2 shootout attempts, 1 penalty shot, 3 teammate-blocked attempts.",
+  );
+});
+
+test("exclusionsNote uses the singular for 1 and omits zero kinds", () => {
+  assert.equal(exclusionsNote(excluded(1, 0, 1)), "Excluded from these tables: 1 shootout attempt, 1 teammate-blocked attempt.");
+  assert.equal(exclusionsNote(excluded(0, 2, 0)), "Excluded from these tables: 2 penalty shots.");
+});
+
+test("exclusionsNote is null when nothing was excluded or events are null", () => {
+  assert.equal(exclusionsNote(excluded(0, 0, 0)), null);
+  assert.equal(exclusionsNote(null), null);
+});
+
+test("UNIT_LEGEND is the three 03-UI-SPEC lines", () => {
+  assert.equal(UNIT_LEGEND.length, 3);
+  assert.ok(UNIT_LEGEND[0].startsWith("GF and GA are goals for and against."));
+  assert.ok(UNIT_LEGEND[1].includes("not the NHL's official plus-minus"));
+  assert.ok(UNIT_LEGEND[2].includes("all time and events while either goalie was pulled"));
+  assert.ok(UNIT_LEGEND[2].includes("shootout attempts, penalty shots and teammate-blocked attempts are left out"));
+});
+
+const FOOTNOTES = '<div class="flex flex-col gap-1 text-xs text-neutral-500">';
+const footnotesOf = (html: string) => html.split(FOOTNOTES)[1]?.split("</div>")[0] ?? "";
+const paragraphs = (block: string) => [...block.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
+
+test("markup: the footnotes block follows the tables with the exclusions note, then the three legend lines", () => {
+  const html = render(markupGame(richLines(), { ...richEvents(), excluded: { shootout: 2, penaltyShot: 0, teammateBlocked: 1 } }));
+  assert.ok(html.lastIndexOf("</table>") < html.indexOf(FOOTNOTES));
+  assert.deepEqual(paragraphs(footnotesOf(html)), [
+    "Excluded from these tables: 2 shootout attempts, 1 teammate-blocked attempt.",
+    ...UNIT_LEGEND,
+  ]);
+});
+
+test("markup: the legend renders without an exclusions note when nothing was excluded or events are null", () => {
+  for (const events of [richEvents(), null]) {
+    assert.deepEqual(paragraphs(footnotesOf(render(markupGame(richLines(), events)))), [...UNIT_LEGEND]);
+  }
+});
+
+test("markup: with lines null no legend renders, only the no-shift-chart message", () => {
+  const html = render(markupGame(null, null));
+  assert.ok(!html.includes(FOOTNOTES));
+  assert.ok(!html.includes("GF and GA are goals"));
+});
+
+// --- amber reliability notes --------------------------------------------------------------------------------------
+
+const NO_PBP =
+  "No play-by-play for this game yet (not published, or it failed to load), so all goal, shot and Corsi columns show —. Reload the page to retry.";
+const CORRUPTED = "This game's shift chart looks corrupted (players from other teams or repeated shifts); counts may be off.";
+const withQuality = (checked: number, matched: number, chartSuspect = false): GameEvents => ({
+  ...mkEvents(),
+  quality: { checked, matched },
+  chartSuspect,
+});
+const lines = () => mkLines({ ev: 0, pp: 0, sh: 0 });
+
+test("topNotes: lines with null events gives only the D-18 note", () => {
+  assert.deepEqual(topNotes({ lines: lines(), events: null }), [NO_PBP]);
+});
+
+test("topNotes: a suspect chart with 90% matched gives the D-23 note then the D-16 note with 10%", () => {
+  assert.deepEqual(topNotes({ lines: lines(), events: withQuality(1000, 900, true) }), [
+    CORRUPTED,
+    "Shift data disagrees with play-by-play on 10% of events in this game; counts may be off.",
+  ]);
+});
+
+test("topNotes: 95% matched and no flag gives no notes", () => {
+  assert.deepEqual(topNotes({ lines: lines(), events: withQuality(1000, 950) }), []);
+});
+
+test("topNotes: nothing checked gives no D-16 note", () => {
+  assert.deepEqual(topNotes({ lines: lines(), events: withQuality(0, 0) }), []);
+});
+
+test("topNotes: the D-16 percent is rounded to a whole number", () => {
+  const [note] = topNotes({ lines: lines(), events: withQuality(1000, 947) });
+  assert.equal(note, "Shift data disagrees with play-by-play on 5% of events in this game; counts may be off.");
+});
+
+test("topNotes: notes carry no API path, status or error text (T-01-11)", () => {
+  const all = topNotes({ lines: lines(), events: null }).concat(topNotes({ lines: lines(), events: withQuality(1000, 900, true) }));
+  for (const note of all) assert.ok(!/api|http|\b[45]\d\d\b|error/i.test(note), note);
+});
+
+const dated = (date: string, hasLines: boolean, hasEvents: boolean) => ({
+  date,
+  lines: hasLines ? lines() : null,
+  events: hasEvents ? mkEvents() : null,
+});
+
+test("missingPlayByPlayNote names only older games that have lines but no events", () => {
+  const games = [dated("2026-10-01", true, false), dated("2026-10-03", false, false), dated("2026-10-05", true, false)];
+  assert.equal(
+    missingPlayByPlayNote(games),
+    "No play-by-play for Oct 1: not published yet, or it failed to load. Those games keep their ice-time data. Reload the page to retry.",
+  );
+});
+
+test("missingPlayByPlayNote joins several dates with a comma and is null when none apply", () => {
+  const games = [dated("2026-10-01", true, false), dated("2026-10-03", true, false), dated("2026-10-05", true, true)];
+  assert.ok(missingPlayByPlayNote(games)?.startsWith("No play-by-play for Oct 1, Oct 3:"));
+  assert.equal(missingPlayByPlayNote([dated("2026-10-01", true, true), dated("2026-10-05", true, false)]), null);
+  assert.equal(missingPlayByPlayNote([]), null);
+});
+
+const AMBER = '<p class="text-xs text-amber-600 dark:text-amber-400">';
+const amberNotes = (html: string) => [...html.matchAll(/<p class="text-xs text-amber-600 dark:text-amber-400">([\s\S]*?)<\/p>/g)].map((m) => m[1]);
+const renderGames = (games: ResearchGame[]) =>
+  renderToStaticMarkup(
+    createElement(LastGameLines, {
+      research: { players, games, unavailableDates: [] } satisfies TeamResearch,
+      team: "MTL",
+      gameCount: 5,
+      sort: DEFAULT_SORT,
+      sit: "ev",
+      selected: null,
+    }),
+  );
+
+test("markup: amber notes sit above the tables in the order D-18, D-23, D-16", () => {
+  const html = render(markupGame(richLines(), withQuality(1000, 900, true)));
+  assert.equal(amberNotes(html).length, 2);
+  assert.ok(html.indexOf(AMBER) < html.indexOf("<table"));
+  assert.ok(html.lastIndexOf(AMBER) < html.indexOf("<table"));
+  assert.ok(amberNotes(html)[0].includes("looks corrupted"));
+  assert.ok(amberNotes(html)[1].includes("Shift data disagrees"));
+});
+
+test("markup: with events null the top note says play-by-play is missing and the exclusions note is omitted", () => {
+  const html = render(markupGame(richLines(), null));
+  assert.deepEqual(amberNotes(html).map((n) => n.replace(/&#x27;/g, "'")), [NO_PBP]);
+  assert.ok(html.indexOf(AMBER) < html.indexOf("<table"));
+  assert.ok(!html.includes("Excluded from these tables"));
+});
+
+test("markup: a clean game with events renders no amber note", () => {
+  assert.deepEqual(amberNotes(render(markupGame(richLines(), withQuality(1000, 960)))), []);
+});
+
+test("markup: with lines null no amber note renders", () => {
+  assert.deepEqual(amberNotes(render(markupGame(null, null))), []);
+});
+
+test("markup: the older-dates note closes the footnotes block after the legend", () => {
+  const older = { ...markupGame(richLines(), null), date: "2026-10-01" };
+  const html = renderGames([older, markupGame(richLines(), richEvents())]);
+  const block = footnotesOf(html);
+  assert.equal([...block.matchAll(/<p[^>]*>/g)].at(-1)?.[0], AMBER);
+  assert.ok(block.indexOf(UNIT_LEGEND[2].slice(0, 20)) < block.indexOf(AMBER));
+  assert.ok(block.includes("No play-by-play for Oct 1:"));
+});
+
+test("markup: the older-dates note is omitted when no older game lacks play-by-play", () => {
+  const older = { ...markupGame(richLines(), richEvents()), date: "2026-10-01" };
+  const html = renderGames([older, markupGame(richLines(), richEvents())]);
+  assert.ok(!footnotesOf(html).includes("No play-by-play for"));
 });
