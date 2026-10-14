@@ -175,7 +175,11 @@ const richLines = () =>
       pp: { F: [unit([1, 2, 3], 60, 120)], D: [] },
     },
   );
-const richEvents = () => mkEvents({}, { ev: { F: { "1,2,3": counts({ gf: 2, ga: 1, sf: 10, sa: 6, cf: 20, ca: 12 }) } } });
+const richEvents = () =>
+  mkEvents(
+    { ev: counts({ gf: 3, ga: 2, sf: 12, sa: 8, cf: 25, ca: 15 }) },
+    { ev: { F: { "1,2,3": counts({ gf: 2, ga: 1, sf: 10, sa: 6, cf: 20, ca: 12 }) } } },
+  );
 
 test("markup: six tables in situation-then-group order, stacked full width in overflow wrappers", () => {
   const html = render(markupGame(richLines(), richEvents()));
@@ -245,4 +249,154 @@ test("markup: with lines null no table renders", () => {
   const html = render(markupGame(null, null));
   assert.equal(tablesOf(html).length, 0);
   assert.ok(html.includes("No shift chart is available"));
+});
+
+// --- Other and Total ----------------------------------------------------------------------------------------------
+
+const STAT_KEYS = ["gf", "ga", "sf", "sa", "cf", "ca"] as const;
+const rowsOf = (table: string) => table.match(/<tr[\s\S]*?<\/tr>/g) ?? [];
+const cellsOf = (row: string) => [...row.matchAll(/<(?:td|th)\b[^>]*>[\s\S]*?<\/(?:td|th)>/g)].map((m) => m[0]);
+const cellTexts = (row: string) => cellsOf(row).map(textOf);
+const bodyRows = (table: string) => rowsOf(table).slice(2);
+const rowLabelled = (table: string, label: string) => rowsOf(table).find((r) => cellTexts(r)[3] === label) ?? "";
+const rowClasses = (row: string) => (row.match(/^<tr[^>]*class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+
+test("Other and Total: time and pct come from seconds, Total is 100.0", () => {
+  const lines = mkLines({ ev: 300, pp: 0, sh: 0 }, { ev: { F: [unit([1, 2, 3], 120, 300), unit([4, 5, 6], 90, 300)], D: [] } });
+  const view = buildUnitTable(lines, mkEvents(), "ev", "F");
+  assert.equal(view.other?.time, "1:30");
+  assert.equal(view.other?.pct, "30.0");
+  assert.equal(view.total?.time, "5:00");
+  assert.equal(view.total?.pct, "100.0");
+});
+
+test("Other is the situation total minus the listed rows for every counter, so listed plus Other equals Total", () => {
+  const a = counts({ gf: 1, ga: 0, sf: 4, sa: 2, cf: 7, ca: 3 });
+  const b = counts({ gf: 0, ga: 1, sf: 2, sa: 5, cf: 3, ca: 8 });
+  const total = counts({ gf: 3, ga: 2, sf: 9, sa: 9, cf: 15, ca: 16 });
+  const lines = mkLines({ ev: 300, pp: 0, sh: 0 }, { ev: { F: [unit([1, 2, 3], 120, 300), unit([4, 5, 6], 90, 300)], D: [] } });
+  const events = mkEvents({ ev: total }, { ev: { F: { "1,2,3": a, "4,5,6": b } } });
+  const view = buildUnitTable(lines, events, "ev", "F");
+  assert.deepEqual(view.other?.stats, statCells(counts({ gf: 2, ga: 1, sf: 3, sa: 2, cf: 5, ca: 5 })));
+  assert.deepEqual(view.total?.stats, statCells(total));
+  for (const k of STAT_KEYS) {
+    const sum: number = Number(view.rows[0]?.stats[k]) + Number(view.rows[1]?.stats[k]) + Number(view.other?.stats[k]);
+    assert.equal(sum, Number(view.total?.stats[k]), k);
+  }
+});
+
+test("a unit below the cap folds into Other with its time and counts", () => {
+  const units = Array.from({ length: 5 }, (_, i) => unit([10 + i, 20 + i, 30 + i], 60, 300));
+  const lines = mkLines({ ev: 300, pp: 0, sh: 0 }, { ev: { F: units, D: [] } });
+  const perUnit = Object.fromEntries(units.map((u) => [u.playerIds.join(","), counts({ gf: 1, cf: 2, sf: 1 })]));
+  const view = buildUnitTable(lines, mkEvents({ ev: counts({ gf: 5, cf: 10, sf: 5 }) }, { ev: { F: perUnit } }), "ev", "F");
+  assert.equal(view.rows.length, 4);
+  assert.equal(view.other?.time, "1:00");
+  assert.equal(view.other?.stats.gf, "1");
+  assert.equal(view.other?.stats.cf, "2");
+});
+
+test("pulled-goalie and 4-on-4 events sit in the total only, so they land in Other", () => {
+  const lines = mkLines({ ev: 100, pp: 0, sh: 0 }, { ev: { F: [unit([1, 2, 3], 60, 100)], D: [] } });
+  const view = buildUnitTable(lines, mkEvents({ ev: counts({ gf: 1, cf: 3, sf: 2 }) }), "ev", "F");
+  assert.equal(view.rows[0]?.stats.cf, "0");
+  assert.equal(view.other?.stats.cf, "3");
+  assert.equal(view.total?.stats.cf, "3");
+});
+
+test("events null: every stat cell in rows, Other and Total is a dash while their time and pct are real", () => {
+  const lines = mkLines({ ev: 300, pp: 0, sh: 0 }, { ev: { F: [unit([1, 2, 3], 120, 300)], D: [] } });
+  const view = buildUnitTable(lines, null, "ev", "F");
+  assert.ok(view.other && view.total);
+  for (const row of [...view.rows, view.other, view.total]) assert.deepEqual(Object.values(row.stats), Array(9).fill(DASH));
+  assert.equal(view.other.time, "3:00");
+  assert.equal(view.other.pct, "60.0");
+  assert.equal(view.total.time, "5:00");
+});
+
+test("a situation with no time and no events has no Other or Total", () => {
+  const lines = mkLines({ ev: 300, pp: 0, sh: 0 });
+  for (const events of [mkEvents(), null]) {
+    assert.deepEqual(buildUnitTable(lines, events, "pp", "F"), { rows: [], other: null, total: null });
+  }
+});
+
+test("no listed unit but time in the situation: Other and Total still render", () => {
+  const lines = mkLines({ ev: 0, pp: 45, sh: 0 });
+  const view = buildUnitTable(lines, mkEvents({ pp: counts({ cf: 2, ca: 1, sf: 1 }) }), "pp", "D");
+  assert.equal(view.rows.length, 0);
+  assert.equal(view.other?.time, "0:45");
+  assert.equal(view.other?.pct, "100.0");
+  assert.equal(view.total?.stats.cf, "2");
+});
+
+test("events with no time still render Other and Total, with a dash percentage for Other", () => {
+  const view = buildUnitTable(mkLines({ ev: 0, pp: 0, sh: 0 }), mkEvents({ ev: counts({ cf: 1 }) }), "ev", "F");
+  assert.equal(view.other?.pct, DASH);
+  assert.equal(view.total?.time, "0:00");
+});
+
+test("the F and D tables of one situation have identical Totals", () => {
+  const lines = mkLines(
+    { ev: 300, pp: 0, sh: 0 },
+    { ev: { F: [unit([1, 2, 3], 120, 300)], D: [unit([11, 12], 100, 300), unit([13, 14], 50, 300)] } },
+  );
+  const events = mkEvents({ ev: counts({ gf: 1, sf: 3, cf: 6, ca: 2 }) });
+  assert.deepEqual(buildUnitTable(lines, events, "ev", "F").total, buildUnitTable(lines, events, "ev", "D").total);
+});
+
+test("markup: Other row styling and label, Total row last with its rule and weight", () => {
+  const table = tablesOf(render(markupGame(richLines(), richEvents())))[0] ?? "";
+  const other = rowLabelled(table, "Other");
+  const total = rowLabelled(table, "Total");
+  for (const token of ["text-neutral-600", "dark:text-neutral-400", "border-b", "border-neutral-100", "dark:border-neutral-900"]) {
+    assert.ok(rowClasses(other).includes(token), token);
+  }
+  for (const token of ["border-t", "border-neutral-300", "font-medium", "dark:border-neutral-700"]) assert.ok(rowClasses(total).includes(token), token);
+  assert.equal(rowsOf(table).at(-1), total);
+  assert.deepEqual(cellTexts(other).slice(0, 4), ["", "6:40", "66.7", "Other"]);
+  assert.deepEqual(cellTexts(total).slice(0, 4), ["", "10:00", "100.0", "Total"]);
+});
+
+test("markup: exactly the GF, SF and CF cells carry border-l in every row", () => {
+  const table = tablesOf(render(markupGame(richLines(), richEvents())))[0] ?? "";
+  const rows = rowsOf(table).slice(1); // the group row is covered by the header test
+  assert.equal(rows.length, 4); // column headers, one listed unit, Other, Total
+  for (const row of rows) {
+    const cells = cellsOf(row);
+    assert.equal(cells.length, 13);
+    cells.forEach((cell, i) => {
+      const has = (cell.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/).includes("border-l");
+      assert.equal(has, i === 4 || i === 7 || i === 10, `cell ${i} of ${row.slice(0, 60)}`);
+    });
+  }
+});
+
+test("markup: a situation with neither time nor events shows only the None row", () => {
+  const lines = mkLines({ ev: 600, pp: 0, sh: 0 }, { ev: { F: [unit([1, 2, 3], 200, 600)], D: [] } });
+  const pp = tablesOf(render(markupGame(lines, mkEvents())))[2] ?? "";
+  assert.equal(bodyRows(pp).length, 1);
+  assert.ok(pp.includes(">None<"));
+  assert.ok(!pp.includes(">Other<") && !pp.includes(">Total<"));
+});
+
+test("markup: a None list with remaining time still shows Other and Total", () => {
+  const shForwards = tablesOf(render(markupGame(richLines(), richEvents())))[4] ?? "";
+  assert.ok(shForwards.includes(">None<"));
+  assert.deepEqual(cellTexts(rowLabelled(shForwards, "Other")).slice(1, 4), ["1:30", "100.0", "Other"]);
+  assert.deepEqual(cellTexts(rowLabelled(shForwards, "Total")).slice(1, 4), ["1:30", "100.0", "Total"]);
+});
+
+test("markup: with events null every stat cell in listed, Other and Total rows is a dash and Time and % are real", () => {
+  const table = tablesOf(render(markupGame(richLines(), null)))[0] ?? "";
+  assert.equal(bodyRows(table).length, 3);
+  for (const row of bodyRows(table)) assert.deepEqual(cellTexts(row).slice(-9), Array(9).fill(DASH), row);
+  assert.deepEqual(cellTexts(rowLabelled(table, "Other")).slice(1, 4), ["6:40", "66.7", "Other"]);
+  assert.deepEqual(cellTexts(rowLabelled(table, "Total")).slice(1, 4), ["10:00", "100.0", "Total"]);
+});
+
+test("markup: the F and D tables of one situation print the same Total stats", () => {
+  const tables = tablesOf(render(markupGame(richLines(), richEvents())));
+  const stats = (table: string) => cellTexts(rowLabelled(table, "Total")).slice(4);
+  assert.deepEqual(stats(tables[0] ?? ""), stats(tables[1] ?? ""));
 });
