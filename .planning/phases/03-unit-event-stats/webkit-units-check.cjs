@@ -19,6 +19,8 @@
  *       link sits inside its wrapper; screenshots of the Last game section go to $TMPDIR/units-check-light.png and -dark.png.
  *   U6  in both color schemes every table has a computed 1px left border on exactly the GF, SF and CF cells (group headers, header
  *       row 2, body, Other and Total rows) and a last row Total with font-weight 500 and a 1px top border.
+ * Checks in this file (plan 03-13, UAT G-03-7 and G-03-3, 1024px, light and dark):
+ *   U7  every en dash between two names on one line has equal space on both sides (within 1px), each between 2 and 8 px.
  *
  * What it does:
  *  - copies the repo (not .git, .next, node_modules, .planning, .claude or any .env* file) to a temp directory,
@@ -469,6 +471,64 @@ async function layoutChecks(context) {
         seen[scheme] = { tables: r.tables.length, totals: r.tables.filter((t) => t.total).length, dividerColor: r.colors };
       }
       if (seen.light && seen.dark && seen.light.dividerColor === seen.dark.dividerColor) problems.push("the divider color is the same in light and dark");
+      return { ok: problems.length === 0, details: { ...seen, problems: problems.slice(0, 10) } };
+    });
+
+    await check("U7", "at 1024px in light and dark every en dash between two names on one line has equal space on both sides (within 1px), each between 2 and 8 px", async () => {
+      const problems = [];
+      const seen = {};
+      for (const scheme of ["light", "dark"]) {
+        const r = await pages[scheme].evaluate(() => {
+          const h2 = [...document.querySelectorAll("h2")].find((h) => h.textContent.trim().startsWith("Last game"));
+          if (!h2) return { error: "no Last game section" };
+          const rects = (node) => {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            return [...range.getClientRects()];
+          };
+          const pairs = [];
+          let skipped = 0;
+          for (const t of h2.closest("section").querySelectorAll("table")) {
+            for (const row of t.tBodies[0].rows) {
+              if (row.cells.length !== 13) continue;
+              const cell = row.cells[3];
+              for (const dash of cell.querySelectorAll(":scope > span[aria-hidden]")) {
+                const prev = dash.previousElementSibling;
+                const next = dash.nextElementSibling;
+                const dashText = dash.firstChild;
+                if (!prev || !next || !dashText || !prev.firstChild || !next.firstChild) continue;
+                const d = rects(dashText)[0];
+                const p = rects(prev.firstChild).pop();
+                const n = rects(next.firstChild)[0];
+                if (!d || !p || !n || Math.abs(n.top - d.top) > 4 || Math.abs(p.top - d.top) > 4) {
+                  skipped++;
+                  continue;
+                }
+                pairs.push({ table: t.tHead.rows[1].cells[3].textContent.trim(), before: d.left - p.right, after: n.left - d.right });
+              }
+            }
+          }
+          return { pairs, skipped };
+        });
+        if (r.error) {
+          problems.push(`${scheme}: ${r.error}`);
+          continue;
+        }
+        if (r.pairs.length === 0) problems.push(`${scheme}: no separator with both names on one line was measured`);
+        const worstAsym = r.pairs.reduce((w, p) => (Math.abs(p.before - p.after) > Math.abs(w.before - w.after) ? p : w), r.pairs[0] || { before: 0, after: 0 });
+        for (const p of r.pairs) {
+          if (Math.abs(p.before - p.after) > 1) problems.push(`${scheme}: ${p.table}: before ${p.before.toFixed(1)}px vs after ${p.after.toFixed(1)}px`);
+          if (p.before < 2 || p.before > 8 || p.after < 2 || p.after > 8) problems.push(`${scheme}: ${p.table}: spacing ${p.before.toFixed(1)}/${p.after.toFixed(1)}px outside 2-8px`);
+        }
+        const all = r.pairs.flatMap((p) => [p.before, p.after]);
+        seen[scheme] = {
+          measured: r.pairs.length,
+          skippedWrapped: r.skipped,
+          min: Number(Math.min(...all).toFixed(1)),
+          max: Number(Math.max(...all).toFixed(1)),
+          worst: { before: Number(worstAsym.before.toFixed(1)), after: Number(worstAsym.after.toFixed(1)) },
+        };
+      }
       return { ok: problems.length === 0, details: { ...seen, problems: problems.slice(0, 10) } };
     });
   } finally {

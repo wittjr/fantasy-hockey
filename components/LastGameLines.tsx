@@ -175,7 +175,11 @@ function UnitTable({
               <td className="py-1">
                 {u.playerIds.map((id, n) => (
                   <Fragment key={id}>
-                    {n > 0 && <span aria-hidden> – </span>}
+                    {n > 0 && (
+                      <span aria-hidden className="mx-1">
+                        –
+                      </span>
+                    )}
                     <PlayerLink
                       playerId={id}
                       name={name(id)}
@@ -185,6 +189,7 @@ function UnitTable({
                       gameCount={link.gameCount}
                       sort={link.sort}
                       title={`Show who ${name(id)} plays with at ${SITUATION_ABBREV[situation]}`}
+                      overlaySpinner
                     />
                   </Fragment>
                 ))}

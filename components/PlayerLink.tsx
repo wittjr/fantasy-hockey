@@ -19,6 +19,7 @@ export function PlayerLink({
   gameCount,
   sort,
   title,
+  overlaySpinner,
 }: {
   playerId: number;
   name: string;
@@ -28,6 +29,8 @@ export function PlayerLink({
   gameCount: number;
   sort: SortSpec;
   title: string;
+  /** Float the pending spinner over the line so the name takes no trailing space (unit tables). */
+  overlaySpinner?: boolean;
 }) {
   const selected = selectedSit !== null;
   const className = `${LINK_LOOK}${selected ? " font-medium" : ""}`;
@@ -44,6 +47,7 @@ export function PlayerLink({
       aria-current={selected ? "true" : undefined}
       title={title}
       className={className}
+      overlaySpinner={overlaySpinner}
     >
       {name}
     </PendingLink>
