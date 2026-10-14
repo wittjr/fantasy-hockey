@@ -9,6 +9,10 @@ interface Stub {
   boxscoreFails?: number[];
   /** Games whose shift chart answers 503. */
   shiftChartFails?: number[];
+  /** Games whose play-by-play answers 503. */
+  pbpFails?: number[];
+  /** Games whose play-by-play is published with no plays yet. */
+  pbpEmpty?: number[];
   /** Games that ended past regulation, keyed by game id. */
   lastPeriod?: Record<number, "OT" | "SO">;
 }
@@ -42,8 +46,32 @@ function boxscore(id: number, lastPeriodType: "REG" | "OT" | "SO") {
 
 const SHIFT_ROWS = [{ playerId: 8, teamAbbrev: "MTL", period: 1, startTime: "00:00", endTime: "00:45", typeCode: 517 }];
 
+/** One MTL shot on goal at P1 00:30, while player 8 is on the ice. */
+function playByPlay(id: number, plays: boolean) {
+  return {
+    id,
+    homeTeam: { id: 8, abbrev: "MTL" },
+    awayTeam: { id: 6, abbrev: "BOS" },
+    plays: plays
+      ? [
+          {
+            typeDescKey: "shot-on-goal",
+            timeInPeriod: "00:30",
+            situationCode: "1551",
+            periodDescriptor: { number: 1, periodType: "REG" },
+            details: { eventOwnerTeamId: 8 },
+          },
+        ]
+      : [],
+  };
+}
+
+/** Play-by-play requests per game id, filled by stubNhl. */
+const pbpRequests = new Map<number, number>();
+
 /** Replaces global fetch with canned NHL responses and silences (but records) console.error. */
 function stubNhl(t: TestContext, stub: Stub = {}) {
+  pbpRequests.clear();
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
   t.mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
     const url = String(input);
@@ -58,6 +86,12 @@ function stubNhl(t: TestContext, stub: Stub = {}) {
     const chart = url.match(/shiftcharts\?cayenneExp=gameId=(\d+)/);
     if (chart) {
       return stub.shiftChartFails?.includes(Number(chart[1])) ? json({}, 503) : json({ data: SHIFT_ROWS });
+    }
+    const pbp = url.match(/gamecenter\/(\d+)\/play-by-play/);
+    if (pbp) {
+      const id = Number(pbp[1]);
+      pbpRequests.set(id, (pbpRequests.get(id) ?? 0) + 1);
+      return stub.pbpFails?.includes(id) ? json({}, 503) : json(playByPlay(id, !stub.pbpEmpty?.includes(id)));
     }
     throw new Error(`unexpected request: ${url}`);
   });
@@ -123,4 +157,48 @@ test("a failed shift chart is logged server-side with its game id", async (t) =>
   const research = await loadTeamResearch("MTL", 5);
   assert.equal(research.games.length, 3);
   assert.ok(mentions(errorLog.mock.calls, "game 3"));
+});
+
+test("every loaded game carries events with its attributed shot", async (t) => {
+  stubNhl(t);
+  const research = await loadTeamResearch("MTL", 5);
+  assert.equal(research.games.length, 3);
+  for (const game of research.games) {
+    assert.notEqual(game.events, null);
+    const { total } = game.events!;
+    assert.equal(total.ev.sf + total.pp.sf + total.sh.sf, 1);
+  }
+});
+
+test("a failed play-by-play keeps the game with unknown events and is logged with its game id", async (t) => {
+  const errorLog = stubNhl(t, { pbpFails: [3] });
+  const research = await loadTeamResearch("MTL", 5);
+  assert.deepEqual(research.unavailableDates, []);
+  const third = research.games[2];
+  assert.equal(third.id, 3);
+  assert.notEqual(third.lines, null);
+  assert.notEqual(third.regulationToi, null);
+  assert.equal(third.toi.get(8), 900);
+  assert.equal(third.events, null);
+  assert.notEqual(research.games[0].events, null);
+  assert.ok(mentions(errorLog.mock.calls, "play-by-play for game 3"));
+});
+
+test("an unpublished play-by-play is requested twice and leaves the game's events unknown", async (t) => {
+  stubNhl(t, { pbpEmpty: [3] });
+  const research = await loadTeamResearch("MTL", 5);
+  assert.deepEqual(research.unavailableDates, []);
+  assert.equal(research.games[2].events, null);
+  assert.equal(pbpRequests.get(3), 2);
+  assert.equal(pbpRequests.get(1), 1);
+});
+
+test("a missing shift chart gives unknown events even when the play-by-play loaded", async (t) => {
+  stubNhl(t, { shiftChartFails: [3] });
+  const research = await loadTeamResearch("MTL", 5);
+  const third = research.games[2];
+  assert.equal(third.lines, null);
+  assert.equal(third.events, null);
+  assert.equal(pbpRequests.get(3), 1);
+  assert.notEqual(research.games[0].events, null);
 });
