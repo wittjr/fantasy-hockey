@@ -54,7 +54,7 @@ export function gameDetail(cell: PerGameCell | null, game: StripGame): GameDetai
   }
   if (cell.pp === null || cell.sh === null) {
     detail.rows.push({ label: "PP", value: "—" }, { label: "SH", value: "—" });
-    detail.notes.push("No PP/SH data (shift chart not published)");
+    detail.notes.push("No PP/SH data (shift chart not published yet, or it failed to load)");
   } else {
     const share = cell.ppShare !== null ? ` (${Math.round(cell.ppShare)}% of team PP)` : "";
     detail.rows.push({ label: "PP", value: `${formatClock(cell.pp)}${share}` }, { label: "SH", value: formatClock(cell.sh) });

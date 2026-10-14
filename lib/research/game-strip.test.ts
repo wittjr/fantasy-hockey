@@ -70,13 +70,13 @@ test("detailText for an OT game with no shift data says it is excluded and shows
   const g = game({ date: "2026-10-03", home: false, opponent: "BOS", score: { for: 2, against: 3 }, overtime: "OT" });
   assert.equal(
     text(c, g),
-    "Oct 3 @ BOS · L 2–3 · OT · TOI — · Total (incl. OT) 21:05 · PP — · SH — · Excluded from averages: no shift data for overtime · No PP/SH data (shift chart not published)",
+    "Oct 3 @ BOS · L 2–3 · OT · TOI — · Total (incl. OT) 21:05 · PP — · SH — · Excluded from averages: no shift data for overtime · No PP/SH data (shift chart not published yet, or it failed to load)",
   );
 });
 
 test("detailText for a regulation game with no shift chart shows dashes for PP and SH", () => {
   const c = full({ totalToi: 900, toi: 900, pp: null, sh: null, teamPp: 0, ppShare: null });
-  assert.equal(text(c, game()), "Oct 8 vs TOR · W 3–2 · TOI 15:00 · PP — · SH — · No PP/SH data (shift chart not published)");
+  assert.equal(text(c, game()), "Oct 8 vs TOR · W 3–2 · TOI 15:00 · PP — · SH — · No PP/SH data (shift chart not published yet, or it failed to load)");
 });
 
 test("detailText shows plain PP time when the team had no power play", () => {

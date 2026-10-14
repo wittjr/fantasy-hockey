@@ -1,7 +1,7 @@
 import { PendingLink } from "@/components/PendingLink";
 import { StripPopover } from "@/components/StripPopover";
 import { ToiStripCell } from "@/components/ToiStripCell";
-import { formatClock, formatDate, formatSignedClock, formatSignedPoints } from "@/lib/research/format";
+import { formatClock, formatDate, formatPointsDelta, formatSignedClock } from "@/lib/research/format";
 import { detailText, STRIP_SQUARE_CLASS } from "@/lib/research/game-strip";
 import type { Situation } from "@/lib/research/lines";
 import {
@@ -144,7 +144,7 @@ export function PlayerLinemates({
         {showTrend && (
           <HeaderStat
             label="PP share Δ"
-            value={row.ppShareDelta === null ? null : formatSignedPoints(row.ppShareDelta)}
+            value={row.ppShareDelta === null ? null : formatPointsDelta(row.ppShareDelta)}
             crossing={ppCrossing}
           />
         )}

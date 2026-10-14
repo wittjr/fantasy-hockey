@@ -1,7 +1,7 @@
 import { PendingLink } from "@/components/PendingLink";
 import { PlayerLink } from "@/components/PlayerLink";
 import { ToiGameStrip } from "@/components/ToiGameStrip";
-import { formatClock, formatDate, formatSignedClock, formatSignedPoints } from "@/lib/research/format";
+import { formatClock, formatDate, formatPointsDelta, formatSignedClock } from "@/lib/research/format";
 import type { Situation } from "@/lib/research/lines";
 import type { TeamResearch } from "@/lib/research/team-games";
 import {
@@ -46,7 +46,7 @@ export function ToiTrends({
   const sort = effectiveSort(requestedSort, research.games.length);
   const rows = sortRows(buildTrendRows(research.players.values(), research.games), sort);
   const showTrend = research.games.length > 1;
-  const muted = "text-neutral-400 dark:text-neutral-500";
+  const muted = "text-neutral-600 dark:text-neutral-400";
   const overtime = research.games.map((g) => g.overtime !== null);
   const sortProps = { sort, team, gameCount, selected, sit, all };
   const noChartDates = research.games.filter((g) => !g.lines).map((g) => formatDate(g.date));
@@ -112,7 +112,7 @@ export function ToiTrends({
                   </td>
                   <td className="py-1 pr-3 whitespace-nowrap text-neutral-600 dark:text-neutral-400">
                     {row.player.position}{" "}
-                    <span className="ml-1 text-xs tabular-nums text-neutral-600 dark:text-neutral-400">
+                    <span className="text-xs tabular-nums text-neutral-600 dark:text-neutral-400">
                       {row.gamesPlayed}/{research.games.length} GP
                     </span>
                   </td>
@@ -134,7 +134,7 @@ export function ToiTrends({
                   {showTrend && (
                     <DeltaCell
                       delta={row.ppShareDelta}
-                      format={formatSignedPoints}
+                      format={formatPointsDelta}
                       slope={row.ppShareSlope}
                       slopeThreshold={PP_SHARE_TREND_THRESHOLD_POINTS}
                       moverThreshold={PP_MOVER_POINTS}
@@ -264,7 +264,7 @@ function DeltaCell({
         : "";
   return (
     <td className={`py-1 pr-3 text-right whitespace-nowrap tabular-nums ${tone}`}>
-      {delta !== null ? format(delta) : <span className="text-neutral-400 dark:text-neutral-500">—</span>}
+      {delta !== null ? format(delta) : <span className="text-neutral-600 dark:text-neutral-400">—</span>}
       <TrendArrow direction={slopeDirection(slope, slopeThreshold)} />
     </td>
   );

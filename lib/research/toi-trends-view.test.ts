@@ -77,6 +77,9 @@ test("the Pos cell reads the position, a space, then games played", () => {
   const posText = (name: string) => tds(rowHtml(html, name))[1].replace(/<[^>]*>/g, "").trim();
   assert.equal(posText("Alpha Forward"), "C 3/3 GP");
   assert.equal(posText("Bravo Forward"), "L 2/3 GP");
+  // The literal space is the only gap: the GP span adds no margin.
+  const gpSpan = tds(rowHtml(html, "Alpha Forward"))[1].match(/<span\b[^>]*>/)![0];
+  assert.ok(!classTokens(gpSpan).some((c) => c.startsWith("ml-")), gpSpan);
 });
 
 test("a player with null avgToi shows a dash and never 0:00", () => {
@@ -132,6 +135,18 @@ test("a player with 2 included games shows a dash in both delta cells", () => {
   assert.ok(cellsHtml[5].includes("—"), cellsHtml[5]);
 });
 
+// Re-audit 2026-10-14: the muted dash holds 4.5:1 on white, the mover tints and #0a0a0a.
+test("Avg TOI and delta dashes are text-neutral-600 in light and text-neutral-400 in dark", () => {
+  const games = threeGames();
+  games[0].toi.delete(2);
+  const deltaCells = tds(rowHtml(render(research(games)), "Bravo Forward"));
+  const otNoChart: ResearchGame = { ...fixtureGame("2026-10-07", { 1: 1500 }, false), overtime: "OT", regulationToi: null };
+  const avgCell = tds(rowHtml(render(research([otNoChart])), "Alpha Forward"))[2];
+  for (const cell of [deltaCells[3], deltaCells[5], avgCell]) {
+    const dash = cell.match(/<span\b[^>]*>—<\/span>/)?.[0] ?? "";
+    assert.deepEqual(classTokens(dash), ["text-neutral-600", "dark:text-neutral-400"], cell);
+  }
+});
 test("a rising TOI slope shows a muted up arrow with screen-reader text and no green or red", () => {
   const games = [
     fixtureGame("2026-10-01", { 1: 1000, 2: 900, 3: 1300 }),
@@ -278,6 +293,13 @@ test("a delta below the mover threshold has no weight or colour", () => {
   const cell = tds(rowHtml(html, "Alpha Forward"))[3];
   assert.ok(cell.includes("+0:50"), cell);
   assert.ok(!cell.includes("font-medium") && !/text-(green|red)-/.test(cell), cell);
+});
+
+test("a zero delta still carries a sign", () => {
+  const html = render(research(moverGames({ 2: [1000, 1000, 1000, 1000, 1000] }, { 2: [20, 20, 20, 20, 20] })));
+  const cells = tds(rowHtml(html, "Bravo Forward"));
+  assert.ok(cells[3].includes("±0:00"), cells[3]);
+  assert.ok(cells[5].includes("±0"), cells[5]);
 });
 
 test("the delta that rounds to exactly 2:00 is coloured and 1:59 is not", () => {
