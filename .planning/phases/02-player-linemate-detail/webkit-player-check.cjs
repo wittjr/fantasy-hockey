@@ -81,7 +81,7 @@ function makeScratchApp() {
       return !path.basename(src).startsWith(".env");
     },
   });
-  execFileSync("cp", ["-Rc", path.join(root, "node_modules"), path.join(tmp, "node_modules")]);
+  execFileSync("cp", ["-Rc", fs.realpathSync(path.join(root, "node_modules")), path.join(tmp, "node_modules")]);
   const pagePath = path.join(tmp, "app", "research", "page.tsx");
   let page = fs.readFileSync(pagePath, "utf8");
   for (const line of GATE_LINES) {
@@ -319,10 +319,10 @@ async function navigationChecks(context) {
   await check("N8", "clicking a name in a PP unit table opens that player on the PP tab and jumps to the panel (D-22)", async () => {
     const target = await page.evaluate((cur) => {
       const tables = [...document.querySelectorAll("table")].filter((t) =>
-        (t.querySelector("thead tr")?.lastElementChild?.textContent ?? "").trim().startsWith("PP - "),
+        [...t.querySelectorAll("thead th")].some((th) => th.textContent.trim().startsWith("PP - ")),
       );
       for (const t of tables) {
-        for (const a of t.querySelectorAll("tbody td:last-child a")) {
+        for (const a of t.querySelectorAll("tbody a")) {
           const m = /player=(\d+)/.exec(a.getAttribute("href") ?? "");
           if (m && m[1] !== String(cur)) {
             a.setAttribute("data-pc-target", "1");
@@ -633,7 +633,7 @@ async function main() {
   try {
     let up = false;
     for (let n = 0; n < 180 && !up; n++) {
-      if ((await answers(`${BASE}/research?team=${TEAM}&games=5`)) === 200) up = true;
+      if ((await answers(`${BASE}/research`)) === 200) up = true; // no team: compiles the page without a slow NHL load that the 3 s probe would abort
       else await new Promise((r) => setTimeout(r, 1000));
     }
     if (!up) {
