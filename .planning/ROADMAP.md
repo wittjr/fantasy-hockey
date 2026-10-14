@@ -111,7 +111,7 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 9/11 plans executed
+**Plans:** 10/11 plans executed
 
 Plans:
 **Wave 1**
@@ -136,7 +136,7 @@ Plans:
 - [x] 03-09-PLAN.md — Last 20 measured: cold three-team CLI check tunes the pacing; WebKit harness with in-app cold and warm Last 20 (U1, U2)
 
 **Wave 7** *(blocked on Wave 6 completion)*
-- [ ] 03-10-PLAN.md — WebKit checks of the unit tables on live data: structure and no negative Other (U3), name links (U4), 1024px light/dark (U5), dividers and Total row (U6)
+- [x] 03-10-PLAN.md — WebKit checks of the unit tables on live data: structure and no negative Other (U3), name links (U4), 1024px light/dark (U5), dividers and Total row (U6)
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [ ] 03-11-PLAN.md — Phase 2 regression run with N8 updated, live smoke rerun, full suite and end-of-phase human check
@@ -154,4 +154,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 9/11 | In Progress | - |
+| 3. Unit Event Stats | 10/11 | In Progress | - |
