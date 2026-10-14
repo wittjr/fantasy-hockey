@@ -111,7 +111,7 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 11/13 plans executed (2 gap-closure plans from UAT)
+**Plans:** 12/13 plans executed (2 gap-closure plans from UAT)
 
 Plans:
 **Wave 1**
@@ -142,7 +142,7 @@ Plans:
 - [x] 03-11-PLAN.md — Phase 2 regression run with N8 updated, live smoke rerun, full suite and end-of-phase human check
 
 **Wave 9** *(gap closure, UAT; blocked on Wave 8 completion)*
-- [ ] 03-12-PLAN.md — G-03-1: teammate-blocked attempts count in CF/CA (user decision); fixture 2026020092 pins L1 EV CF 11 and L3 EV CA 6 with SOG still reconciled; exclusion removed from the counter, note, legend and spec documents
+- [x] 03-12-PLAN.md — G-03-1: teammate-blocked attempts count in CF/CA (user decision); fixture 2026020092 pins L1 EV CF 11 and L3 EV CA 6 with SOG still reconciled; exclusion removed from the counter, note, legend and spec documents
 
 **Wave 10** *(gap closure, UAT; blocked on Wave 9 completion)*
 - [ ] 03-13-PLAN.md — G-03-7: centered name separator (unit-table names use an overlay spinner that takes no inline space); G-03-3: pl-1 pr-3 stat cells so numbers clear the dividers; WebKit U7/U8 at 1024px light and dark
@@ -160,7 +160,7 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 11/11 | In Progress | - |
+| 3. Unit Event Stats | 12/13 | In Progress | - |
 
 ## Backlog
 
