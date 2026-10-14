@@ -368,7 +368,7 @@ test("a TOI Δ and a PP share Δ that cross the mover thresholds are coloured wi
 test("unknown header stats show a muted dash, never 0:00 or 0%", () => {
   const items = stats(renderPanel(research(unknownPpGames())));
   assert.deepEqual(items.map((i) => i.value), ["18:20", "+5:00", "—", "—"]);
-  for (const i of [items[2], items[3]]) assert.ok(i.html.includes('class="text-neutral-400'), i.html);
+  for (const i of [items[2], items[3]]) assert.ok(i.html.includes('class="text-neutral-600 dark:text-neutral-400'), i.html);
   const text = items.map((i) => i.value).join(" ");
   assert.ok(!text.includes("0:00") && !text.includes("0%"), text);
 });
@@ -442,7 +442,7 @@ test("the amber footnote lists every window game without a shift chart and says 
   const games = headerGames();
   games[2] = alphaGame(3, "2026-10-10", 1300, null, null);
   const notes = footnotes(renderPanel(research(games)));
-  const amber = notes.find((n) => classTokens(n.attrs).includes("text-amber-600"));
+  const amber = notes.find((n) => classTokens(n.attrs).includes("text-amber-700"));
   assert.ok(amber, JSON.stringify(notes));
   assert.ok(classTokens(amber.attrs).includes("dark:text-amber-400"));
   assert.ok(
@@ -456,7 +456,7 @@ test("with every game charted there is no amber footnote", () => {
   const games = [1, 2, 3].map((n) => alphaGame(n, `2026-10-0${n}`, 1200, evPairs(), null));
   const notes = footnotes(renderPanel(research(games)));
   assert.equal(notes.length, 3); // legend lines 1-3
-  assert.ok(!notes.some((n) => classTokens(n.attrs).includes("text-amber-600") || n.text.startsWith("No linemate data")));
+  assert.ok(!notes.some((n) => classTokens(n.attrs).includes("text-amber-700") || n.text.startsWith("No linemate data")));
 });
 
 test("when no game has a shift chart the panel says so, shows no table or legend and keeps the tabs", () => {
@@ -468,7 +468,7 @@ test("when no game has a shift chart the panel says so, shows no table or legend
     ),
   );
   assert.ok(!html.includes("<table") && !html.includes("Squares are team games"));
-  assert.ok(!html.includes("text-amber-600"), "the empty message is not repeated as an amber footnote");
+  assert.ok(!html.includes("text-amber-700"), "the empty message is not repeated as an amber footnote");
   assert.deepEqual(tabLinks(html).map((t) => t.label), ["EV", "PP", "SH"]);
 });
 
@@ -663,5 +663,5 @@ test("a player with no earlier game to compare with gets a note", () => {
 test("the tag notes are not amber", () => {
   const games = [fixtureGames()[0], mkGame(2, "2026-10-03", [2], null), mkGame(3, "2026-10-05", [2], null)];
   const note = footnotes(renderPanel(research(games))).find((n) => n.text.startsWith("No tags:"));
-  assert.ok(note && !classTokens(note.attrs).includes("text-amber-600"), JSON.stringify(note));
+  assert.ok(note && !classTokens(note.attrs).includes("text-amber-700"), JSON.stringify(note));
 });

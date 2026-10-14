@@ -547,8 +547,8 @@ test("missingPlayByPlayNote joins several dates with a comma and is null when no
   assert.equal(missingPlayByPlayNote([]), null);
 });
 
-const AMBER = '<p class="text-xs text-amber-600 dark:text-amber-400">';
-const amberNotes = (html: string) => [...html.matchAll(/<p class="text-xs text-amber-600 dark:text-amber-400">([\s\S]*?)<\/p>/g)].map((m) => m[1]);
+const AMBER = '<p class="text-xs text-amber-700 dark:text-amber-400">';
+const amberNotes = (html: string) => [...html.matchAll(/<p class="text-xs text-amber-700 dark:text-amber-400">([\s\S]*?)<\/p>/g)].map((m) => m[1]);
 const renderGames = (games: ResearchGame[]) =>
   renderToStaticMarkup(
     createElement(LastGameLines, {
