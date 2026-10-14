@@ -1,16 +1,26 @@
 import { Fragment } from "react";
 import { PlayerLink } from "@/components/PlayerLink";
-import { formatClock, formatDate, gameLabel, resultLabel } from "@/lib/research/format";
-import type { Situation, Unit } from "@/lib/research/lines";
+import { formatDate, gameLabel, resultLabel } from "@/lib/research/format";
+import type { Situation } from "@/lib/research/lines";
 import { SITUATION_ABBREV } from "@/lib/research/linemates";
 import type { TeamResearch } from "@/lib/research/team-games";
 import type { SortSpec } from "@/lib/research/toi-trends";
+import { buildUnitTable, DASH, type UnitStats, type UnitTableView } from "@/lib/research/unit-events-view";
 
-const UNIT_LIMITS: Record<Situation, { F: number; D: number }> = {
-  ev: { F: 4, D: 3 },
-  pp: { F: 2, D: 2 },
-  sh: { F: 3, D: 3 },
-};
+const DIVIDER = "border-l border-neutral-200 dark:border-neutral-800";
+
+/** The nine stat columns in display order; `start` columns open a Goals, Shots or Corsi group and carry its divider. */
+const STAT_COLUMNS: { key: keyof UnitStats; label: string; title: string; width: string; start?: boolean; derived?: boolean }[] = [
+  { key: "gf", label: "GF", title: "Goals for", width: "w-12", start: true },
+  { key: "ga", label: "GA", title: "Goals against", width: "w-12" },
+  { key: "plusMinus", label: "+/-", title: "Goals for minus goals against", width: "w-12" },
+  { key: "sf", label: "SF", title: "Shots on goal for", width: "w-12", start: true },
+  { key: "sa", label: "SA", title: "Shots on goal against", width: "w-12" },
+  { key: "sfPct", label: "SF%", title: "Share of shots on goal", width: "w-14", derived: true },
+  { key: "cf", label: "CF", title: "Shot attempts for", width: "w-12", start: true },
+  { key: "ca", label: "CA", title: "Shot attempts against", width: "w-12" },
+  { key: "cfPct", label: "CF%", title: "Share of shot attempts", width: "w-14", derived: true },
+];
 
 /** Each name links to that player's panel on the table's own situation tab, so a PP name opens the PP tab. */
 export function LastGameLines({
@@ -42,17 +52,18 @@ export function LastGameLines({
       {!game.lines ? (
         <p className="text-sm text-neutral-500">No shift chart is available for this game (not published yet, or it failed to load).</p>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="flex flex-col gap-6">
           {(["ev", "pp", "sh"] as const).flatMap((situation) =>
             (["F", "D"] as const).map((group) => (
-              <UnitTable
-                key={`${situation}-${group}`}
-                title={`${SITUATION_ABBREV[situation]} - ${group === "F" ? "Forwards" : "Defense"}`}
-                units={game.lines!.units[situation][group].slice(0, UNIT_LIMITS[situation][group])}
-                name={name}
-                situation={situation}
-                link={{ team, gameCount, sort, sit, selected }}
-              />
+              <div key={`${situation}-${group}`} className="overflow-x-auto">
+                <UnitTable
+                  title={`${SITUATION_ABBREV[situation]} - ${group === "F" ? "Forwards" : "Defense"}`}
+                  view={buildUnitTable(game.lines!, game.events, situation, group)}
+                  name={name}
+                  situation={situation}
+                  link={{ team, gameCount, sort, sit, selected }}
+                />
+              </div>
             ))
           )}
         </div>
@@ -61,15 +72,27 @@ export function LastGameLines({
   );
 }
 
+function StatCells({ stats }: { stats: UnitStats }) {
+  return STAT_COLUMNS.map((c) => {
+    const value = stats[c.key];
+    const tone = value === DASH ? "text-neutral-400 dark:text-neutral-500" : c.derived ? "text-neutral-500" : "";
+    return (
+      <td key={c.key} className={`py-1 pl-3 text-right tabular-nums whitespace-nowrap ${tone} ${c.start ? DIVIDER : ""}`}>
+        {value}
+      </td>
+    );
+  });
+}
+
 function UnitTable({
   title,
-  units,
+  view,
   name,
   situation,
   link,
 }: {
   title: string;
-  units: Unit[];
+  view: UnitTableView;
   name: (id: number) => string;
   situation: Situation;
   link: { team: string; gameCount: number; sort: SortSpec; sit: Situation; selected: number | null };
@@ -77,26 +100,39 @@ function UnitTable({
   return (
     <table className="w-full text-sm">
       <thead>
+        <tr>
+          <td colSpan={4} />
+          {["Goals", "Shots", "Corsi"].map((group) => (
+            <th key={group} scope="colgroup" colSpan={3} className={`${DIVIDER} pl-3 pt-1 text-left text-xs font-medium text-neutral-500`}>
+              {group}
+            </th>
+          ))}
+        </tr>
         <tr className="border-b border-neutral-200 text-left text-xs text-neutral-500 dark:border-neutral-800">
-          <th className="w-10 py-1 font-medium">#</th>
-          <th className="w-14 py-1 font-medium">Time</th>
-          <th className="w-14 py-1 font-medium">%</th>
-          <th className="py-1 font-medium">{title}</th>
+          <th scope="col" className="w-10 py-1 font-medium">#</th>
+          <th scope="col" className="w-14 py-1 font-medium">Time</th>
+          <th scope="col" className="w-14 py-1 font-medium">%</th>
+          <th scope="col" className="py-1 font-medium">{title}</th>
+          {STAT_COLUMNS.map((c) => (
+            <th key={c.key} scope="col" title={c.title} className={`${c.width} py-1 pl-3 text-right font-medium ${c.start ? DIVIDER : ""}`}>
+              {c.label}
+            </th>
+          ))}
         </tr>
       </thead>
       <tbody>
-        {units.length === 0 ? (
+        {view.rows.length === 0 ? (
           <tr>
-            <td colSpan={4} className="py-1 text-neutral-400">
+            <td colSpan={13} className="py-1 text-neutral-400">
               None
             </td>
           </tr>
         ) : (
-          units.map((u, i) => (
+          view.rows.map((u, i) => (
             <tr key={u.playerIds.join(",")} className="border-b border-neutral-100 dark:border-neutral-900">
               <td className="py-1 text-neutral-500">{i + 1}</td>
-              <td className="py-1 tabular-nums">{formatClock(u.seconds)}</td>
-              <td className="py-1 tabular-nums text-neutral-500">{u.pct.toFixed(1)}</td>
+              <td className="py-1 tabular-nums">{u.time}</td>
+              <td className="py-1 tabular-nums text-neutral-500">{u.pct}</td>
               <td className="py-1">
                 {u.playerIds.map((id, n) => (
                   <Fragment key={id}>
@@ -114,6 +150,7 @@ function UnitTable({
                   </Fragment>
                 ))}
               </td>
+              <StatCells stats={u.stats} />
             </tr>
           ))
         )}

@@ -192,7 +192,7 @@ test("the #, Time and % cells keep their values", () => {
 test("an empty unit table shows one None row with no link", () => {
   const sh = tableHtml(renderUnits(fixtureUnits()), "SH - Defense");
   assert.ok(sh.includes("None"));
-  assert.equal((sh.match(/<tr/g) ?? []).length, 2);
+  assert.equal((sh.match(/>None</g) ?? []).length, 1);
   assert.ok(!sh.includes("<a"));
 });
 
@@ -218,14 +218,15 @@ test("the selected player's name on his own tab is a plain #player-detail anchor
 test("an EV forward list of 5 units renders 4 rows", () => {
   const five = unitResearch({ ev: { F: [3, 4, 5, 6, 7].map((id) => unit([id, 8])) } });
   const table = tableHtml(renderUnits(five), "EV - Forwards");
-  assert.equal((table.match(/<tr/g) ?? []).length, 1 + 4);
+  // Rows that list a unit hold name links; header, Other and Total rows do not.
+  assert.equal((table.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*<a\b/g) ?? []).length, 4);
 });
 
 test("players with the same display name get links with their own ids", () => {
   const twins = new Map(unitPlayers);
   twins.set(12, { id: 12, name: "Same Name", position: "C", group: "F" });
   twins.set(13, { id: 13, name: "Same Name", position: "C", group: "F" });
-  const cell = tds(tableHtml(renderUnits(unitResearch({ ev: { F: [unit([12, 13])] } }, twins), "ev", null), "EV - Forwards").match(/<tr[\s\S]*?<\/tr>/g)![1])[3];
+  const cell = tds(rowHtml(tableHtml(renderUnits(unitResearch({ ev: { F: [unit([12, 13])] } }, twins), "ev", null), "EV - Forwards"), "Same Name"))[3];
   assert.deepEqual(anchors(cell).map((a) => attr(a, "href")), [12, 13].map((id) => `/research?team=MTL&games=5&player=${id}#player-detail`));
 });
 

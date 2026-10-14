@@ -204,7 +204,7 @@ test("markup: every table has Goals, Shots, Corsi group headers over 13 column h
 });
 
 test("markup: abbreviated headers carry a title", () => {
-  const [table] = tablesOf(render(markupGame(richLines(), richEvents())));
+  const table = tablesOf(render(markupGame(richLines(), richEvents())))[0] ?? "";
   for (const title of [
     "Goals for",
     "Goals against",
@@ -222,12 +222,12 @@ test("markup: abbreviated headers carry a title", () => {
 
 test("markup: a listed unit prints its stats and a PP name links to the PP tab", () => {
   const tables = tablesOf(render(markupGame(richLines(), richEvents())));
-  const evRow = tables[0].match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*Alpha Center[\s\S]*?<\/tr>/)?.[0] ?? "";
+  const evRow = (tables[0] ?? "").match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*Alpha Center[\s\S]*?<\/tr>/)?.[0] ?? "";
   assert.deepEqual(
     [...evRow.matchAll(/<td[^>]*>([^<]*)<\/td>/g)].map((m) => m[1]).slice(-9),
     ["2", "1", "+1", "10", "6", "62.5", "20", "12", "62.5"],
   );
-  assert.ok(tables[2].includes("sit=pp"));
+  assert.ok((tables[2] ?? "").includes("sit=pp"));
 });
 
 test("markup: no count, percentage or +/- is coloured green or red (D-10)", () => {
@@ -238,7 +238,7 @@ test("markup: no count, percentage or +/- is coloured green or red (D-10)", () =
 
 test("markup: the None row spans 13 columns", () => {
   const html = render(markupGame(richLines(), richEvents()));
-  assert.ok(tablesOf(html)[3].includes('colSpan="13"') || tablesOf(html)[3].includes('colspan="13"'));
+  assert.ok((tablesOf(html)[3] ?? "").includes('colSpan="13"'));
 });
 
 test("markup: with lines null no table renders", () => {
