@@ -11,6 +11,7 @@ import {
   type PositionGroup,
   type ShiftInput,
   type Situation,
+  uniqueShifts,
 } from "./lines";
 import { toGameEvents, type GameEvent } from "./play-events";
 import type { NhlPlayByPlay } from "@/lib/nhl/client";
@@ -39,6 +40,8 @@ export interface GameEvents {
   unattributed: number;
   /** Shift-chart versus situationCode agreement for this game, both teams (D-16). */
   quality: { checked: number; matched: number };
+  /** D-23: the shift chart looks corrupted (foreign-team rows or many repeated rows); counts are still shown, with a warning. */
+  chartSuspect: boolean;
 }
 
 const NO_ONE: OnIce = { skaters: [], goalie: false };
@@ -83,6 +86,7 @@ export function attributeEvents(
     excluded: { shootout: 0, penaltyShot: 0, teammateBlocked: 0 },
     unattributed: 0,
     quality: { checked: 0, matched: 0 },
+    chartSuspect: false,
   };
 
   for (const event of events) {
@@ -168,6 +172,23 @@ export function matchIsLow(q: { checked: number; matched: number }): boolean {
   return ratio !== null && ratio < EVENT_MATCH_THRESHOLD;
 }
 
+/**
+ * Largest share of repeated shift rows (repeated rows / all rows) a trustworthy chart may have (D-23).
+ * Measured: the six gate fixtures repeat 0% of rows (2026020075 repeats 3 of 756, 0.4%); the corrupted
+ * chart 2025020565 repeats 750 of 2,166 (34.6%) and also lists VGK and SJS players. 5% sits between them.
+ */
+export const MAX_REPEATED_SHIFT_SHARE = 0.05;
+
+/**
+ * D-23: true when the chart lists a team that is not in the game, or repeats identical rows beyond
+ * MAX_REPEATED_SHIFT_SHARE. Takes the raw list, before bucketOnIce drops ids it has no position for.
+ */
+export function isShiftChartSuspect(shifts: readonly ShiftInput[], teams: { home: string; away: string }): boolean {
+  if (shifts.length === 0) return false;
+  if (shifts.some((s) => s.team !== teams.home && s.team !== teams.away)) return true;
+  return (shifts.length - uniqueShifts(shifts).length) / shifts.length > MAX_REPEATED_SHIFT_SHARE;
+}
+
 /** Events for `team`, or null when the shift chart or play-by-play is missing: unknown, never zeros. */
 export function buildGameEvents(
   team: string,
@@ -177,8 +198,10 @@ export function buildGameEvents(
 ): GameEvents | null {
   if (shifts.length === 0 || !pbp || pbp.plays.length === 0) return null;
   const events = toGameEvents(pbp);
+  const teams = { home: pbp.homeTeam.abbrev, away: pbp.awayTeam.abbrev };
   return {
     ...attributeEvents(team, shifts, positions, events),
-    quality: matchQuality(shifts, positions, events, { home: pbp.homeTeam.abbrev, away: pbp.awayTeam.abbrev }),
+    quality: matchQuality(shifts, positions, events, teams),
+    chartSuspect: isShiftChartSuspect(shifts, teams),
   };
 }
