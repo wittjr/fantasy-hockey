@@ -155,3 +155,13 @@ Phases execute in numeric order: 1 → 2 → 3
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
 | 3. Unit Event Stats | 11/11 | In Progress | - |
+
+## Backlog
+
+### Phase 999.1: Follow-up — Phase 03 deferred UAT follow-up: Test 2 (BACKLOG)
+
+**Goal:** Resolve the UAT checkpoint deferred during Phase 03 verification
+**Source phase:** 03
+**Deferred at:** 2026-10-14 during /gsd-verify-work 03 session completion
+**Follow-ups:**
+- [ ] Test 2: I want to add a target for later to be able to see the details in "Other" (deferred 2026-10-14)
