@@ -381,6 +381,25 @@ test("markup: exactly the GF, SF and CF cells carry border-l in every row", () =
   }
 });
 
+test("markup: every stat cell carries pl-1 and pr-3 (never pl-3) and the group headers keep pl-3", () => {
+  const table = tablesOf(render(markupGame(richLines(), richEvents())))[0] ?? "";
+  const tokens = (cell: string) => (cell.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+  const rows = rowsOf(table).slice(1); // column headers, one listed unit, Other, Total
+  assert.equal(rows.length, 4);
+  for (const row of rows) {
+    const cells = cellsOf(row);
+    assert.equal(cells.length, 13);
+    cells.slice(4).forEach((cell, i) => {
+      const t = tokens(cell);
+      assert.ok(t.includes("pl-1") && t.includes("pr-3") && !t.includes("pl-3"), `stat cell ${i} of ${row.slice(0, 60)}`);
+    });
+  }
+  const groups = rowsOf(table)[0];
+  const headers = [...groups.matchAll(/<th\b[^>]*scope="colgroup"[^>]*>/g)].map((m) => m[0]);
+  assert.equal(headers.length, 3);
+  for (const h of headers) assert.ok(tokens(h).includes("pl-3"), h);
+});
+
 test("markup: a situation with neither time nor events shows only the None row", () => {
   const lines = mkLines({ ev: 600, pp: 0, sh: 0 }, { ev: { F: [unit([1, 2, 3], 200, 600)], D: [] } });
   const pp = tablesOf(render(markupGame(lines, mkEvents())))[2] ?? "";
