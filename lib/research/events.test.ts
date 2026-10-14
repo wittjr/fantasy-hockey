@@ -3,15 +3,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { NhlPlayByPlay } from "@/lib/nhl/client";
-import { attributeEvents, buildGameEvents, EVENT_MATCH_THRESHOLD, matchIsLow, matchQuality, matchRatio, onIceAt, type EventCounts } from "./events";
-import { analyzeGameLines, bucketOnIce, dedupeOnIce, parseClock, situationFor, type OnIce, type PositionGroup, type ShiftInput } from "./lines";
+import { attributeEvents, buildGameEvents, EVENT_MATCH_THRESHOLD, isShiftChartSuspect, matchIsLow, matchQuality, matchRatio, MAX_REPEATED_SHIFT_SHARE, onIceAt, type EventCounts } from "./events";
+import { analyzeGameLines, bucketOnIce, dedupeOnIce, parseClock, situationFor, uniqueShifts, type OnIce, type PositionGroup, type ShiftInput } from "./lines";
 import { toGameEvents, type EventKind, type GameEvent } from "./play-events";
 
 // The DATA-03 gate: counts from real NHL payloads must reproduce the official boxscore.
 // GATE_FIXTURES are games whose team SOG and every skater's plus-minus are reconciled;
 // ALL_FIXTURES is every committed fixture. Later plans append to both.
+// 2025020565 is a negative fixture for the corrupted-chart flag (D-23): in ALL_FIXTURES, never a gate game.
 const GATE_FIXTURES = [2025020084, 2025020306, 2026020075, 2025020343, 2025020528, 2025020500];
-export const ALL_FIXTURES = [...GATE_FIXTURES, 2026020026];
+export const ALL_FIXTURES = [...GATE_FIXTURES, 2026020026, 2025020565];
 
 interface Fixture {
   gameId: number;
@@ -440,4 +441,77 @@ test("buildGameEvents carries the game's match quality", () => {
   const built = buildGameEvents(fixture.homeTeam.abbrev, shifts, positions, pbp);
   assert.deepEqual(built?.quality, matchQuality(shifts, positions, toGameEvents(pbp), fixtureTeams(fixture)));
   assert.ok((built?.quality.checked ?? 0) > 0);
+});
+
+// ---- Corrupted shift chart flag (plan 03-04, D-23) ----
+const repeatedShare = (shifts: readonly ShiftInput[]) => (shifts.length - uniqueShifts(shifts).length) / shifts.length;
+
+test("2025020565 is the corrupted-chart fixture: every row kept, in ALL_FIXTURES and not in GATE_FIXTURES", () => {
+  const { fixture } = load(2025020565);
+  assert.equal(fixture.category, "corrupted-shift-chart");
+  assert.ok(fixture.shifts.length > 2000);
+  assert.ok(ALL_FIXTURES.includes(2025020565));
+  assert.ok(!GATE_FIXTURES.includes(2025020565));
+});
+
+for (const abbrev of ["NJD", "BUF"]) {
+  test(`2025020565 ${abbrev}: repeated rows and other teams' players change no count`, () => {
+    const { pbp, shifts, positions } = load(2025020565);
+    const events = toGameEvents(pbp);
+    const raw = attributeEvents(abbrev, shifts, positions, events);
+    assert.deepEqual(raw, attributeEvents(abbrev, uniqueShifts(shifts), positions, events));
+    for (const situation of ["ev", "pp", "sh"] as const) {
+      for (const group of ["F", "D"] as const) {
+        for (const key of raw.byUnit[situation][group].keys()) {
+          for (const id of key.split(",")) assert.ok(positions.has(Number(id)), `unit member ${id} is a listed player`);
+        }
+      }
+    }
+  });
+}
+
+test("2025020565 is flagged by both rules: players from other teams and a repeated share above the threshold", () => {
+  const { fixture, shifts } = load(2025020565);
+  const teams = fixtureTeams(fixture);
+  assert.equal(isShiftChartSuspect(shifts, teams), true);
+  assert.ok(shifts.some((s) => s.team !== teams.home && s.team !== teams.away), "foreign team rows are present");
+  assert.ok(repeatedShare(shifts) > MAX_REPEATED_SHIFT_SHARE, `repeated share ${repeatedShare(shifts)}`);
+});
+
+test("no gate fixture is flagged, and each repeated-row share is below MAX_REPEATED_SHIFT_SHARE", () => {
+  const shares: string[] = [];
+  for (const id of GATE_FIXTURES) {
+    const { fixture, shifts } = load(id);
+    assert.equal(isShiftChartSuspect(shifts, fixtureTeams(fixture)), false, `${id} is not flagged`);
+    assert.ok(repeatedShare(shifts) < MAX_REPEATED_SHIFT_SHARE, `${id} repeated share ${repeatedShare(shifts)}`);
+    shares.push(`${id} ${repeatedShare(shifts).toFixed(4)}`);
+  }
+  console.log("measured repeated-row share per gate fixture:", shares.join(", "));
+});
+
+test("isShiftChartSuspect: one row from a third team is suspect", () => {
+  const shifts = [...fiveOnFive(60), ...synthShifts("VGK", [301], 0, 30)];
+  assert.equal(isShiftChartSuspect(shifts, { home: "OPP", away: "BUF" }), true);
+});
+
+test("isShiftChartSuspect: 10 verbatim repeats in 100 rows is suspect, 1 in 100 is not, an empty list is not", () => {
+  const teams = { home: "OPP", away: "BUF" };
+  const row = (n: number): ShiftInput => ({ playerId: n, team: "BUF", period: 1, startSec: 0, endSec: 30 });
+  const unique = (n: number) => Array.from({ length: n }, (_, i) => row(i + 1));
+  assert.equal(isShiftChartSuspect([...unique(90), ...unique(10)], teams), true);
+  assert.equal(isShiftChartSuspect([...unique(99), row(1)], teams), false);
+  assert.equal(isShiftChartSuspect([], teams), false);
+});
+
+test("buildGameEvents on the corrupted 2025020565 is flagged and still returns counts", () => {
+  const { pbp, shifts, positions } = load(2025020565);
+  const built = buildGameEvents("BUF", shifts, positions, pbp);
+  assert.ok(built);
+  assert.equal(built.chartSuspect, true);
+  assert.ok(built.total.ev.cf + built.total.pp.cf + built.total.sh.cf > 0);
+});
+
+test("buildGameEvents leaves a good game unflagged", () => {
+  const { pbp, shifts, positions } = load(2025020084);
+  assert.equal(buildGameEvents("WPG", shifts, positions, pbp)?.chartSuspect, false);
 });
