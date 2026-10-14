@@ -7,7 +7,7 @@ import { emptyCounts, type EventCounts, type GameEvents } from "./events";
 import type { GameLines, Situation, Unit } from "./lines";
 import type { ResearchGame, ResearchPlayer, TeamResearch } from "./team-games";
 import { DEFAULT_SORT } from "./toi-trends";
-import { buildUnitTable, DASH, statCells, UNIT_LIMITS } from "./unit-events-view";
+import { buildUnitTable, DASH, exclusionsNote, statCells, UNIT_LEGEND, UNIT_LIMITS } from "./unit-events-view";
 
 const counts = (c: Partial<EventCounts> = {}): EventCounts => ({ ...emptyCounts(), ...c });
 const unit = (playerIds: number[], seconds: number, total: number): Unit => ({ playerIds, seconds, pct: (seconds / total) * 100 });
@@ -399,4 +399,61 @@ test("markup: the F and D tables of one situation print the same Total stats", (
   const tables = tablesOf(render(markupGame(richLines(), richEvents())));
   const stats = (table: string) => cellTexts(rowLabelled(table, "Total")).slice(4);
   assert.deepEqual(stats(tables[0] ?? ""), stats(tables[1] ?? ""));
+});
+
+// --- legend and exclusions note -----------------------------------------------------------------------------------
+
+const excluded = (shootout: number, penaltyShot: number, teammateBlocked: number): GameEvents => ({
+  ...mkEvents(),
+  excluded: { shootout, penaltyShot, teammateBlocked },
+});
+
+test("exclusionsNote lists the non-zero kinds in order, plural by default", () => {
+  assert.equal(
+    exclusionsNote(excluded(2, 1, 3)),
+    "Excluded from these tables: 2 shootout attempts, 1 penalty shot, 3 teammate-blocked attempts.",
+  );
+});
+
+test("exclusionsNote uses the singular for 1 and omits zero kinds", () => {
+  assert.equal(exclusionsNote(excluded(1, 0, 1)), "Excluded from these tables: 1 shootout attempt, 1 teammate-blocked attempt.");
+  assert.equal(exclusionsNote(excluded(0, 2, 0)), "Excluded from these tables: 2 penalty shots.");
+});
+
+test("exclusionsNote is null when nothing was excluded or events are null", () => {
+  assert.equal(exclusionsNote(excluded(0, 0, 0)), null);
+  assert.equal(exclusionsNote(null), null);
+});
+
+test("UNIT_LEGEND is the three 03-UI-SPEC lines", () => {
+  assert.equal(UNIT_LEGEND.length, 3);
+  assert.ok(UNIT_LEGEND[0].startsWith("GF and GA are goals for and against."));
+  assert.ok(UNIT_LEGEND[1].includes("not the NHL's official plus-minus"));
+  assert.ok(UNIT_LEGEND[2].includes("all time and events while either goalie was pulled"));
+  assert.ok(UNIT_LEGEND[2].includes("shootout attempts, penalty shots and teammate-blocked attempts are left out"));
+});
+
+const FOOTNOTES = '<div class="flex flex-col gap-1 text-xs text-neutral-500">';
+const footnotesOf = (html: string) => html.split(FOOTNOTES)[1]?.split("</div>")[0] ?? "";
+const paragraphs = (block: string) => [...block.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)].map((m) => m[1].replace(/&#x27;/g, "'"));
+
+test("markup: the footnotes block follows the tables with the exclusions note, then the three legend lines", () => {
+  const html = render(markupGame(richLines(), { ...richEvents(), excluded: { shootout: 2, penaltyShot: 0, teammateBlocked: 1 } }));
+  assert.ok(html.lastIndexOf("</table>") < html.indexOf(FOOTNOTES));
+  assert.deepEqual(paragraphs(footnotesOf(html)), [
+    "Excluded from these tables: 2 shootout attempts, 1 teammate-blocked attempt.",
+    ...UNIT_LEGEND,
+  ]);
+});
+
+test("markup: the legend renders without an exclusions note when nothing was excluded or events are null", () => {
+  for (const events of [richEvents(), null]) {
+    assert.deepEqual(paragraphs(footnotesOf(render(markupGame(richLines(), events)))), [...UNIT_LEGEND]);
+  }
+});
+
+test("markup: with lines null no legend renders, only the no-shift-chart message", () => {
+  const html = render(markupGame(null, null));
+  assert.ok(!html.includes(FOOTNOTES));
+  assert.ok(!html.includes("GF and GA are goals"));
 });
