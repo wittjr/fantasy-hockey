@@ -111,7 +111,7 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 3/11 plans executed
+**Plans:** 5/11 plans executed
 
 Plans:
 **Wave 1**
@@ -124,8 +124,8 @@ Plans:
 - [x] 03-03-PLAN.md — Gate (part 3): overtime, shootout, empty-net, penalty-shot and missing-shift-chart fixtures reproduce boxscore SOG and every skater's plus-minus (one pinned exemption); exclusion counters
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 03-04-PLAN.md — Reliability flags: shift-vs-situationCode match quality (95% threshold) and corrupted shift chart detection with the 2025020565 fixture (D-16, D-17, D-23)
-- [ ] 03-05-PLAN.md — Play-by-play on every game load: getPlayByPlay, ResearchGame.events (null = unknown), play-by-play failure keeps the game (D-05), live boxscore reconciliation smoke
+- [x] 03-04-PLAN.md — Reliability flags: shift-vs-situationCode match quality (95% threshold) and corrupted shift chart detection with the 2025020565 fixture (D-16, D-17, D-23)
+- [x] 03-05-PLAN.md — Play-by-play on every game load: getPlayByPlay, ResearchGame.events (null = unknown), play-by-play failure keeps the game (D-05), live boxscore reconciliation smoke
 
 **Wave 5** *(blocked on Wave 4 completion; 03-06 is the gated event-column plan)*
 - [ ] 03-06-PLAN.md — Unit tables: GF GA +/- | SF SA SF% | CF CA CF% on all six stacked tables, Other and Total rows
@@ -154,4 +154,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 3/11 | In Progress | - |
+| 3. Unit Event Stats | 5/11 | In Progress | - |
