@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 03-unit-event-stats
 source: [03-VERIFICATION.md]
 started: 2026-10-14T14:34:47Z
