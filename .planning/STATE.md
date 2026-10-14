@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 current_phase: 02
 status: completed
 stopped_at: Phase 02 re-verified (passed 5/5) — milestone ready to close
-last_updated: "2026-10-14T23:13:11.766Z"
+last_updated: "2026-10-14T23:15:48.378Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 02 complete
-state_head: 4892dd6e52e1b0ffbe7f028298282b8239580593
+state_head: 104cb7480ff29d27acc4200007840c0b357bc73e
 progress:
   total_phases: 3
   completed_phases: 3
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 Phase: 02
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-10-14 - Completed quick task 261014-qo6: align 02-UI-SPEC copy, font-medium page chrome, IN-10 formatter
+Last activity: 2026-10-14 - Completed quick task 261014-qr6: raise research page footer text contrast
 
 Progress: [██████████] 100% (3 of 3 phases; 29/29 plans done)
 
@@ -137,6 +137,7 @@ None yet.
 | 261014-lu2 | Fix phase-01 UI re-audit warnings (dash contrast, window-2 rule, copy drift, Pos gap, signed zero Δ) | 2026-10-14 | f71fe3f | [261014-lu2-fix-phase-01-ui-re-audit-warnings](./quick/261014-lu2-fix-phase-01-ui-re-audit-warnings/) |
 | 261014-qgu | Fix WR-06 dash contrast (PlayerLinemates, LastGameLines) and amber-600 note text on /research | 2026-10-14 | 2670b71 | [261014-qgu-fix-wr-06-dash-contrast-in-playerlinemat](./quick/261014-qgu-fix-wr-06-dash-contrast-in-playerlinemat/) |
 | 261014-qo6 | Align 02-UI-SPEC copy with code, font-medium page chrome, fix IN-10 formatter coupling | 2026-10-14 | 4892dd6 | [261014-qo6-align-02-ui-spec-copy-with-code-font-med](./quick/261014-qo6-align-02-ui-spec-copy-with-code-font-med/) |
+| 261014-qr6 | Raise /research footer text contrast (disabled window counts left gray) | 2026-10-14 | 104cb74 | [261014-qr6-raise-research-page-footer-text-contrast](./quick/261014-qr6-raise-research-page-footer-text-contrast/) |
 
 ## Deferred Items
 
