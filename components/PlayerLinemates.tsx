@@ -305,7 +305,7 @@ function HeaderStat({
     <div>
       <dt className="text-xs text-neutral-600 dark:text-neutral-400">{label}</dt>
       <dd className={`text-sm tabular-nums ${tone}`}>
-        {value ?? <span className="text-neutral-400 dark:text-neutral-500">—</span>}
+        {value ?? <span className="text-neutral-600 dark:text-neutral-400">—</span>}
         {crossing !== 0 && <span className="sr-only">{crossing === 1 ? "Moving up" : "Moving down"}</span>}
       </dd>
     </div>
@@ -364,7 +364,7 @@ export function LinemateRowView({
       </td>
       <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">
         {row.windowShare === null ? (
-          <span className="text-neutral-400 dark:text-neutral-500">—</span>
+          <span className="text-neutral-600 dark:text-neutral-400">—</span>
         ) : (
           `${Math.round(row.windowShare * 100)}%`
         )}

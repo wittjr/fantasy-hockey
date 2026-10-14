@@ -101,7 +101,7 @@ export function LastGameLines({
 function StatCells({ stats }: { stats: UnitStats }) {
   return STAT_COLUMNS.map((c) => {
     const value = stats[c.key];
-    const tone = value === DASH ? "text-neutral-400 dark:text-neutral-500" : c.derived ? "text-neutral-500" : "";
+    const tone = value === DASH ? "text-neutral-600 dark:text-neutral-400" : c.derived ? "text-neutral-500" : "";
     return (
       <td key={c.key} className={`py-1 pl-1 pr-3 text-right tabular-nums whitespace-nowrap ${tone} ${c.start ? DIVIDER : ""}`}>
         {value}
@@ -162,7 +162,7 @@ function UnitTable({
       <tbody>
         {view.rows.length === 0 ? (
           <tr>
-            <td colSpan={13} className="py-1 text-neutral-400">
+            <td colSpan={13} className="py-1 text-neutral-600 dark:text-neutral-400">
               None
             </td>
           </tr>
