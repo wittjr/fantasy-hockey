@@ -3,12 +3,25 @@
 
 const NHL_BASE = "https://api-web.nhle.com/v1";
 
+// The NHL answers a burst with a 50-60 s ban; waiting that long inside a render is never right (D-04 degrades instead).
+export const RETRY_AFTER_CAP_S = 5;
+export const MAX_429_RETRIES = 2;
+
+/** Milliseconds to wait before retrying, or null to give up. Only a 429 with a short numeric Retry-After is retried. */
+export function retryAfterMs(status: number, retryAfter: string | null, attempt: number): number | null {
+  if (status !== 429 || attempt >= MAX_429_RETRIES || retryAfter === null || retryAfter.trim() === "") return null;
+  const seconds = Number(retryAfter);
+  return Number.isFinite(seconds) && seconds >= 0 && seconds <= RETRY_AFTER_CAP_S ? seconds * 1000 : null;
+}
+
 async function nhlGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${NHL_BASE}/${path}`, { ...init, headers: { Accept: "application/json" } });
-  if (!res.ok) {
-    throw new Error(`NHL API ${path} failed: ${res.status} ${res.statusText}`);
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${NHL_BASE}/${path}`, { ...init, headers: { Accept: "application/json" } });
+    if (res.ok) return res.json() as Promise<T>;
+    const waitMs = retryAfterMs(res.status, res.headers.get("retry-after"), attempt);
+    if (waitMs === null) throw new Error(`NHL API ${path} failed: ${res.status} ${res.statusText}`);
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
-  return res.json() as Promise<T>;
 }
 
 // Verified 2026-09-06 via /v1/standings/{date}. Static because roster
@@ -83,6 +96,8 @@ export async function getScheduleWeek(date: string): Promise<Array<{ date: strin
 
 export interface NhlClubGame extends NhlGame {
   gameState: string; // "FUT" | "PRE" | "LIVE" | "CRIT" | "FINAL" | "OFF"
+  /** ISO UTC start time; optional because test stubs omit it. */
+  startTimeUTC?: string;
 }
 
 /** Current-season schedule for one team, all game types, cached for 10 minutes. */
@@ -113,11 +128,23 @@ export interface NhlBoxscore {
   gameOutcome?: { lastPeriodType: "REG" | "OT" | "SO" };
 }
 
-// Finished games only change for stat corrections; an hour keeps them fresh enough.
-const FINISHED_GAME_CACHE = { next: { revalidate: 3600 } };
+export const RECENT_GAME_WINDOW_MS = 48 * 60 * 60 * 1000;
+export const RECENT_GAME_REVALIDATE_S = 3600;
+export const OLD_GAME_REVALIDATE_S = 30 * 24 * 60 * 60;
 
-export async function getBoxscore(gameId: number): Promise<NhlBoxscore> {
-  return nhlGet<NhlBoxscore>(`gamecenter/${gameId}/boxscore`, FINISHED_GAME_CACHE);
+/**
+ * Cache tier for a finished game's data. Finished games only change for stat corrections; a game under 48 h
+ * old may still get them, so it revalidates hourly (also when the start is missing or unparseable). Older data
+ * is pinned 30 days because a non-200 is never cached and empty charts or play-by-play are re-requested uncached.
+ */
+export function finishedGameCache(startTimeUTC: string | undefined, now = Date.now()): { next: { revalidate: number } } {
+  const start = startTimeUTC === undefined ? NaN : Date.parse(startTimeUTC);
+  const old = Number.isFinite(start) && now - start >= RECENT_GAME_WINDOW_MS;
+  return { next: { revalidate: old ? OLD_GAME_REVALIDATE_S : RECENT_GAME_REVALIDATE_S } };
+}
+
+export async function getBoxscore(gameId: number, cache = finishedGameCache(undefined)): Promise<NhlBoxscore> {
+  return nhlGet<NhlBoxscore>(`gamecenter/${gameId}/boxscore`, cache);
 }
 
 /** A play-by-play event. Holds only the fields event attribution reads; `details` is optional because the JSON is untrusted. */
@@ -145,12 +172,12 @@ export interface NhlPlayByPlay {
 
 /**
  * A game's play-by-play. Can have no plays for a short while after a game ends, until the league
- * publishes it. An empty cached result is re-requested uncached so it is not pinned for the hour;
- * a published play-by-play stays in the hour cache.
+ * publishes it. An empty cached result is re-requested uncached so it is not pinned;
+ * a published play-by-play stays in its cache tier.
  */
-export async function getPlayByPlay(gameId: number): Promise<NhlPlayByPlay> {
+export async function getPlayByPlay(gameId: number, cache = finishedGameCache(undefined)): Promise<NhlPlayByPlay> {
   const path = `gamecenter/${gameId}/play-by-play`;
-  const pbp = await nhlGet<NhlPlayByPlay>(path, FINISHED_GAME_CACHE);
+  const pbp = await nhlGet<NhlPlayByPlay>(path, cache);
   return pbp.plays?.length > 0 ? pbp : nhlGet<NhlPlayByPlay>(path, { cache: "no-store" });
 }
 
@@ -178,9 +205,9 @@ async function fetchShiftCharts(gameId: number, init: RequestInit): Promise<NhlS
 /**
  * Every shift in a game, from the separate NHL stats API. Can be empty for a short while after a
  * game ends, until the league publishes shift charts. An empty cached result is re-requested
- * uncached so it is not pinned for the hour; a published chart stays in the hour cache.
+ * uncached so it is not pinned; a published chart stays in its cache tier.
  */
-export async function getShiftCharts(gameId: number): Promise<NhlShift[]> {
-  const shifts = await fetchShiftCharts(gameId, FINISHED_GAME_CACHE);
+export async function getShiftCharts(gameId: number, cache = finishedGameCache(undefined)): Promise<NhlShift[]> {
+  const shifts = await fetchShiftCharts(gameId, cache);
   return shifts.length > 0 ? shifts : fetchShiftCharts(gameId, { cache: "no-store" });
 }
