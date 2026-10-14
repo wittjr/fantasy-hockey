@@ -111,14 +111,14 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 1/11 plans executed
+**Plans:** 2/11 plans executed
 
 Plans:
 **Wave 1**
 - [x] 03-01-PLAN.md — Tracer + gate (part 1): one real regulation game → play-by-play mapper → on-ice attribution reproduces boxscore SOG and every skater's plus-minus; mapper exclusion and pulled-goalie rules pinned
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-02-PLAN.md — Gate (part 2): attribution rules pinned on every fixture (start < t <= end, pulled goalie, 4-on-4/3-on-3, accounting, listed ≤ Total, purity); unit Time follows the same creditsUnit rule (D-13, D-21, D-22)
+- [x] 03-02-PLAN.md — Gate (part 2): attribution rules pinned on every fixture (start < t <= end, pulled goalie, 4-on-4/3-on-3, accounting, listed ≤ Total, purity); unit Time follows the same creditsUnit rule (D-13, D-21, D-22)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 03-03-PLAN.md — Gate (part 3): overtime, shootout, empty-net, penalty-shot and missing-shift-chart fixtures reproduce boxscore SOG and every skater's plus-minus (one pinned exemption); exclusion counters
@@ -154,4 +154,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 1/11 | In Progress | - |
+| 3. Unit Event Stats | 2/11 | In Progress | - |
