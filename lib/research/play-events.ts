@@ -4,7 +4,7 @@ import { parseClock } from "./lines";
 import type { NhlPlayByPlay } from "@/lib/nhl/client";
 
 export type EventKind = "goal" | "shot-on-goal" | "missed-shot" | "blocked-shot";
-export type Exclusion = "shootout" | "penalty-shot" | "teammate-blocked";
+export type Exclusion = "shootout" | "penalty-shot";
 
 export interface GameEvent {
   /** Abbrev of the shooting team (eventOwnerTeamId). */
