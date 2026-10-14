@@ -107,7 +107,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Fixture tests on real games (regulation, overtime, shootout, empty-net goal, penalty shot, missing shift chart) reproduce official team shots on goal and every skater's plus-minus from attributed play-by-play events, and they pass before any unit-table event columns are built
   2. Every last-game unit table (EV, PP, SH; forwards and defense) shows SF/SA, GF/GA and CF/CA counts plus SF%, CF% and +/-, with "—" where a unit has no events
-  3. A legend on the page defines each stat and its exclusions (empty-net, shootout and teammate-blocked attempts), and an "other" row makes each table's unit totals add up to the team's totals for that game
+  3. A legend on the page defines each stat and its exclusions (empty-net and shootout attempts; teammate-blocked attempts count in CF/CA, UAT G-03-1), and an "other" row makes each table's unit totals add up to the team's totals for that game
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
