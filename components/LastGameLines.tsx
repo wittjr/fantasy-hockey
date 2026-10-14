@@ -9,6 +9,8 @@ import {
   buildUnitTable,
   DASH,
   exclusionsNote,
+  missingPlayByPlayNote,
+  topNotes,
   UNIT_LEGEND,
   type UnitStats,
   type UnitSummaryRow,
@@ -51,6 +53,7 @@ export function LastGameLines({
   const game = research.games[research.games.length - 1];
   const name = (id: number) => research.players.get(id)?.name ?? String(id);
   const exclusions = exclusionsNote(game.events);
+  const olderDates = missingPlayByPlayNote(research.games);
 
   return (
     <section className="flex flex-col gap-3">
@@ -62,6 +65,11 @@ export function LastGameLines({
         <p className="text-sm text-neutral-500">No shift chart is available for this game (not published yet, or it failed to load).</p>
       ) : (
         <>
+          {topNotes(game).map((note) => (
+            <p key={note} className="text-xs text-amber-600 dark:text-amber-400">
+              {note}
+            </p>
+          ))}
           <div className="flex flex-col gap-6">
             {(["ev", "pp", "sh"] as const).flatMap((situation) =>
               (["F", "D"] as const).map((group) => (
@@ -82,6 +90,7 @@ export function LastGameLines({
             {UNIT_LEGEND.map((line) => (
               <p key={line}>{line}</p>
             ))}
+            {olderDates && <p className="text-xs text-amber-600 dark:text-amber-400">{olderDates}</p>}
           </div>
         </>
       )}
