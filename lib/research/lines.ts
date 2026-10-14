@@ -176,6 +176,8 @@ export function analyzeGameLines(
       rec[situation]++;
     }
 
+    // Pulled-goalie, 4-on-4 and 3-on-3 seconds go to Other, the same rule unit events follow.
+    if (!creditsUnit(situation, mine, opp)) continue;
     for (const group of ["F", "D"] as const) {
       const key = unitKey(situation, group, mine.skaters, positions);
       if (key === null) continue;
