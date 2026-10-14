@@ -268,7 +268,7 @@ export function PlayerLinemates({
             </>
           )}
           {showNoChartNote && (
-            <p className="text-amber-600 dark:text-amber-400">
+            <p className="text-amber-700 dark:text-amber-400">
               No linemate data for {view.noChartDates.map(formatDate).join(", ")}: no shift chart is available for those games
               (not published yet, or it failed to load). They are left out of shares and tags.
             </p>

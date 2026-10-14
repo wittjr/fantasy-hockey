@@ -99,7 +99,7 @@ export default async function ResearchPage({
       ) : (
         <>
           {research.unavailableDates.length > 0 && (
-            <p className="text-sm text-amber-600 dark:text-amber-400">
+            <p className="text-sm text-amber-700 dark:text-amber-400">
               Couldn&apos;t load NHL data for {research.unavailableDates.map(formatDate).join(", ")}, so those games are left out of this window
               {newestMissing && "; Last game and the last-2-games comparison use the newest games that did load"}. Reload to try again.
             </p>

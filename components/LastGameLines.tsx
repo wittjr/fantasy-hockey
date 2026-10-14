@@ -66,7 +66,7 @@ export function LastGameLines({
       ) : (
         <>
           {topNotes(game).map((note) => (
-            <p key={note} className="text-xs text-amber-600 dark:text-amber-400">
+            <p key={note} className="text-xs text-amber-700 dark:text-amber-400">
               {note}
             </p>
           ))}
@@ -90,7 +90,7 @@ export function LastGameLines({
             {UNIT_LEGEND.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            {olderDates && <p className="text-xs text-amber-600 dark:text-amber-400">{olderDates}</p>}
+            {olderDates && <p className="text-xs text-amber-700 dark:text-amber-400">{olderDates}</p>}
           </div>
         </>
       )}
