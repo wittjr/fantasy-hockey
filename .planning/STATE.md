@@ -1,11 +1,12 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 03
-status: "Phase 03 shipped — PR #2"
-stopped_at: Phase 03 complete — all phases complete
-last_updated: "2026-10-14T19:00:21.816Z"
+current_phase: 01
+status: completed
+stopped_at: Phase 01 complete — all phases complete
+last_updated: "2026-10-14T19:29:20.407Z"
 last_activity: 2026-10-14
-state_head: bdd509658d66db19a035b8bc4abb746e5738c439
+last_activity_desc: Phase 01 complete
+state_head: 428bca1b5fe41c9f9845ee32b554e9c8ee1950f6
 progress:
   total_phases: 3
   completed_phases: 3
@@ -21,14 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-14)
 
 **Core value:** At a glance, show which players on a team are moving up or down in deployment, so pickup/drop decisions can be made before the rest of the league notices.
-**Current focus:** Milestone complete — ready to close
+**Current focus:** Phase 01 — Ice-Time Trends Table
 
 ## Current Position
 
-Phase: 03
+Phase: 01
 Plan: Not started
-Status: Phase 03 shipped — PR #2
-Last activity: 2026-10-14
+Status: All phases complete
+Last activity: 2026-10-14 — Phase 01 complete
 
 Progress: [██████████] 100% (3 of 3 phases; 29/29 plans done)
 
@@ -43,7 +44,7 @@ Progress: [██████████] 100% (3 of 3 phases; 29/29 plans done
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 9 | - | - |
+| 01 | 9 | - | - |
 | 2 | 7 | - | - |
 | 03 | 13 | - | - |
 
@@ -140,5 +141,5 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-14
-Stopped at: Phase 03 complete — milestone ready to close
+Stopped at: Phase 01 complete — all phases complete
 Resume file: None
