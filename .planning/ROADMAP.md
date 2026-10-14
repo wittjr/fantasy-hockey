@@ -111,7 +111,7 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 11/11 plans executed
+**Plans:** 11/13 plans executed (2 gap-closure plans from UAT)
 
 Plans:
 **Wave 1**
@@ -140,6 +140,12 @@ Plans:
 
 **Wave 8** *(blocked on Wave 7 completion)*
 - [x] 03-11-PLAN.md — Phase 2 regression run with N8 updated, live smoke rerun, full suite and end-of-phase human check
+
+**Wave 9** *(gap closure, UAT; blocked on Wave 8 completion)*
+- [ ] 03-12-PLAN.md — G-03-1: teammate-blocked attempts count in CF/CA (user decision); fixture 2026020092 pins L1 EV CF 11 and L3 EV CA 6 with SOG still reconciled; exclusion removed from the counter, note, legend and spec documents
+
+**Wave 10** *(gap closure, UAT; blocked on Wave 9 completion)*
+- [ ] 03-13-PLAN.md — G-03-7: centered name separator (unit-table names use an overlay spinner that takes no inline space); G-03-3: pl-1 pr-3 stat cells so numbers clear the dividers; WebKit U7/U8 at 1024px light and dark
 
 **UI hint**: yes
 **Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs. The tests span 03-01 (regulation game and mapper rules), 03-02 (attribution rules on every fixture) and 03-03 (the other game types); encoded as 03-06 `depends_on: 03-01, 03-02, 03-03` (03-08, which adds the notes and legend, lists them too).
