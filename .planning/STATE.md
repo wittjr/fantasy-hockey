@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 current_phase: 02
 status: completed
 stopped_at: Phase 02 re-verified (passed 5/5) — milestone ready to close
-last_updated: "2026-10-14T22:50:37.602Z"
+last_updated: "2026-10-14T23:05:04.830Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 02 complete
-state_head: 43f8931e4f195485f624e6a4be25fef397f188c9
+state_head: 2670b7171252c6bacafdf18267c2d4d882523936
 progress:
   total_phases: 3
   completed_phases: 3
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 Phase: 02
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-10-14 — Phase 02 complete
+Last activity: 2026-10-14 - Completed quick task 261014-qgu: fix WR-06 dash contrast in PlayerLinemates and LastGameLines, plus amber-600 footnote text
 
 Progress: [██████████] 100% (3 of 3 phases; 29/29 plans done)
 
@@ -126,7 +126,7 @@ None yet.
 - [All phases]: Site targets laptop browsers; no phone/touch UAT
 - [Phase 3]: Last 20 is only verified on 6-8 finished games per team (October); re-check a full 20-game window later in the season
 - [Phase 1]: UI re-audit (2026-10-14) scored 19/24, warnings only: muted-dash contrast, all-dash Δ columns at a 2-game window with no UI-SPEC rule, copy drift; see 01-UI-REVIEW.md
-- [Phase 2]: Re-review WR-06 open: unknown-value dash is still text-neutral-400 in PlayerLinemates.tsx (308, 367) and LastGameLines.tsx (104, 165); quick task 261014-lu2 fixed only ToiTrends. IN-10/IN-11 info open; UI audit 18/24 (amber-600 footnote contrast, UI-SPEC copy drift); see 02-REVIEW-DISPOSITION.md, 02-UI-REVIEW.md
+- [Phase 2]: WR-06 and the amber-600 footnote contrast fixed in quick 261014-qgu (a5ed8c8, 29d9e72). Still open: IN-10/IN-11 info; UI audit UI-SPEC copy drift; see 02-REVIEW-DISPOSITION.md, 02-UI-REVIEW.md
 - [GSD tooling]: the code-review disposition step cannot parse the hand-curated 01-REVIEW-DISPOSITION.md; a future phase-01 review would rewrite it to 15 rows and reopen WR-10, so reconcile that ledger by hand
 
 ### Quick Tasks Completed
@@ -135,6 +135,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 261012-tph | WR-01 follow-up: dedupe on-ice skaters before strength classification in analyzeGameLines | 2026-10-12 | 67949f3 | [261012-tph-wr-01-follow-up-dedupe-skaters-before-st](./quick/261012-tph-wr-01-follow-up-dedupe-skaters-before-st/) |
 | 261014-lu2 | Fix phase-01 UI re-audit warnings (dash contrast, window-2 rule, copy drift, Pos gap, signed zero Δ) | 2026-10-14 | f71fe3f | [261014-lu2-fix-phase-01-ui-re-audit-warnings](./quick/261014-lu2-fix-phase-01-ui-re-audit-warnings/) |
+| 261014-qgu | Fix WR-06 dash contrast (PlayerLinemates, LastGameLines) and amber-600 note text on /research | 2026-10-14 | 2670b71 | [261014-qgu-fix-wr-06-dash-contrast-in-playerlinemat](./quick/261014-qgu-fix-wr-06-dash-contrast-in-playerlinemat/) |
 
 ## Deferred Items
 

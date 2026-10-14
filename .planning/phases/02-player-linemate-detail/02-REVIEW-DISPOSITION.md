@@ -5,7 +5,7 @@ titles: json
 findings:
   - id: WR-06
     severity: warning
-    disposition: open
+    disposition: fixed
     title: "Quick task 1a68924 fixed the low-contrast \"—\" in ToiTrends but left the same dash in the player panel"
   - id: IN-10
     severity: info
@@ -67,7 +67,7 @@ findings:
     severity: info
     disposition: deferred
     title: "Window-share ordering favours linemates with few counted games"
-open: 3
+open: 2
 total: 16
 recorded: 2026-10-14T22:48:36.505Z
 ---
@@ -76,7 +76,7 @@ recorded: 2026-10-14T22:48:36.505Z
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-06 | warning | open | - |
+| WR-06 | warning | fixed | quick 261014-qgu (a5ed8c8) |
 | IN-10 | info | open | - |
 | IN-11 | info | open | - |
 | WR-05 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
