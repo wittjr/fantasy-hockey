@@ -3,9 +3,9 @@ phase: "2"
 slug: "player-linemate-detail"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
 # audit-milestone §5.5 distinguishes NOT-VALIDATED (draft) from PARTIAL (validated + nyquist_compliant: false) (#2117)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-10-12"
 ---
 
@@ -41,25 +41,25 @@ Note: `npm run lint` is not used. It lints the whole repo and fails at baseline 
 
 ## Per-Task Verification Map
 
-Filled in by the planner per task. Requirement coverage target, from research:
+Audited 2026-10-14 against the shipped tests (264 unit tests across 7 files; webkit-player-check.cjs 17/17):
 
 | Requirement / SC | Behavior | Test Type | Automated Command | File Exists | Status |
 |------------------|----------|-----------|-------------------|-------------|--------|
-| SC5 / D-19 | `analyzeGameLines` outputs unchanged after any extraction | unit (existing) | `npx tsx --test lib/research/lines.test.ts` | ✅ must pass untouched | ⬜ pending |
-| PLYR-02, PLYR-03 / D-19 | Pair seconds are symmetric, together <= self, regulation only, EV/PP/SH split, duplicates counted once, goalie excluded | unit | `npx tsx --test lib/research/pair-seconds.test.ts` | ❌ W0 | ⬜ pending |
-| Oracle | self == `lines.playerSeconds` for a non-OT fixture; self <= it with OT | unit | same | ❌ W0 | ⬜ pending |
-| PLYR-02 / SC5 / D-24 | Cell states together/apart/absent/unknown; unknown is never 0 and is excluded from share and tags | unit | `npx tsx --test lib/research/linemates.test.ts` | ❌ W0 | ⬜ pending |
-| PLYR-03 | Per-game share, window share, `—` when no counted games, share <= 1 | unit | same | ❌ W0 | ⬜ pending |
-| PLYR-02 / D-11, D-12, D-13, D-21 | Minimum filter, recent-first ordering, caps, `all` lifts the cap but not the minimum, F/D split, group-played-most | unit | same | ❌ W0 | ⬜ pending |
-| PLYR-04 / SC4 / D-14..D-18, D-20 | Tag matrix: clean line change at windows 2/3/5 gives New and Fading; ±15 boundary; Out; trade; 1-game window; fewer than 2 played; missed all recent | unit | same | ❌ W0 | ⬜ pending |
-| PLYR-01 | `player` / `sit` / `all` parsing and allowlisting; `researchHref` default output byte-identical; team links drop player | unit | `npx tsx --test lib/research/toi-trends.test.ts` | ✅ extend | ⬜ pending |
-| PLYR-01 / D-02, D-06 | Trends name cell links to `?player=ID#player-detail`; selected row marked; existing assertions still pass | markup | `npx tsx --test lib/research/toi-trends-view.test.ts` | ✅ extend | ⬜ pending |
-| UNIT-04 / D-22 | Unit-table names are links carrying the table's `sit`; Time and `%` cells unchanged | markup | `npx tsx --test lib/research/player-detail-view.test.ts` | ❌ W0 | ⬜ pending |
-| PLYR-02 / D-07, D-10, D-13 | Panel tabs, one square per game per row, forwards before defense, legend, show-all, empty states, window-of-1 shape | markup | same | ❌ W0 | ⬜ pending |
-| SC5 / D-24 | Unknown square markup, amber footnote, no `0:00` or `0%` in the strip | markup | same | ❌ W0 | ⬜ pending |
-| WR-10 | Dismiss transitions; popover class string pinned; no `aria-expanded` | unit + markup | `npx tsx --test lib/research/toi-trends-view.test.ts` | ✅ extend | ⬜ pending |
-| Types | New required field and widened state type compile with all fixtures | typecheck | `npx tsc --noEmit` | ✅ | ⬜ pending |
-| SC1 / SC2 / WR-10 | Jump to panel, Back, reload, tab keeps scroll; squares separate; popover on hover/focus/click, not clipped; Escape keeps focus | browser | `node .planning/phases/02-player-linemate-detail/webkit-player-check.cjs` | ❌ W0 | ⬜ pending |
+| SC5 / D-19 | `analyzeGameLines` outputs unchanged after any extraction | unit (existing) | `npx tsx --test lib/research/lines.test.ts` | ✅ | ✅ green |
+| PLYR-02, PLYR-03 / D-19 | Pair seconds are symmetric, together <= self, regulation only, EV/PP/SH split, duplicates counted once, goalie excluded | unit | `npx tsx --test lib/research/pair-seconds.test.ts` | ✅ | ✅ green |
+| Oracle | self == `lines.playerSeconds` for a non-OT fixture; self <= it with OT | unit | same | ✅ | ✅ green |
+| PLYR-02 / SC5 / D-24 | Cell states together/apart/absent/unknown; unknown is never 0 and is excluded from share and tags | unit | `npx tsx --test lib/research/linemates.test.ts` | ✅ | ✅ green |
+| PLYR-03 | Per-game share, window share, `—` when no counted games, share <= 1 | unit | same | ✅ | ✅ green |
+| PLYR-02 / D-11, D-12, D-13, D-21 | Minimum filter, recent-first ordering, caps, `all` lifts the cap but not the minimum, F/D split, group-played-most | unit | same | ✅ | ✅ green |
+| PLYR-04 / SC4 / D-14..D-18, D-20 | Tag matrix: clean line change at windows 2/3/5 gives New and Fading; ±15 boundary; Out; trade; 1-game window; fewer than 2 played; missed all recent | unit | same | ✅ | ✅ green |
+| PLYR-01 | `player` / `sit` / `all` parsing and allowlisting; `researchHref` default output byte-identical; team links drop player | unit | `npx tsx --test lib/research/toi-trends.test.ts` | ✅ | ✅ green |
+| PLYR-01 / D-02, D-06 | Trends name cell links to `?player=ID#player-detail`; selected row marked; existing assertions still pass | markup | `npx tsx --test lib/research/toi-trends-view.test.ts` | ✅ | ✅ green |
+| UNIT-04 / D-22 | Unit-table names are links carrying the table's `sit`; Time and `%` cells unchanged | markup | `npx tsx --test lib/research/player-detail-view.test.ts` | ✅ | ✅ green |
+| PLYR-02 / D-07, D-10, D-13 | Panel tabs, one square per game per row, forwards before defense, legend, show-all, empty states, window-of-1 shape | markup | same | ✅ | ✅ green |
+| SC5 / D-24 | Unknown square markup, amber footnote, no `0:00` or `0%` in the strip | markup | same | ✅ | ✅ green |
+| WR-10 | Dismiss transitions; popover class string pinned; no `aria-expanded` | unit + markup | `npx tsx --test lib/research/toi-trends-view.test.ts` | ✅ | ✅ green |
+| Types | New required field and widened state type compile with all fixtures | typecheck | `npx tsc --noEmit` | ✅ | ✅ green |
+| SC1 / SC2 / WR-10 | Jump to panel, Back, reload, tab keeps scroll; squares separate; popover on hover/focus/click, not clipped; Escape keeps focus | browser | `node .planning/phases/02-player-linemate-detail/webkit-player-check.cjs` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -67,11 +67,11 @@ Filled in by the planner per task. Requirement coverage target, from research:
 
 ## Wave 0 Requirements
 
-- [ ] `lib/research/pair-seconds.test.ts`: fixtures reuse the layout from `lines.test.ts`, plus an OT shift and a 2OT shift
-- [ ] `lib/research/linemates.test.ts`: hand-built `ResearchGame`-shaped inputs, no network
-- [ ] `lib/research/player-detail-view.test.ts`: renders the panel, the player link and `UnitTable`
-- [ ] Update `fixtureGame` in `lib/research/toi-trends-view.test.ts` for the new required `ResearchGame` field
-- [ ] `.planning/phases/02-player-linemate-detail/webkit-player-check.cjs`: copy the Phase 1 harness, desktop context only, pick the player from the page DOM
+- [x] `lib/research/pair-seconds.test.ts`: fixtures reuse the layout from `lines.test.ts`, plus an OT shift and a 2OT shift
+- [x] `lib/research/linemates.test.ts`: hand-built `ResearchGame`-shaped inputs, no network
+- [x] `lib/research/player-detail-view.test.ts`: renders the panel, the player link and `UnitTable`
+- [x] Update `fixtureGame` in `lib/research/toi-trends-view.test.ts` for the new required `ResearchGame` field
+- [x] `.planning/phases/02-player-linemate-detail/webkit-player-check.cjs`: copy the Phase 1 harness, desktop context only, pick the player from the page DOM
 - No framework install needed.
 
 ---
@@ -89,11 +89,19 @@ Filled in by the planner per task. Requirement coverage target, from research:
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-10-14 (re-verification audit: 264 unit tests green, tsc clean, webkit-player-check 17/17)
+
+## Validation Audit 2026-10-14
+
+| Metric | Count |
+|---|---|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
