@@ -27,4 +27,4 @@ Source: `01-REVIEW.md`. First review: standard depth, 13 files; 1 critical, 4 wa
 | IN-10 | info | `text-green-700` on green-100 is 4.56:1, only just above AA; `text-green-800` would add headroom | open |
 | IN-11 | info | No test for an OT game with an empty (unpublished) shift chart; WR-06 clause does not cover a failed second-newest game and has no render test | open |
 | IN-12 | info | `nextOpen` lives in a "use client" file; key repeat and Ctrl/Alt+Enter still toggle | open |
-| IN-13 | info | `aria-expanded` sits on a control whose popover is `aria-hidden` | open |
+| IN-13 | info | `aria-expanded` sits on a control whose popover is `aria-hidden` | fixed (ad76e51, plan 02-04 drops aria-expanded) |

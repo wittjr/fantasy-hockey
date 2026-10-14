@@ -3,10 +3,10 @@ gsd_state_version: "1.0"
 current_phase: 02
 status: completed
 stopped_at: Phase 02 re-verified (passed 5/5) — milestone ready to close
-last_updated: "2026-10-14T23:15:48.378Z"
+last_updated: "2026-10-14T23:21:13.034Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 02 complete
-state_head: 104cb7480ff29d27acc4200007840c0b357bc73e
+state_head: d80209ab16106071488503078f7bb75379336e77
 progress:
   total_phases: 3
   completed_phases: 3
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-10-14)
 Phase: 02
 Plan: Not started
 Status: All phases complete
-Last activity: 2026-10-14 - Completed quick task 261014-qr6: raise research page footer text contrast
+Last activity: 2026-10-14 - Completed quick task 261014-quc: Phase 3 WR-01 contain play-by-play mapping errors, WR-02 note unattributed events
 
 Progress: [██████████] 100% (3 of 3 phases; 29/29 plans done)
 
@@ -122,10 +122,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1 → later]: WR-05..WR-08 fixed (1314b03, 88b2299, adb0f61, 888cc03); WR-10 fixed in Phase 02 (5bbb68c). Still open: WR-08 remainder (no DOM test of outside-click/blur), info IN-01..IN-13; see 01-REVIEW-DISPOSITION.md
+- [Phase 1 → later]: WR-05..WR-08 fixed (1314b03, 88b2299, adb0f61, 888cc03); WR-10 fixed in Phase 02 (5bbb68c); IN-13 fixed by ad76e51. Still open: WR-08 remainder (no DOM test of outside-click/blur), info IN-01..IN-12 (not IN-08); see 01-REVIEW-DISPOSITION.md
 - [All phases]: Site targets laptop browsers; no phone/touch UAT
 - [Phase 3]: Last 20 is only verified on 6-8 finished games per team (October); re-check a full 20-game window later in the season
-- [Phase 1]: UI re-audit (2026-10-14) scored 19/24, warnings only: muted-dash contrast, all-dash Δ columns at a 2-game window with no UI-SPEC rule, copy drift; see 01-UI-REVIEW.md
+- [Phase 3]: WR-01 and WR-02 fixed (quick 261014-quc). Still open: IN-01..IN-04 info; no UI audit was run for Phase 3; see 03-REVIEW-DISPOSITION.md
 - [Phase 2]: WR-06 and amber footnote contrast fixed (quick 261014-qgu); IN-10 and UI audit copy drift / page chrome weight fixed (quick 261014-qo6). Still open: IN-11 info (no Escape-on-hover regression test); see 02-REVIEW-DISPOSITION.md
 - [GSD tooling]: the code-review disposition step cannot parse the hand-curated 01-REVIEW-DISPOSITION.md; a future phase-01 review would rewrite it to 15 rows and reopen WR-10, so reconcile that ledger by hand
 
@@ -138,6 +138,7 @@ None yet.
 | 261014-qgu | Fix WR-06 dash contrast (PlayerLinemates, LastGameLines) and amber-600 note text on /research | 2026-10-14 | 2670b71 | [261014-qgu-fix-wr-06-dash-contrast-in-playerlinemat](./quick/261014-qgu-fix-wr-06-dash-contrast-in-playerlinemat/) |
 | 261014-qo6 | Align 02-UI-SPEC copy with code, font-medium page chrome, fix IN-10 formatter coupling | 2026-10-14 | 4892dd6 | [261014-qo6-align-02-ui-spec-copy-with-code-font-med](./quick/261014-qo6-align-02-ui-spec-copy-with-code-font-med/) |
 | 261014-qr6 | Raise /research footer text contrast (disabled window counts left gray) | 2026-10-14 | 104cb74 | [261014-qr6-raise-research-page-footer-text-contrast](./quick/261014-qr6-raise-research-page-footer-text-contrast/) |
+| 261014-quc | Phase 3 WR-01 contain play-by-play mapping errors, WR-02 note unattributed events | 2026-10-14 | d80209a | [261014-quc-phase-3-wr-01-contain-play-by-play-mappi](./quick/261014-quc-phase-3-wr-01-contain-play-by-play-mappi/) |
 
 ## Deferred Items
 
