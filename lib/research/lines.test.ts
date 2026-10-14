@@ -2,10 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   analyzeGameLines,
+  creditsUnit,
   parseClock,
   regulationSeconds,
   trendSlope,
   uniqueShifts,
+  unitKey,
+  type OnIce,
   type PositionGroup,
   type ShiftInput,
 } from "./lines";
@@ -59,6 +62,11 @@ test("an empty net counts as even strength, not a power play", () => {
     ...shifts("OPP", [101, 102, 103, 104, 105, 120], 0, 30),
   ];
   assert.deepEqual(analyzeGameLines("BUF", input, positions).situationSeconds, { ev: 30, pp: 0, sh: 0 });
+  // D-22: the pulled-goalie seconds are in no listed unit, but each skater still has his seconds.
+  const lines = analyzeGameLines("BUF", input, positions);
+  assert.deepEqual(lines.units.ev.F, []);
+  assert.deepEqual(lines.units.ev.D, []);
+  assert.deepEqual(lines.playerSeconds.get(11), { ev: 30, pp: 0, sh: 0 });
 });
 
 test("ignores momentary combos from line changes and offsets later periods", () => {
@@ -212,4 +220,70 @@ test("a player's overlapping differing rows on the power play count once in his 
   const lines = analyzeGameLines("BUF", input, positions);
   assert.deepEqual(lines.units.pp.F, [{ playerIds: [1, 4, 5, 6], seconds: 30, pct: 100 }]);
   assert.deepEqual(lines.playerSeconds.get(4), { ev: 0, pp: 30, sh: 0 });
+});
+
+// Unit seconds follow creditsUnit (D-13, D-21, D-22): these seconds go to Other, never to a listed unit.
+function assertNoUnits(lines: ReturnType<typeof analyzeGameLines>) {
+  for (const situation of ["ev", "pp", "sh"] as const) {
+    assert.deepEqual(lines.units[situation].F, [], `${situation} F`);
+    assert.deepEqual(lines.units[situation].D, [], `${situation} D`);
+  }
+}
+
+test("opponent goalie pulled: the seconds stay even strength for every skater but credit no unit", () => {
+  const withSixth = new Map<number, PositionGroup>([...positions, [106, "F"]]);
+  const input = [
+    ...shifts("BUF", [1, 2, 3, 11, 12, 20], 0, 30),
+    ...shifts("OPP", [101, 102, 103, 104, 105, 106], 0, 30), // no OPP goalie
+  ];
+  const lines = analyzeGameLines("BUF", input, withSixth);
+  assert.deepEqual(lines.situationSeconds, { ev: 30, pp: 0, sh: 0 });
+  assertNoUnits(lines);
+  assert.equal(lines.playerSeconds.get(1)?.ev, 30);
+});
+
+test("an opponent with no shift rows keeps today's situation seconds but credits no unit", () => {
+  const lines = analyzeGameLines("BUF", shifts("BUF", [1, 2, 3, 11, 12, 20], 0, 30), positions);
+  assert.deepEqual(lines.situationSeconds, { ev: 0, pp: 30, sh: 0 });
+  assert.deepEqual(lines.units.pp.F, []);
+  assert.deepEqual(lines.units.pp.D, []);
+});
+
+test("4-on-4 stays even strength for situation and player seconds but credits no unit", () => {
+  const input = [
+    ...shifts("BUF", [1, 2, 11, 12, 20], 0, 40),
+    ...shifts("OPP", [101, 102, 103, 104, 120], 0, 40),
+  ];
+  const lines = analyzeGameLines("BUF", input, positions);
+  assert.equal(lines.situationSeconds.ev, 40);
+  assert.deepEqual(lines.units.ev.D, []);
+  assert.deepEqual(lines.playerSeconds.get(11), { ev: 40, pp: 0, sh: 0 });
+});
+
+test("3-on-3 overtime seconds credit no unit, so a trio keeps only its 5-on-5 time", () => {
+  const input = [
+    ...shifts("BUF", [1, 2, 3, 11, 12, 20], 0, 60),
+    ...shifts("OPP", [101, 102, 103, 104, 105, 120], 0, 60),
+    ...shifts("BUF", [1, 2, 3, 20], 0, 50, 4),
+    ...shifts("OPP", [101, 102, 103, 120], 0, 50, 4),
+  ];
+  const lines = analyzeGameLines("BUF", input, positions);
+  assert.equal(lines.situationSeconds.ev, 110);
+  assert.deepEqual(lines.units.ev.F, [{ playerIds: [1, 2, 3], seconds: 60, pct: (60 / 110) * 100 }]);
+});
+
+test("unitKey sorts a unit's ids and returns null for no unit or a short even-strength unit", () => {
+  assert.equal(unitKey("ev", "F", [3, 1, 2], positions), "1,2,3");
+  assert.equal(unitKey("ev", "F", [1, 2, 3, 4], positions), null);
+  assert.equal(unitKey("pp", "F", [1, 4, 5, 6], positions), "1,4,5,6");
+  assert.equal(unitKey("ev", "D", [1, 2, 3], positions), null);
+});
+
+test("creditsUnit needs both goalies, and exactly 5 on 5 at even strength", () => {
+  const side = (skaters: number, goalie = true): OnIce => ({ skaters: Array.from({ length: skaters }, (_, i) => i + 1), goalie });
+  assert.equal(creditsUnit("ev", side(5, false), side(5)), false);
+  assert.equal(creditsUnit("ev", side(5), side(5, false)), false);
+  assert.equal(creditsUnit("ev", side(4), side(4)), false);
+  assert.equal(creditsUnit("ev", side(5), side(5)), true);
+  assert.equal(creditsUnit("pp", side(5), side(4)), true);
 });
