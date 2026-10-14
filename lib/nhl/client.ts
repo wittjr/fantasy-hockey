@@ -143,6 +143,17 @@ export interface NhlPlayByPlay {
   plays: NhlPlay[];
 }
 
+/**
+ * A game's play-by-play. Can have no plays for a short while after a game ends, until the league
+ * publishes it. An empty cached result is re-requested uncached so it is not pinned for the hour;
+ * a published play-by-play stays in the hour cache.
+ */
+export async function getPlayByPlay(gameId: number): Promise<NhlPlayByPlay> {
+  const path = `gamecenter/${gameId}/play-by-play`;
+  const pbp = await nhlGet<NhlPlayByPlay>(path, FINISHED_GAME_CACHE);
+  return pbp.plays?.length > 0 ? pbp : nhlGet<NhlPlayByPlay>(path, { cache: "no-store" });
+}
+
 export interface NhlShift {
   playerId: number;
   teamAbbrev: string;
