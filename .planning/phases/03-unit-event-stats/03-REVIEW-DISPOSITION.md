@@ -23,6 +23,10 @@ findings:
     severity: info
     disposition: open
     title: "Redundant class and non-drained response on the non-OK path"
+  - id: IN-04
+    severity: info
+    disposition: open
+    title: "The unit-name separator now has no whitespace, so names copy as \"A–B–C\" and wrapping is left to atomic-inline rules"
 ---
 
 # Phase 03 code review disposition
