@@ -15,7 +15,10 @@
  *       the 13 column headers, Other then Total as last rows and the legend under them; no Other count (GF, GA, SF, SA, CF, CA)
  *       is negative (UNIT-01..03; the live render check). FAIL, never a pass, when the last game has no shift chart.
  *   U4  clicking a linked name in a PP table opens that player's panel with PP as the current tab (UNIT-04).
- * Added in the same plan, second task: U5 and U6 (see the check functions below).
+ *   U5  at 1024x800, light then dark: no table wrapper scrolls horizontally (scrollWidth at most clientWidth + 1) and every name
+ *       link sits inside its wrapper; screenshots of the Last game section go to $TMPDIR/units-check-light.png and -dark.png.
+ *   U6  in both color schemes every table has a computed 1px left border on exactly the GF, SF and CF cells (group headers, header
+ *       row 2, body, Other and Total rows) and a last row Total with font-weight 500 and a 1px top border.
  *
  * What it does:
  *  - copies the repo (not .git, .next, node_modules, .planning, .claude or any .env* file) to a temp directory,
@@ -351,8 +354,130 @@ async function unitChecks(context) {
   });
 }
 
+const SCREENSHOT_DIR = process.env.TMPDIR || "/tmp";
+const SCREENSHOT = (scheme) => path.join(SCREENSHOT_DIR, `units-check-${scheme}.png`);
+
+/** U5 and U6: the Last game tables at a 1024x800 laptop viewport, light and then dark. */
+async function layoutChecks(context) {
+  const browser = context.browser();
+  const pages = {};
+  const contexts = [];
+  try {
+    for (const scheme of ["light", "dark"]) {
+      const ctx = await browser.newContext({ viewport: { width: 1024, height: 800 }, colorScheme: scheme });
+      contexts.push(ctx);
+      pages[scheme] = await openUnitPage(ctx, TEAM);
+    }
+
+    await check("U5", "at 1024px in light and dark no table wrapper overflows and every name link stays inside its wrapper (screenshots units-check-light.png and units-check-dark.png)", async () => {
+      const results = {};
+      const problems = [];
+      for (const scheme of ["light", "dark"]) {
+        const page = pages[scheme];
+        const r = await page.evaluate(() => {
+          const h2 = [...document.querySelectorAll("h2")].find((h) => h.textContent.trim().startsWith("Last game"));
+          if (!h2) return { error: "no Last game section" };
+          const wrappers = [...h2.closest("section").querySelectorAll("div.overflow-x-auto")];
+          return {
+            dark: matchMedia("(prefers-color-scheme: dark)").matches,
+            viewport: innerWidth,
+            wrappers: wrappers.map((w) => {
+              const box = w.getBoundingClientRect();
+              const links = [...w.querySelectorAll("tbody a")];
+              return {
+                slack: w.clientWidth + 1 - w.scrollWidth,
+                links: links.length,
+                outside: links.filter((a) => {
+                  const b = a.getBoundingClientRect();
+                  return b.right > box.right + 0.5 || b.left < box.left - 0.5;
+                }).length,
+              };
+            }),
+          };
+        });
+        if (r.error) {
+          problems.push(`${scheme}: ${r.error}`);
+          continue;
+        }
+        if (r.dark !== (scheme === "dark")) problems.push(`${scheme}: prefers-color-scheme did not apply`);
+        if (r.wrappers.length !== 6) problems.push(`${scheme}: ${r.wrappers.length} wrappers, expected 6`);
+        r.wrappers.forEach((w, i) => {
+          if (w.slack < 0) problems.push(`${scheme}: ${EXPECTED_TITLES[i]} scrollWidth exceeds clientWidth by ${-w.slack + 1}px`);
+          if (w.outside > 0) problems.push(`${scheme}: ${EXPECTED_TITLES[i]} has ${w.outside} name link(s) outside the wrapper`);
+        });
+        results[scheme] = { viewport: r.viewport, wrappers: r.wrappers.length, links: r.wrappers.reduce((n, w) => n + w.links, 0) };
+        const shot = SCREENSHOT(scheme);
+        await page.locator("section", { has: page.locator("h2", { hasText: /^Last game/ }) }).first().screenshot({ path: shot });
+        console.log(`INFO U5 screenshot ${shot}`);
+      }
+      return { ok: problems.length === 0, details: { ...results, problems: problems.slice(0, 10) } };
+    });
+
+    await check("U6", "in light and dark every table has a 1px left border on exactly the GF, SF and CF cells (group headers, header row 2, body, Other, Total) and a last row Total with font-weight 500 and a 1px top border", async () => {
+      const problems = [];
+      const seen = {};
+      for (const scheme of ["light", "dark"]) {
+        const r = await pages[scheme].evaluate(() => {
+          const h2 = [...document.querySelectorAll("h2")].find((h) => h.textContent.trim().startsWith("Last game"));
+          if (!h2) return { error: "no Last game section" };
+          const left = (el) => {
+            const cs = getComputedStyle(el);
+            return cs.borderLeftStyle !== "none" && cs.borderLeftWidth === "1px";
+          };
+          const DIVIDER_COLUMNS = [4, 7, 10];
+          return {
+            colors: (() => {
+              const th = h2.closest("section").querySelector('thead th[scope="colgroup"]');
+              return th ? getComputedStyle(th).borderLeftColor : null;
+            })(),
+            tables: [...h2.closest("section").querySelectorAll("table")].map((t) => {
+              const title = t.tHead.rows[1].cells[3].textContent.trim();
+              const problems = [];
+              // Header row 1: the empty lead cell has no divider, the three group headers do.
+              const groups = [...t.tHead.rows[0].cells];
+              if (left(groups[0])) problems.push("header row 1 lead cell has a divider");
+              if (groups.slice(1).some((c) => !left(c)) || groups.length !== 4) problems.push("a group header lacks its divider");
+              const bodyRows = [t.tHead.rows[1], ...[...t.tBodies[0].rows].filter((r) => r.cells.length === 13)];
+              bodyRows.forEach((row, n) => {
+                const bad = [...row.cells].map((c, i) => (left(c) !== DIVIDER_COLUMNS.includes(i) ? i + 1 : null)).filter((i) => i !== null);
+                if (bad.length) problems.push(`${n === 0 ? "header row 2" : `row ${n}`} (${row.cells[3].textContent.trim()}): wrong divider in column(s) ${bad.join(",")}`);
+              });
+              const all = [...t.tBodies[0].rows];
+              const onlyNone = all.length === 1 && all[0].cells.length === 1;
+              let total = null;
+              if (!onlyNone) {
+                const last = all[all.length - 1];
+                const cs = getComputedStyle(last);
+                total = { label: last.cells[3].textContent.trim(), weight: cs.fontWeight, top: cs.borderTopWidth, style: cs.borderTopStyle, labelWeight: getComputedStyle(last.cells[3]).fontWeight };
+                if (total.label !== "Total") problems.push(`last row is ${total.label}`);
+                if (total.weight !== "500" || total.labelWeight !== "500") problems.push(`Total weight ${total.weight}/${total.labelWeight}`);
+                if (total.top !== "1px" || total.style === "none") problems.push(`Total top border ${total.top} ${total.style}`);
+                const other = all[all.length - 2];
+                if (getComputedStyle(other).fontWeight === "500") problems.push("Other row is as heavy as Total");
+              }
+              return { title, rows: bodyRows.length, total: total !== null, problems };
+            }),
+          };
+        });
+        if (r.error) {
+          problems.push(`${scheme}: ${r.error}`);
+          continue;
+        }
+        if (r.tables.length !== 6) problems.push(`${scheme}: ${r.tables.length} tables, expected 6`);
+        if (!r.tables.some((t) => t.total)) problems.push(`${scheme}: no table has a Total row`);
+        for (const t of r.tables) for (const pr of t.problems) problems.push(`${scheme}: ${t.title}: ${pr}`);
+        seen[scheme] = { tables: r.tables.length, totals: r.tables.filter((t) => t.total).length, dividerColor: r.colors };
+      }
+      if (seen.light && seen.dark && seen.light.dividerColor === seen.dark.dividerColor) problems.push("the divider color is the same in light and dark");
+      return { ok: problems.length === 0, details: { ...seen, problems: problems.slice(0, 10) } };
+    });
+  } finally {
+    for (const ctx of contexts) await ctx.close();
+  }
+}
+
 // Check functions are listed here in run order, after loadChecks, so U1 and U2 stay untouched.
-const CHECK_GROUPS = [loadChecks, unitChecks];
+const CHECK_GROUPS = [loadChecks, unitChecks, layoutChecks];
 
 async function main() {
   const pw = findPlaywright();
