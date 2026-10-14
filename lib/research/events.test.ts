@@ -297,6 +297,23 @@ test("buildGameEvents returns null for an empty shift list, a null play-by-play 
   assert.notEqual(buildGameEvents("WPG", shifts, positions, pbp), null);
 });
 
+test("buildGameEvents returns null instead of throwing on malformed play-by-play (WR-01)", () => {
+  const { pbp, shifts, positions } = load(ALL_FIXTURES[0]);
+  const shot = pbp.plays.find((p) => p.typeDescKey === "shot-on-goal")!;
+  const malformed = [
+    { ...pbp, plays: undefined },
+    { ...pbp, homeTeam: undefined },
+    { ...pbp, plays: [{ ...shot, periodDescriptor: undefined }] },
+  ] as unknown as NhlPlayByPlay[];
+  const error = console.error;
+  console.error = () => {};
+  try {
+    for (const bad of malformed) assert.equal(buildGameEvents("WPG", shifts, positions, bad), null);
+  } finally {
+    console.error = error;
+  }
+});
+
 for (const id of ALL_FIXTURES) {
   const { fixture, pbp, shifts, positions } = load(id);
   const events = toGameEvents(pbp);

@@ -188,19 +188,25 @@ export function isShiftChartSuspect(shifts: readonly ShiftInput[], teams: { home
   return (shifts.length - uniqueShifts(shifts).length) / shifts.length > MAX_REPEATED_SHIFT_SHARE;
 }
 
-/** Events for `team`, or null when the shift chart or play-by-play is missing: unknown, never zeros. */
+/** Events for `team`, or null when the shift chart or play-by-play is missing or malformed: unknown, never zeros. */
 export function buildGameEvents(
   team: string,
   shifts: ShiftInput[],
   positions: Map<number, PositionGroup>,
   pbp: NhlPlayByPlay | null,
 ): GameEvents | null {
-  if (shifts.length === 0 || !pbp || pbp.plays.length === 0) return null;
-  const events = toGameEvents(pbp);
-  const teams = { home: pbp.homeTeam.abbrev, away: pbp.awayTeam.abbrev };
-  return {
-    ...attributeEvents(team, shifts, positions, events),
-    quality: matchQuality(shifts, positions, events, teams),
-    chartSuspect: isShiftChartSuspect(shifts, teams),
-  };
+  if (shifts.length === 0 || !pbp?.plays?.length) return null;
+  // Malformed play-by-play must never fail the game (D-05).
+  try {
+    const events = toGameEvents(pbp);
+    const teams = { home: pbp.homeTeam.abbrev, away: pbp.awayTeam.abbrev };
+    return {
+      ...attributeEvents(team, shifts, positions, events),
+      quality: matchQuality(shifts, positions, events, teams),
+      chartSuspect: isShiftChartSuspect(shifts, teams),
+    };
+  } catch (err) {
+    console.error(`Mapping play-by-play for ${team} failed`, err);
+    return null;
+  }
 }
