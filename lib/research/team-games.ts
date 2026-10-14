@@ -1,6 +1,8 @@
 import {
+  finishedGameCache,
   getBoxscore,
   getClubScheduleNow,
+  getPlayByPlay,
   getShiftCharts,
   type NhlBoxscoreTeamStats,
   type NhlTeamAbbrev,
@@ -13,11 +15,49 @@ import {
   type PositionGroup,
   type Situation,
 } from "./lines";
+import { buildGameEvents, type GameEvents } from "./events";
 import { pairSeconds, type GamePairs } from "./pair-seconds";
 
 // Regular season and playoffs; preseason deployment isn't representative.
 const RESEARCH_GAME_TYPES = new Set([2, 3]);
 const FINISHED_STATES = new Set(["OFF", "FINAL"]);
+
+// NHL api-web limits request rate (burst about 50, then a 60 s ban), not concurrency. Each game makes 3 requests
+// (boxscore, shift chart, play-by-play), so a start every 1000 ms is about 3 api-web requests per second. Measured by the
+// cold Last 20 check (plan 03-09): 500, 600 and 750 ms all hit 429 on the third team; 1000 ms loaded nine teams in a row.
+export const MAX_CONCURRENT_GAMES = 3;
+export const GAME_START_GAP_MS = 1000;
+
+/**
+ * Runs `fn` over `items` with at most `concurrency` in flight, starting items in order at least `gapMs` apart.
+ * Results come back in input order; a failed item is a rejected result, so this never rejects.
+ */
+export async function mapPaced<T, R>(
+  items: readonly T[],
+  fn: (item: T) => Promise<R>,
+  opts: { concurrency: number; gapMs: number },
+): Promise<PromiseSettledResult<R>[]> {
+  const results = new Array<PromiseSettledResult<R>>(items.length);
+  let next = 0;
+  let nextStartAt = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      // Reserve this item's start slot before waiting so concurrent workers stay gapMs apart.
+      const startAt = Math.max(Date.now(), nextStartAt);
+      nextStartAt = startAt + opts.gapMs;
+      const wait = startAt - Date.now();
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      try {
+        results[i] = { status: "fulfilled", value: await fn(items[i]) };
+      } catch (reason) {
+        results[i] = { status: "rejected", reason };
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(opts.concurrency, items.length) }, worker));
+  return results;
+}
 
 export interface ResearchPlayer {
   id: number;
@@ -49,6 +89,12 @@ export interface ResearchGame {
    * Null when there is no shift chart, like lines.
    */
   pairs: GamePairs | null;
+  /**
+   * Shots, goals and shot attempts per situation and unit for this team (pulled-goalie and 4-on-4/3-on-3 events only
+   * in the situation totals). Null (unknown, never zeros) when there is no shift chart or the play-by-play failed or
+   * is unpublished; the game still counts for TOI and linemates (D-05).
+   */
+  events: GameEvents | null;
 }
 
 export interface TeamResearch {
@@ -75,13 +121,19 @@ function addPlayers(stats: NhlBoxscoreTeamStats, into: Map<number, ResearchPlaye
 async function loadGame(
   team: string,
   gameId: number,
+  cache: ReturnType<typeof finishedGameCache>,
 ): Promise<{ game: ResearchGame; players: Map<number, ResearchPlayer> }> {
   // A failed shift chart (null) is not the same as an unpublished one ([]): a regulation game falls back to boxscore
   // TOI with no PP/SH, but an OT/SO game needs the chart for its regulation TOI, so it fails below.
-  const [box, shifts] = await Promise.all([
-    getBoxscore(gameId),
-    getShiftCharts(gameId).catch((err: unknown) => {
+  // A play-by-play failure never fails the game (D-05): its events are null (unknown).
+  const [box, shifts, pbp] = await Promise.all([
+    getBoxscore(gameId, cache),
+    getShiftCharts(gameId, cache).catch((err: unknown) => {
       console.error(`Loading shift chart for game ${gameId} (${team}) failed`, err);
+      return null;
+    }),
+    getPlayByPlay(gameId, cache).catch((err: unknown) => {
+      console.error(`Loading play-by-play for game ${gameId} (${team}) failed`, err);
       return null;
     }),
   ]);
@@ -127,12 +179,17 @@ async function loadGame(
     regulationToi,
     lines: shiftInputs.length > 0 ? analyzeGameLines(team, shiftInputs, positions) : null,
     pairs: shiftInputs.length > 0 ? pairSeconds(team, shiftInputs, positions) : null,
+    events: buildGameEvents(team, shiftInputs, positions, pbp),
   };
   return { game, players: gamePlayers };
 }
 
 /** The team's last `count` finished regular-season/playoff games this season. */
-export async function loadTeamResearch(team: NhlTeamAbbrev, count: number): Promise<TeamResearch> {
+export async function loadTeamResearch(
+  team: NhlTeamAbbrev,
+  count: number,
+  options: { gapMs?: number } = {},
+): Promise<TeamResearch> {
   const schedule = await getClubScheduleNow(team);
   const recent = schedule
     .filter((g) => RESEARCH_GAME_TYPES.has(g.gameType) && FINISHED_STATES.has(g.gameState))
@@ -140,7 +197,13 @@ export async function loadTeamResearch(team: NhlTeamAbbrev, count: number): Prom
     .slice(-count);
 
   // One failed game must not blank the page: keep the games that loaded and name the ones that did not.
-  const settled = await Promise.allSettled(recent.map((g) => loadGame(team, g.id)));
+  // Newest first, so if a ban hits mid-load the games that loaded are the latest ones; reversed back to match `recent`.
+  const settled = (
+    await mapPaced([...recent].reverse(), (g) => loadGame(team, g.id, finishedGameCache(g.startTimeUTC)), {
+      concurrency: MAX_CONCURRENT_GAMES,
+      gapMs: options.gapMs ?? GAME_START_GAP_MS,
+    })
+  ).reverse();
   // Merge oldest-first so the latest game's name/position wins.
   const players = new Map<number, ResearchPlayer>();
   const games: ResearchGame[] = [];

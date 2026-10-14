@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Ice-Time Trends Table** - Replace the per-game ice-time grid with a sortable trends table that shows who is moving up or down (completed 2026-10-12)
 - [x] **Phase 2: Player Linemate Detail** - Click any player to see a per-game linemate heat strip by situation, with New/Rising/Fading tags (completed 2026-10-12)
-- [ ] **Phase 3: Unit Event Stats** - Show boxscore-reconciled shots, goals and Corsi on every last-game unit table
+- [x] **Phase 3: Unit Event Stats** - Show boxscore-reconciled shots, goals and Corsi on every last-game unit table (completed 2026-10-14)
 
 ## Phase Details
 
@@ -107,13 +107,48 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Fixture tests on real games (regulation, overtime, shootout, empty-net goal, penalty shot, missing shift chart) reproduce official team shots on goal and every skater's plus-minus from attributed play-by-play events, and they pass before any unit-table event columns are built
   2. Every last-game unit table (EV, PP, SH; forwards and defense) shows SF/SA, GF/GA and CF/CA counts plus SF%, CF% and +/-, with "—" where a unit has no events
-  3. A legend on the page defines each stat and its exclusions (empty-net, shootout and teammate-blocked attempts), and an "other" row makes each table's unit totals add up to the team's totals for that game
+  3. A legend on the page defines each stat and its exclusions (empty-net and shootout attempts; teammate-blocked attempts count in CF/CA, UAT G-03-1), and an "other" row makes each table's unit totals add up to the team's totals for that game
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans**: TBD
+**Plans:** 13/13 plans complete (2 gap-closure plans from UAT)
+
+Plans:
+**Wave 1**
+- [x] 03-01-PLAN.md — Tracer + gate (part 1): one real regulation game → play-by-play mapper → on-ice attribution reproduces boxscore SOG and every skater's plus-minus; mapper exclusion and pulled-goalie rules pinned
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 03-02-PLAN.md — Gate (part 2): attribution rules pinned on every fixture (start < t <= end, pulled goalie, 4-on-4/3-on-3, accounting, listed ≤ Total, purity); unit Time follows the same creditsUnit rule (D-13, D-21, D-22)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 03-03-PLAN.md — Gate (part 3): overtime, shootout, empty-net, penalty-shot and missing-shift-chart fixtures reproduce boxscore SOG and every skater's plus-minus (one pinned exemption); exclusion counters
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 03-04-PLAN.md — Reliability flags: shift-vs-situationCode match quality (95% threshold) and corrupted shift chart detection with the 2025020565 fixture (D-16, D-17, D-23)
+- [x] 03-05-PLAN.md — Play-by-play on every game load: getPlayByPlay, ResearchGame.events (null = unknown), play-by-play failure keeps the game (D-05), live boxscore reconciliation smoke
+
+**Wave 5** *(blocked on Wave 4 completion; 03-06 is the gated event-column plan)*
+- [x] 03-06-PLAN.md — Unit tables: GF GA +/- | SF SA SF% | CF CA CF% on all six stacked tables, Other and Total rows
+- [x] 03-07-PLAN.md — Last 20 without throttling: tiered finished-game cache (1 h / 30 d), short Retry-After 429 retry, paced newest-first pool
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [x] 03-08-PLAN.md — Unit tables: legend, exclusions note and amber reliability notes (D-05, D-14 to D-16, D-18, D-21, D-23)
+- [x] 03-09-PLAN.md — Last 20 measured: cold three-team CLI check tunes the pacing; WebKit harness with in-app cold and warm Last 20 (U1, U2)
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [x] 03-10-PLAN.md — WebKit checks of the unit tables on live data: structure and no negative Other (U3), name links (U4), 1024px light/dark (U5), dividers and Total row (U6)
+
+**Wave 8** *(blocked on Wave 7 completion)*
+- [x] 03-11-PLAN.md — Phase 2 regression run with N8 updated, live smoke rerun, full suite and end-of-phase human check
+
+**Wave 9** *(gap closure, UAT; blocked on Wave 8 completion)*
+- [x] 03-12-PLAN.md — G-03-1: teammate-blocked attempts count in CF/CA (user decision); fixture 2026020092 pins L1 EV CF 11 and L3 EV CA 6 with SOG still reconciled; exclusion removed from the counter, note, legend and spec documents
+
+**Wave 10** *(gap closure, UAT; blocked on Wave 9 completion)*
+- [x] 03-13-PLAN.md — G-03-7: centered name separator (unit-table names use an overlay spinner that takes no inline space); G-03-3: pl-1 pr-3 stat cells so numbers clear the dividers; WebKit U7/U8 at 1024px light and dark
+
 **UI hint**: yes
-**Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs.
+**Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs. The tests span 03-01 (regulation game and mapper rules), 03-02 (attribution rules on every fixture) and 03-03 (the other game types); encoded as 03-06 `depends_on: 03-01, 03-02, 03-03` (03-08, which adds the notes and legend, lists them too).
 **Research flags**: Needs a fixture-test spike (5-6 real games) before the main build; measure NHL 429 behaviour with the bounded-concurrency loader in dev before deploying to Vercel; decide the per-game on-ice vs `situationCode` match threshold (research suggests 95%) for flagging a game's event stats as unreliable.
 
 ## Progress
@@ -125,4 +160,14 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 0/TBD | Not started | - |
+| 3. Unit Event Stats | 13/13 | Complete    | 2026-10-14 |
+
+## Backlog
+
+### Phase 999.1: Follow-up — Phase 03 deferred UAT follow-up: Test 2 (BACKLOG)
+
+**Goal:** Resolve the UAT checkpoint deferred during Phase 03 verification
+**Source phase:** 03
+**Deferred at:** 2026-10-14 during /gsd-verify-work 03 session completion
+**Follow-ups:**
+- [ ] Test 2: I want to add a target for later to be able to see the details in "Other" (deferred 2026-10-14)

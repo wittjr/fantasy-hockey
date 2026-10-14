@@ -9,9 +9,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Data Reliability
 
-- [ ] **DATA-01**: User can load "Last 20" for any team without the page failing from NHL API throttling (bounded request concurrency + retry on HTTP 429)
-- [ ] **DATA-02**: User sees "—" (unknown), never 0, for event stats and linemate time in games whose shift charts or play-by-play are missing, and those games are excluded from averages and trends
-- [ ] **DATA-03**: User sees shot/goal/Corsi counts that reconcile with the official boxscore — fixture tests reproduce team SOG and per-skater plus-minus
+- [x] **DATA-01**: User can load "Last 20" for any team without the page failing from NHL API throttling (bounded request concurrency + retry on HTTP 429)
+- [x] **DATA-02**: User sees "—" (unknown), never 0, for event stats and linemate time in games whose shift charts or play-by-play are missing, and those games are excluded from averages and trends
+- [x] **DATA-03**: User sees shot/goal/Corsi counts that reconcile with the official boxscore — fixture tests reproduce team SOG and per-skater plus-minus
 
 ### Trends
 
@@ -30,9 +30,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Unit Event Stats
 
-- [ ] **UNIT-01**: User can see SF/SA, GF/GA, CF/CA raw counts on every last-game unit table (EV, PP, SH; forwards and defense)
-- [ ] **UNIT-02**: User can see SF%, CF% and +/- on unit tables, showing "—" when a unit has no events
-- [ ] **UNIT-03**: User can read a legend defining the stats and exclusions (empty-net, shootout, teammate-blocked attempts are excluded), with an "other" row so unit totals reconcile with team totals
+- [x] **UNIT-01**: User can see SF/SA, GF/GA, CF/CA raw counts on every last-game unit table (EV, PP, SH; forwards and defense)
+- [x] **UNIT-02**: User can see SF%, CF% and +/- on unit tables, showing "—" when a unit has no events
+- [x] **UNIT-03**: User can read a legend defining the stats and exclusions (empty-net and shootout attempts are excluded; teammate-blocked attempts count in CF/CA, UAT G-03-1), with an "other" row so unit totals reconcile with team totals
 - [x] **UNIT-04**: User can click a player name in a unit table to open that player's detail
 
 ## v2 Requirements
@@ -65,7 +65,8 @@ Deferred to a future milestone. Tracked but not in current roadmap.
 
 - Events are attributed to players on ice during the second before the event timestamp (`start < t <= end`).
 - Blocked shots count toward the shooting team's Corsi (`eventOwnerTeamId` is the shooter's team).
-- Excluded from SF/GF/CF: empty-net events, shootout events (`periodType === "SO"`), and `teammate-blocked` attempts.
+- Excluded from SF/GF/CF: empty-net events and shootout events (`periodType === "SO"`).
+- `teammate-blocked` attempts count in CF for the shooting team (`eventOwnerTeamId`) and in CA for the opponent, never in SF or GF (user decision 2026-10-14, UAT G-03-1).
 
 ## Traceability
 
@@ -73,9 +74,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 3 | Pending |
-| DATA-02 | Phase 3 | Pending |
-| DATA-03 | Phase 3 | Pending |
+| DATA-01 | Phase 3 | Complete |
+| DATA-02 | Phase 3 | Complete |
+| DATA-03 | Phase 3 | Complete |
 | TRND-01 | Phase 1 | Complete |
 | TRND-02 | Phase 1 | Complete |
 | TRND-03 | Phase 1 | Complete |
@@ -85,9 +86,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLYR-02 | Phase 2 | Complete |
 | PLYR-03 | Phase 2 | Complete |
 | PLYR-04 | Phase 2 | Complete |
-| UNIT-01 | Phase 3 | Pending |
-| UNIT-02 | Phase 3 | Pending |
-| UNIT-03 | Phase 3 | Pending |
+| UNIT-01 | Phase 3 | Complete |
+| UNIT-02 | Phase 3 | Complete |
+| UNIT-03 | Phase 3 | Complete |
 | UNIT-04 | Phase 2 | Complete |
 
 **Coverage:**

@@ -33,6 +33,7 @@ function fixtureGame(date: string, toi: Record<number, number>, withLines = true
         }
       : null,
     pairs: null,
+    events: null,
   };
 }
 

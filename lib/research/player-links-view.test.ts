@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LastGameLines } from "@/components/LastGameLines";
+import { PendingLink } from "@/components/PendingLink";
 import { ToiTrends } from "@/components/ToiTrends";
 import type { Situation, Unit } from "./lines";
 import type { ResearchGame, ResearchPlayer, TeamResearch } from "./team-games";
@@ -31,6 +32,7 @@ function fixtureGame(date: string, toi: Record<number, number>): ResearchGame {
       playerSeconds: new Map([[1, { ev: 1000, pp: 60, sh: 10 }]]),
     },
     pairs: null,
+    events: null,
   };
 }
 
@@ -174,13 +176,45 @@ test("EV unit names link without sit and PP unit names link with sit=pp", () => 
   assert.deepEqual(pp.map((a) => attr(a, "href")), [2, 3, 4, 5].map((id) => `/research?team=MTL&games=5&player=${id}&sit=pp#player-detail`));
 });
 
-test("names in a unit are separated by an aria-hidden dash and a one-player unit has no separator", () => {
+test("names in a unit are separated by an aria-hidden mx-1 dash with no spaces and a one-player unit has no separator", () => {
   const html = renderUnits(fixtureUnits());
   const three = tds(rowHtml(tableHtml(html, "EV - Forwards"), "Player 3"))[3];
-  assert.equal((three.match(/<span aria-hidden="true"> – <\/span>/g) ?? []).length, 2);
+  assert.equal((three.match(/<span aria-hidden="true" class="mx-1">–<\/span>/g) ?? []).length, 2);
+  assert.equal((three.match(/–/g) ?? []).length, 2);
   const one = tds(rowHtml(tableHtml(html, "PP - Defense"), "Player 11"))[3];
   assert.equal(anchors(one).length, 1);
   assert.ok(!one.includes("–"));
+});
+
+// Overlay spinner (G-03-7)
+const spinners = (cell: string) => [...cell.matchAll(/<span aria-hidden="true" class="[^"]*animate-spin[^"]*"><\/span>/g)].map((m) => m[0]);
+const OVERLAY = ["absolute", "left-full", "pointer-events-none"];
+
+test("unit-table name links are relative and their spinner is an absolute, left-full, pointer-events-none overlay", () => {
+  const cell = tds(rowHtml(tableHtml(renderUnits(fixtureUnits(), "ev", null), "EV - Forwards"), "Player 3"))[3];
+  const links = anchors(cell);
+  assert.equal(links.length, 3);
+  for (const a of links) assert.ok(classTokens(a).includes("relative"), a);
+  const found = spinners(cell);
+  assert.equal(found.length, 3);
+  for (const s of found) for (const token of OVERLAY) assert.ok(classTokens(s).includes(token), `${token} in ${s}`);
+});
+
+test("trends-table name links and spinners carry no overlay classes", () => {
+  const html = renderTrends(research(threeGames()), { selected: 1, sit: "ev" });
+  const cell = nameCell(html, "Bravo Forward");
+  assert.ok(!classTokens(nameAnchor(html, "Bravo Forward")).includes("relative"));
+  const found = spinners(cell);
+  assert.equal(found.length, 1);
+  for (const token of [...OVERLAY, "relative"]) assert.ok(!classTokens(found[0]).includes(token), `${token} in ${found[0]}`);
+});
+
+test("a PendingLink without overlaySpinner renders exactly the markup it rendered before the overlay option existed", () => {
+  const html = renderToStaticMarkup(createElement(PendingLink, { href: "/research?team=MTL", className: "underline" }, "Alpha"));
+  assert.equal(
+    html,
+    '<a class="inline-flex items-center gap-1.5 underline" href="/research?team=MTL">Alpha<span aria-hidden="true" class="inline-block size-3 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-700 transition-opacity dark:border-neutral-700 dark:border-t-neutral-200 opacity-0"></span></a>',
+  );
 });
 
 test("the #, Time and % cells keep their values", () => {
@@ -191,7 +225,7 @@ test("the #, Time and % cells keep their values", () => {
 test("an empty unit table shows one None row with no link", () => {
   const sh = tableHtml(renderUnits(fixtureUnits()), "SH - Defense");
   assert.ok(sh.includes("None"));
-  assert.equal((sh.match(/<tr/g) ?? []).length, 2);
+  assert.equal((sh.match(/>None</g) ?? []).length, 1);
   assert.ok(!sh.includes("<a"));
 });
 
@@ -217,14 +251,15 @@ test("the selected player's name on his own tab is a plain #player-detail anchor
 test("an EV forward list of 5 units renders 4 rows", () => {
   const five = unitResearch({ ev: { F: [3, 4, 5, 6, 7].map((id) => unit([id, 8])) } });
   const table = tableHtml(renderUnits(five), "EV - Forwards");
-  assert.equal((table.match(/<tr/g) ?? []).length, 1 + 4);
+  // Rows that list a unit hold name links; header, Other and Total rows do not.
+  assert.equal((table.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*<a\b/g) ?? []).length, 4);
 });
 
 test("players with the same display name get links with their own ids", () => {
   const twins = new Map(unitPlayers);
   twins.set(12, { id: 12, name: "Same Name", position: "C", group: "F" });
   twins.set(13, { id: 13, name: "Same Name", position: "C", group: "F" });
-  const cell = tds(tableHtml(renderUnits(unitResearch({ ev: { F: [unit([12, 13])] } }, twins), "ev", null), "EV - Forwards").match(/<tr[\s\S]*?<\/tr>/g)![1])[3];
+  const cell = tds(rowHtml(tableHtml(renderUnits(unitResearch({ ev: { F: [unit([12, 13])] } }, twins), "ev", null), "EV - Forwards"), "Same Name"))[3];
   assert.deepEqual(anchors(cell).map((a) => attr(a, "href")), [12, 13].map((id) => `/research?team=MTL&games=5&player=${id}#player-detail`));
 });
 
