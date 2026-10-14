@@ -53,10 +53,10 @@ Same scale as Phases 1-2 (multiples of 4: 4, 8, 16, 24, 32, 48, 64), applied thr
 | 2xl / 3xl | 48 / 64px | not used |
 
 Exceptions (all intentional):
-- **12px** left padding on stat cells (`pl-3`): the page already uses `pr-3` / `px-3` as its column gutter; a multiple of 4. It separates right-aligned digits from the neighbouring column.
+- **12px** right padding and 4px left padding on stat cells (`pl-1 pr-3`, revised 2026-10-14, G-03-3): the page already uses `pr-3` / `px-3` as its column gutter; both are multiples of 4. Right padding is what keeps right-aligned digits off the divider that follows them and shrinks the gap after a divider; left padding has no visible effect on right-aligned text, so it drops to 4px. The group header cells (`Goals`, `Shots`, `Corsi`) keep `pl-3`.
 - **Section gap `gap-3`** (12px) between heading, notes and tables: existing, unchanged.
 - **Hairlines**: 1px group dividers (`border-l`), 1px Total-row rule (`border-t`), row rules. Not spacing.
-- **Stat column width `w-12`** (48px) on count columns and `w-14` (56px) on the SF% / CF% columns: wide enough for `100.0` and `−12` at `text-sm` plus `pl-3`; multiples of 4. Time and `%` keep their existing `w-14`, `#` keeps `w-10`.
+- **Stat column width `w-12`** (48px) on count columns and `w-14` (56px) on the SF% / CF% columns: wide enough for `100.0` and `−12` at `text-sm` plus `pl-1 pr-3` (32px and 40px of content width); multiples of 4. Time and `%` keep their existing `w-14`, `#` keeps `w-10`.
 
 ---
 
@@ -126,19 +126,19 @@ Neutral palette matching the page. Phase 3 adds **no new colors**.
 | 2 | `Time` | left | `w-14` | existing |
 | 3 | `%` | left | `w-14` | existing |
 | 4 | table title, e.g. `EV - Forwards` | left | auto (takes the remaining width) | existing text, existing position |
-| 5 | `GF` | right | `w-12` | group Goals, `border-l` + `pl-3` |
-| 6 | `GA` | right | `w-12` | `pl-3` |
-| 7 | `+/-` | right | `w-12` | `pl-3` |
-| 8 | `SF` | right | `w-12` | group Shots, `border-l` + `pl-3` |
-| 9 | `SA` | right | `w-12` | `pl-3` |
-| 10 | `SF%` | right | `w-14` | `pl-3` |
-| 11 | `CF` | right | `w-12` | group Corsi, `border-l` + `pl-3` |
-| 12 | `CA` | right | `w-12` | `pl-3` |
-| 13 | `CF%` | right | `w-14` | `pl-3` |
+| 5 | `GF` | right | `w-12` | group Goals, `border-l` + `pl-1 pr-3` |
+| 6 | `GA` | right | `w-12` | `pl-1 pr-3` |
+| 7 | `+/-` | right | `w-12` | `pl-1 pr-3` |
+| 8 | `SF` | right | `w-12` | group Shots, `border-l` + `pl-1 pr-3` |
+| 9 | `SA` | right | `w-12` | `pl-1 pr-3` |
+| 10 | `SF%` | right | `w-14` | `pl-1 pr-3` |
+| 11 | `CF` | right | `w-12` | group Corsi, `border-l` + `pl-1 pr-3` |
+| 12 | `CA` | right | `w-12` | `pl-1 pr-3` |
+| 13 | `CF%` | right | `w-14` | `pl-1 pr-3` |
 
 Column order is exactly D-09 and the accepted preview: `# | Time | % | Line | GF GA +/- | SF SA SF% | CF CA CF%`. The `border-l` on columns 5, 8 and 11 is carried by **every** cell in those columns (header row 2, body rows, Other, Total), so the divider is continuous down the table. Headers carry `title` for mouse users (the legend repeats it for everyone): GF `Goals for`, GA `Goals against`, `+/-` `Goals for minus goals against`, SF `Shots on goal for`, SA `Shots on goal against`, SF% `Share of shots on goal`, CF `Shot attempts for`, CA `Shot attempts against`, CF% `Share of shot attempts`.
 
-**Body rows** (listed units, capped by `UNIT_LIMITS`, D-11): existing cells for columns 1-4 unchanged (including `PlayerLink` names, ` – ` separators, wrapping between names allowed in column 4). Stat cells: `py-1 pl-3 text-right tabular-nums whitespace-nowrap`, plus the group `border-l` classes. Row rule `border-b border-neutral-100 dark:border-neutral-900` (existing).
+**Body rows** (listed units, capped by `UNIT_LIMITS`, D-11): existing cells for columns 1-4 unchanged (including `PlayerLink` names, separators that are an `aria-hidden` en dash span with `mx-1` and no literal spaces, wrapping after a dash allowed in column 4; unit-table names use `PendingLink`'s `overlaySpinner`, so the spinner takes no inline space). Stat cells: `py-1 pl-1 pr-3 text-right tabular-nums whitespace-nowrap`, plus the group `border-l` classes. Row rule `border-b border-neutral-100 dark:border-neutral-900` (existing).
 
 Cell value rules (formatted by the view-model, the component only prints strings):
 
@@ -233,7 +233,7 @@ Applicable state considerations resolved: 28 covered, 3 backstop, 0 unresolved. 
 | populated | E3 | ✅ covered | Listed rows plus Other equal Total for time and every count; F and D tables for one situation share the same Total |
 | partial | E1 | ✅ covered | A game with lines but no events renders Time and `%` with `—` counts; Other and Total still show real Time and `%` |
 | partial | E3 | ✅ covered | Pulled-goalie seconds and events land in Other, 4-on-4 and 3-on-3 in EV Other; below-cap units fold into Other |
-| overflow | E1, E2 | ✅ covered | 13 columns fit a laptop width at `w-full`; each table is inside `overflow-x-auto` and stat cells are `whitespace-nowrap`; only the Line column may wrap between player names |
+| overflow | E1, E2 | ✅ covered | 13 columns fit a laptop width at `w-full`; each table is inside `overflow-x-auto` and stat cells are `whitespace-nowrap`; only the Line column may wrap, after an en dash between player names |
 | empty, zero-one-many | E2 | ✅ covered | The group header and column header rows always render with every table, including a table whose body is the `None` row; header count is fixed at 3 groups and 13 columns |
 | error, partial | E2 | ✅ covered | When `game.lines` is null no table renders at all (existing no-shift-chart message); when only events are null the headers still render and the cells below show `—` |
 | populated | E2 | ✅ covered | Group labels `Goals`, `Shots`, `Corsi` sit over their three columns with a `border-l` divider; abbreviated column headers carry a `title` |
@@ -246,7 +246,7 @@ Applicable state considerations resolved: 28 covered, 3 backstop, 0 unresolved. 
 | populated | E5 | ✅ covered | The legend's three lines define SF, GF, CF, SF%, CF%, +/-, Other and the exclusions; the exclusions note lists shootout and penalty-shot counts |
 | overflow | E1-E3 | 🧪 backstop | `{ statement: "At a 1024px-wide laptop viewport all six stacked tables show every column without clipping the Line names or the group dividers, in light and dark mode", verification: backstop }` |
 | long-text | E4, E5 | ✅ covered | Notes and legend are normal wrapping `text-xs` paragraphs inside the section width; no truncation |
-| long-text | E1 | ✅ covered | Long names wrap in the Line column between the ` – ` separators; numbers stay on one line |
+| long-text | E1 | ✅ covered | Long names wrap in the Line column after an en dash separator (`mx-1`, no literal spaces); numbers stay on one line |
 | zero-one-many | E1 | ✅ covered | 0 units: `None` row; 1+ units up to the `UNIT_LIMITS` cap (EV F4/D3, PP F2/D2, SH F3/D3); extra units fold into Other |
 | zero-one-many | E5 | ✅ covered | Exclusion items use singular for 1 and plural otherwise and only non-zero items are listed |
 | a11y | E1, E2 | ✅ covered | `<th scope="col">` on every header, `scope="colgroup"` with `colSpan={3}` on group labels, `title` on abbreviated headers, `−` and `+` sign glyphs carry +/- direction without color |
@@ -267,7 +267,7 @@ All project-local, server components. Phase 3 adds no client component.
 | `UnitTable` (server, same file) | change | Add the group header row, the nine stat columns, and the Other and Total rows. Takes the view-model result (`rows`, `other`, `total`, all strings pre-formatted) plus the existing `link` props; keeps the `PlayerLink` rendering and `None` row. `UNIT_LIMITS` stays and is applied by the view-model/caller before rows are built. |
 | `lib/research/unit-events-view.ts` | new (pure, tested; research-specified) | Builds `{ rows, other, total }` per situation/group with formatted strings: counts, `SF%`/`CF%` (one decimal, `—` at zero), `+/-` via `formatSignedPoints` (`—` when CF + CA = 0), Time via `formatClock`, `%` from seconds. Also builds the exclusions note string and the amber-note strings (singular/plural, rounded mismatch percentage, never `0%`). Tests: `—` vs `0` rules, listed + Other = Total, events-null all `—`, omitted rows. |
 | `PlayerLink` | reuse unchanged | UNIT-04. |
-| `PendingLink` | reuse unchanged | |
+| `PendingLink` | reuse, plus optional `overlaySpinner` for unit-table names | `overlaySpinner` (default false) makes the always-rendered spinner `absolute`, `pointer-events-none` and placed just right of the name, so it takes no inline space; without it the markup is unchanged. Used by `PlayerLink` in the unit tables only (G-03-7). |
 
 No new dependencies.
 
@@ -315,3 +315,4 @@ CONTEXT.md left these open; chosen for consistency with Phases 1-2 and recorded 
 ## Revisions
 
 - 2026-10-14, UAT G-03-1: teammate-blocked attempts count in CF/CA; removed from the exclusions note and from legend line 3 (plan 03-12).
+- 2026-10-14, UAT G-03-3 and G-03-7 (plan 03-13): (G-03-7) the dash between unit-table names is an `aria-hidden` span with `mx-1` and no literal spaces, and unit-table names use `PendingLink`'s new `overlaySpinner`. Measured cause: the always-rendered 12px spinner plus `gap-1.5` left about 18px of invisible space after every name, so the dash sat 20.9px from the previous name and 3.7px from the next; now 4px on each side. (G-03-3) stat cells and header-row-2 stat headers go from `pl-3` to `pl-1 pr-3`. Measured cause: right-aligned numbers at fixed widths had 0px right padding, so the last number of a group touched the next divider and the gap after a divider was width minus text; a uniform `pr-3` moves every number 12px left, keeping spacing inside groups and the column widths unchanged. Dividers, colors and the group header `pl-3` are unchanged (D-09, D-10).
