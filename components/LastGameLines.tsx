@@ -103,7 +103,7 @@ function StatCells({ stats }: { stats: UnitStats }) {
     const value = stats[c.key];
     const tone = value === DASH ? "text-neutral-400 dark:text-neutral-500" : c.derived ? "text-neutral-500" : "";
     return (
-      <td key={c.key} className={`py-1 pl-3 text-right tabular-nums whitespace-nowrap ${tone} ${c.start ? DIVIDER : ""}`}>
+      <td key={c.key} className={`py-1 pl-1 pr-3 text-right tabular-nums whitespace-nowrap ${tone} ${c.start ? DIVIDER : ""}`}>
         {value}
       </td>
     );
@@ -153,7 +153,7 @@ function UnitTable({
           <th scope="col" className="w-14 py-1 font-medium">%</th>
           <th scope="col" className="py-1 font-medium">{title}</th>
           {STAT_COLUMNS.map((c) => (
-            <th key={c.key} scope="col" title={c.title} className={`${c.width} py-1 pl-3 text-right font-medium ${c.start ? DIVIDER : ""}`}>
+            <th key={c.key} scope="col" title={c.title} className={`${c.width} py-1 pl-1 pr-3 text-right font-medium ${c.start ? DIVIDER : ""}`}>
               {c.label}
             </th>
           ))}

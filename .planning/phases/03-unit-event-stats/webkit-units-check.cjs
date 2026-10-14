@@ -21,6 +21,8 @@
  *       row 2, body, Other and Total rows) and a last row Total with font-weight 500 and a 1px top border.
  * Checks in this file (plan 03-13, UAT G-03-7 and G-03-3, 1024px, light and dark):
  *   U7  every en dash between two names on one line has equal space on both sides (within 1px), each between 2 and 8 px.
+ *   U8  in every body row the +/- and SF% text ends at least 8px before the next divider; in header row 2 the GF, SF and CF
+ *       labels start at most 24px after their divider.
  *
  * What it does:
  *  - copies the repo (not .git, .next, node_modules, .planning, .claude or any .env* file) to a temp directory,
@@ -528,6 +530,60 @@ async function layoutChecks(context) {
           max: Number(Math.max(...all).toFixed(1)),
           worst: { before: Number(worstAsym.before.toFixed(1)), after: Number(worstAsym.after.toFixed(1)) },
         };
+      }
+      return { ok: problems.length === 0, details: { ...seen, problems: problems.slice(0, 10) } };
+    });
+
+    await check("U8", "at 1024px in light and dark the +/- and SF% numbers sit at least 8px left of the next divider in every row, and the GF, SF and CF labels start at most 24px after their divider", async () => {
+      const problems = [];
+      const seen = {};
+      for (const scheme of ["light", "dark"]) {
+        const r = await pages[scheme].evaluate(() => {
+          const h2 = [...document.querySelectorAll("h2")].find((h) => h.textContent.trim().startsWith("Last game"));
+          if (!h2) return { error: "no Last game section" };
+          const textBox = (cell) => {
+            if (!cell.textContent.trim()) return null;
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            return range.getBoundingClientRect();
+          };
+          let minRight = Infinity;
+          let maxLeft = -Infinity;
+          let rows = 0;
+          const bad = [];
+          for (const t of h2.closest("section").querySelectorAll("table")) {
+            const title = t.tHead.rows[1].cells[3].textContent.trim();
+            for (const row of [t.tHead.rows[1], ...t.tBodies[0].rows]) {
+              if (row.cells.length !== 13) continue;
+              const header = row === t.tHead.rows[1];
+              const label = header ? "header row 2" : row.cells[3].textContent.trim();
+              if (!header) rows++;
+              for (const i of [6, 9]) {
+                const box = textBox(row.cells[i]);
+                if (!box || header) continue;
+                const gap = row.cells[i].getBoundingClientRect().right - box.right;
+                minRight = Math.min(minRight, gap);
+                if (gap < 8) bad.push(`${title} / ${label}: column ${i + 1} text ends ${gap.toFixed(1)}px before the divider`);
+              }
+              if (header) {
+                for (const i of [4, 7, 10]) {
+                  const box = textBox(row.cells[i]);
+                  const start = box.left - row.cells[i].getBoundingClientRect().left;
+                  maxLeft = Math.max(maxLeft, start);
+                  if (start > 24) bad.push(`${title}: header ${row.cells[i].textContent.trim()} starts ${start.toFixed(1)}px after its divider`);
+                }
+              }
+            }
+          }
+          return { rows, minRight, maxLeft, bad };
+        });
+        if (r.error) {
+          problems.push(`${scheme}: ${r.error}`);
+          continue;
+        }
+        if (r.rows === 0) problems.push(`${scheme}: no 13-cell body row was measured`);
+        for (const b of r.bad) problems.push(`${scheme}: ${b}`);
+        seen[scheme] = { rows: r.rows, worstGapBeforeDivider: Number(r.minRight.toFixed(1)), worstHeaderStart: Number(r.maxLeft.toFixed(1)) };
       }
       return { ok: problems.length === 0, details: { ...seen, problems: problems.slice(0, 10) } };
     });

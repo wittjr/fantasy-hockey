@@ -394,7 +394,7 @@ test("markup: every stat cell carries pl-1 and pr-3 (never pl-3) and the group h
       assert.ok(t.includes("pl-1") && t.includes("pr-3") && !t.includes("pl-3"), `stat cell ${i} of ${row.slice(0, 60)}`);
     });
   }
-  const groups = rowsOf(table)[0];
+  const groups = rowsOf(table)[0] ?? "";
   const headers = [...groups.matchAll(/<th\b[^>]*scope="colgroup"[^>]*>/g)].map((m) => m[0]);
   assert.equal(headers.length, 3);
   for (const h of headers) assert.ok(tokens(h).includes("pl-3"), h);
