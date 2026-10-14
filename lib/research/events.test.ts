@@ -305,8 +305,8 @@ for (const id of ALL_FIXTURES) {
 
     test(`${id} ${abbrev}: included + excluded + unattributed account for every mapped event`, () => {
       const included = (["ev", "pp", "sh"] as const).reduce((n, s) => n + attributed.total[s].cf + attributed.total[s].ca, 0);
-      const { shootout, penaltyShot, teammateBlocked } = attributed.excluded;
-      assert.equal(included + shootout + penaltyShot + teammateBlocked + attributed.unattributed, events.length);
+      const { shootout, penaltyShot } = attributed.excluded;
+      assert.equal(included + shootout + penaltyShot + attributed.unattributed, events.length);
     });
 
     test(`${id} ${abbrev}: listed units never exceed the situation total, so Other is never negative`, () => {
@@ -322,6 +322,11 @@ for (const id of ALL_FIXTURES) {
     });
   }
 }
+
+test("excluded counts only shootout attempts and penalty shots (UAT G-03-1: teammate-blocked attempts count)", () => {
+  const { pbp, shifts, positions } = load(2026020092);
+  assert.deepEqual(Object.keys(attributeEvents("MTL", shifts, positions, toGameEvents(pbp)).excluded).sort(), ["penaltyShot", "shootout"]);
+});
 
 test("attributeEvents is pure: the same input gives deep-equal results and is not mutated", () => {
   const { pbp, shifts, positions } = load(2025020084);
@@ -410,9 +415,9 @@ test("matchQuality: a missing goalie shift matches only a code with that goalie 
   assert.deepEqual(matchQuality(shifts, synthPositions, [synthEvent("OPP", 1, 10, "goal", { situationCode: "1651" })], teams), { checked: 1, matched: 0 });
 });
 
-test("matchQuality: a teammate-blocked event is checked", () => {
+test("matchQuality: a blocked-shot event is checked", () => {
   const teams = { home: "OPP", away: "BUF" };
-  const event = synthEvent("BUF", 1, 10, "blocked-shot", { exclusion: "teammate-blocked" });
+  const event = synthEvent("BUF", 1, 10, "blocked-shot");
   assert.deepEqual(matchQuality(fiveOnFive(60), synthPositions, [event], teams), { checked: 1, matched: 1 });
 });
 
