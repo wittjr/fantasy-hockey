@@ -21,6 +21,8 @@ created: "2026-10-12"
 
 **2026-10-14 (quick 261014-qgu; WR-06 and UI audit).** Unknown-value `—` is `text-neutral-600 dark:text-neutral-400`, matching Phase 1 (the `neutral-400` / `neutral-500` pair was about 2.5:1). Amber footnote text is `text-amber-700 dark:text-amber-400`; the unknown cell's dashed border stays `amber-600` / `amber-400` (non-text, 3:1).
 
+**2026-10-14 (quick 261014-qo6; UI audit copy drift).** Copy is recorded as shipped: the show-all line orders by highest share of time together (D-28), and the close link's `aria-label` is `Close player detail: {name}`. The page chrome on `/research` (h1, active team and window links) is now `font-medium`, so no 600 weight remains; the h1's 24px `text-2xl` is inherited Phase 1 page chrome, outside this section's 12/14/16 scale.
+
 ---
 
 ## Design System
@@ -132,7 +134,7 @@ Hollow/solid versus dashed carries the meaning without relying on hue; amber onl
 1. **Header row** (`flex flex-wrap items-start justify-between gap-x-6 gap-y-2`):
    - Left: `<h2 id="player-detail-title" className="font-medium">{name}</h2>` followed by `<span className="text-xs tabular-nums text-neutral-600 dark:text-neutral-400">{position} {gamesPlayed}/{teamGames} GP</span>` (the Phase 1 Pos string, e.g. `C 5/5 GP`).
    - Right: close link `PendingLink` `× Close player detail` (see Interaction).
-2. **Header stats** (D-05): `<dl className="flex flex-wrap gap-x-6 gap-y-1">`, four items in the trends order: `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ`. Each item: `<dt className="text-xs text-neutral-600 dark:text-neutral-400">` label above `<dd className="text-sm tabular-nums">` value. Values come from the selected player's `TrendRow` with the same formatters as the table (`formatClock`, `formatSignedClock`, `Math.round(ppShare)%`, `formatSignedPoints`). Avg TOI is `font-medium`. A crossing Δ is colored per the accent rule plus `sr-only` "Moving up"/"Moving down". Unknown values render `—` (`text-neutral-600 dark:text-neutral-400`), never `0:00` or `0%`. **Window of 1:** drop the two Δ items (Phase 1 D-08). No slope arrows and no row tint in the panel.
+2. **Header stats** (D-05): `<dl className="flex flex-wrap gap-x-6 gap-y-1">`, four items in the trends order: `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ`. Each item: `<dt className="text-xs text-neutral-600 dark:text-neutral-400">` label above `<dd className="text-sm tabular-nums">` value. Values come from the selected player's `TrendRow` with the same formatters as the table (`formatClock`, `formatSignedClock`, `Math.round(ppShare)%`, `formatPointsDelta`). Avg TOI is `font-medium`. A crossing Δ is colored per the accent rule plus `sr-only` "Moving up"/"Moving down". Unknown values render `—` (`text-neutral-600 dark:text-neutral-400`), never `0:00` or `0%`. **Window of 1:** drop the two Δ items (Phase 1 D-08). No slope arrows and no row tint in the panel.
 3. **Situation tabs** (D-10): see Interaction.
 4. **Intro paragraph** (`text-sm text-neutral-500`, copy below).
 5. **Heat strip** (or an empty/no-data message), inside `<div className="overflow-x-auto pb-28 -mb-24">`.
@@ -210,7 +212,7 @@ In `UnitTable`, each name in the joined list becomes a `PlayerLink` carrying tha
 
 ### Close (D-04)
 
-`PendingLink` `<span aria-hidden>×</span> Close player detail`, `text-sm text-neutral-500 hover:underline`, `aria-label="Close {name} detail"`, `scroll={false}`, href = the current URL without `player` and `all` (keeps `team`, `games`, `sort`, `dir`, `sit`). Placed in the header row, top right.
+`PendingLink` `<span aria-hidden>×</span> Close player detail`, `text-sm text-neutral-500 hover:underline`, `aria-label="Close player detail: {name}"`, `scroll={false}`, href = the current URL without `player` and `all` (keeps `team`, `games`, `sort`, `dir`, `sit`). Placed in the header row, top right.
 
 ### Heat-strip cells and popover (D-07)
 
@@ -237,7 +239,7 @@ The heat strip reuses `ToiStripCell`, so the open WR-10 finding applies to both 
 
 ### Show all (D-11)
 
-Below the table, when the list is capped: `<p className="text-xs text-neutral-500">Showing {shown} of {total} linemates, most recent time together first. <PendingLink>Show all {total}</PendingLink></p>`; with `all=1`: `Showing all {total} linemates. <PendingLink>Show fewer</PendingLink>`. The link is `text-xs underline`, `scroll={false}`. Omitted when nothing is hidden.
+Below the table, when the list is capped: `<p className="text-xs text-neutral-500">Showing {shown} of {total} linemates, highest share of time together first. <PendingLink>Show all {total}</PendingLink></p>`; with `all=1`: `Showing all {total} linemates. <PendingLink>Show fewer</PendingLink>`. The link is `text-xs underline`, `scroll={false}`. Omitted when nothing is hidden.
 
 ### Tags (D-14..D-18, PLYR-04)
 
@@ -284,13 +286,13 @@ Rendered in the Tag column as a chip: `inline-block rounded border px-1 text-xs 
 | Panel title | `{Player name}` (h2), then muted `{Pos} {GP}/{teamGames} GP` |
 | Header stat labels | `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ` |
 | Primary CTA | None. The primary interaction is clicking a player's name. Name link `title`: `Show who {name} plays with` (unit tables: `Show who {name} plays with at {EV|PP|SH}`) |
-| Close link | `× Close player detail` (`aria-label`: `Close {name} detail`) |
+| Close link | `× Close player detail` (`aria-label`: `Close player detail: {name}`) |
 | Tab labels | `EV`, `PP`, `SH` |
 | Intro paragraph | `Who {name} has been on the ice with, game by game. Click a square for exact minutes together; use EV, PP or SH to switch situation.` |
 | Column headers | `Linemate`, (game dates), `Window share`, `Tag` |
 | Window share header `title` | `Time together as a share of {name}'s {EV} time in the games he played` |
 | Group labels | `Forwards`, `Defense`, empty group row `None` |
-| Show-all line | `Showing {n} of {total} linemates, most recent time together first.` + `Show all {total}` / `Showing all {total} linemates.` + `Show fewer` |
+| Show-all line | `Showing {n} of {total} linemates, highest share of time together first.` + `Show all {total}` / `Showing all {total} linemates.` + `Show fewer` |
 | Legend line 1 | `Squares are team games, oldest to newest. Darker means that linemate was on the ice for more of {name}'s {EV} time in that game. Hollow means both played but not together. Dashed means one of them did not play; amber dashed means no shift chart. A blue ring means overtime; only regulation time counts.` |
 | Legend line 2 | `Window share is time together divided by {name}'s {EV} time in the games he played. Linemates are ordered by the team's last 2 games, then by the whole window, and only those with {2:00} or more together are listed.` |
 | Legend line 3 | `New, Rising, Fading and Out compare the team's last 2 games (in a 2-game window, the latest game) with the earlier games and need 2 or more games played. They describe time together only, not how good a linemate is. Rising and Fading mean a change of 15 or more points of share; Out means the linemate missed the recent games.` |
