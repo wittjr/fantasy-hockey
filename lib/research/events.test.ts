@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { NhlPlayByPlay } from "@/lib/nhl/client";
 import { attributeEvents, buildGameEvents, onIceAt, type EventCounts } from "./events";
-import { bucketOnIce, dedupeOnIce, parseClock, situationFor, type OnIce, type PositionGroup, type ShiftInput } from "./lines";
+import { analyzeGameLines, bucketOnIce, dedupeOnIce, parseClock, situationFor, type OnIce, type PositionGroup, type ShiftInput } from "./lines";
 import { toGameEvents, type EventKind, type GameEvent } from "./play-events";
 
 // The DATA-03 gate: counts from real NHL payloads must reproduce the official boxscore.
@@ -249,6 +249,21 @@ test("attributeEvents is pure: the same input gives deep-equal results and is no
   assert.deepEqual(first, second);
   assert.deepEqual(shifts, shiftsBefore);
   assert.deepEqual(events, eventsBefore);
+});
+
+test("a unit's Time and its events cover the same seconds: a pulled-goalie stretch is in neither", () => {
+  // 60 s of 5-on-5, then 30 s with BUF's goalie pulled for a sixth skater (D 13).
+  const shifts = [
+    ...synthShifts("BUF", BUF_FULL, 0, 60),
+    ...synthShifts("BUF", [1, 2, 3, 11, 12, 13], 60, 90),
+    ...synthShifts("OPP", OPP_FULL, 0, 90),
+  ];
+  const lines = analyzeGameLines("BUF", shifts, synthPositions);
+  assert.deepEqual(lines.units.ev.F, [{ playerIds: [1, 2, 3], seconds: 60, pct: (60 / 90) * 100 }]);
+
+  const result = attributeEvents("BUF", shifts, synthPositions, [synthEvent("BUF", 1, 30), synthEvent("BUF", 1, 80)]);
+  assert.deepEqual(result.total.ev, counts({ sf: 2, cf: 2 }));
+  assert.deepEqual([...result.byUnit.ev.F], [["1,2,3", counts({ sf: 1, cf: 1 })]]);
 });
 
 test("toGameEvents is pure: two runs are deep-equal and the play-by-play is not mutated", () => {
