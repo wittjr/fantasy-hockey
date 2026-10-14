@@ -3,6 +3,18 @@ phase: 02
 review: 02-REVIEW.md
 titles: json
 findings:
+  - id: WR-06
+    severity: warning
+    disposition: open
+    title: "Quick task 1a68924 fixed the low-contrast \"—\" in ToiTrends but left the same dash in the player panel"
+  - id: IN-10
+    severity: info
+    disposition: open
+    title: "`formatSignedPoints` is documented as the PP-share formatter but now formats goal +/-, and `formatPointsDelta` depends on its string output"
+  - id: IN-11
+    severity: info
+    disposition: open
+    title: "The IN-02 hover-only Escape wiring has no regression test"
   - id: WR-05
     severity: warning
     disposition: fixed
@@ -55,24 +67,27 @@ findings:
     severity: info
     disposition: deferred
     title: "Window-share ordering favours linemates with few counted games"
-open: 0
-total: 13
-recorded: 2026-10-13T02:02:51.627Z
+open: 3
+total: 16
+recorded: 2026-10-14T22:48:36.505Z
 ---
 
 # Phase 02: Code Review Disposition
 
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
-| WR-05 | warning | fixed | 02-REVIEW-FIX.md |
-| IN-01 | info | skipped | 02-REVIEW-FIX.md |
-| IN-02 | info | fixed | 02-REVIEW-FIX.md |
-| IN-03 | info | fixed | 02-REVIEW-FIX.md |
-| IN-04 | info | fixed | 02-REVIEW-FIX.md |
-| IN-05 | info | fixed | 02-REVIEW-FIX.md |
-| IN-07 | info | fixed | 02-REVIEW-FIX.md |
-| IN-08 | info | fixed | 02-REVIEW-FIX.md |
-| IN-09 | info | fixed | 02-REVIEW-FIX.md |
+| WR-06 | warning | open | - |
+| IN-10 | info | open | - |
+| IN-11 | info | open | - |
+| WR-05 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| IN-01 | info | skipped | 02-REVIEW-FIX.md (not in the current review) |
+| IN-02 | info | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| IN-03 | info | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| IN-04 | info | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| IN-05 | info | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| IN-07 | info | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| IN-08 | info | fixed | 02-REVIEW-FIX.md (not in the current review) |
+| IN-09 | info | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | WR-01 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | WR-02 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | WR-04 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
