@@ -1,6 +1,7 @@
 import {
   getBoxscore,
   getClubScheduleNow,
+  getPlayByPlay,
   getShiftCharts,
   type NhlBoxscoreTeamStats,
   type NhlTeamAbbrev,
@@ -13,6 +14,7 @@ import {
   type PositionGroup,
   type Situation,
 } from "./lines";
+import { buildGameEvents, type GameEvents } from "./events";
 import { pairSeconds, type GamePairs } from "./pair-seconds";
 
 // Regular season and playoffs; preseason deployment isn't representative.
@@ -49,6 +51,12 @@ export interface ResearchGame {
    * Null when there is no shift chart, like lines.
    */
   pairs: GamePairs | null;
+  /**
+   * Shots, goals and shot attempts per situation and unit for this team (pulled-goalie and 4-on-4/3-on-3 events only
+   * in the situation totals). Null (unknown, never zeros) when there is no shift chart or the play-by-play failed or
+   * is unpublished; the game still counts for TOI and linemates (D-05).
+   */
+  events: GameEvents | null;
 }
 
 export interface TeamResearch {
@@ -78,10 +86,15 @@ async function loadGame(
 ): Promise<{ game: ResearchGame; players: Map<number, ResearchPlayer> }> {
   // A failed shift chart (null) is not the same as an unpublished one ([]): a regulation game falls back to boxscore
   // TOI with no PP/SH, but an OT/SO game needs the chart for its regulation TOI, so it fails below.
-  const [box, shifts] = await Promise.all([
+  // A play-by-play failure never fails the game (D-05): its events are null (unknown).
+  const [box, shifts, pbp] = await Promise.all([
     getBoxscore(gameId),
     getShiftCharts(gameId).catch((err: unknown) => {
       console.error(`Loading shift chart for game ${gameId} (${team}) failed`, err);
+      return null;
+    }),
+    getPlayByPlay(gameId).catch((err: unknown) => {
+      console.error(`Loading play-by-play for game ${gameId} (${team}) failed`, err);
       return null;
     }),
   ]);
@@ -127,6 +140,7 @@ async function loadGame(
     regulationToi,
     lines: shiftInputs.length > 0 ? analyzeGameLines(team, shiftInputs, positions) : null,
     pairs: shiftInputs.length > 0 ? pairSeconds(team, shiftInputs, positions) : null,
+    events: buildGameEvents(team, shiftInputs, positions, pbp),
   };
   return { game, players: gamePlayers };
 }

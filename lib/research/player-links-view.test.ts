@@ -31,6 +31,7 @@ function fixtureGame(date: string, toi: Record<number, number>): ResearchGame {
       playerSeconds: new Map([[1, { ev: 1000, pp: 60, sh: 10 }]]),
     },
     pairs: null,
+    events: null,
   };
 }
 
