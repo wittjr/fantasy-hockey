@@ -70,13 +70,13 @@ test("a shootout attempt with a penalty-shot code is still a shootout", () => {
   assert.equal(only(play({ situationCode: "1010", periodDescriptor: { number: 5, periodType: "SO" } })).exclusion, "shootout");
 });
 
-test("a teammate-blocked attempt is excluded; other block reasons count for the shooting team", () => {
+test("every block reason, teammate-blocked included, counts for the shooting team (UAT G-03-1)", () => {
   const blocked = (reason: string) => only(play({ typeDescKey: "blocked-shot", details: { eventOwnerTeamId: HOME.id, reason } }));
-  assert.equal(blocked("teammate-blocked").exclusion, "teammate-blocked");
-  for (const reason of ["blocked", "other-block", "xyz"]) {
+  for (const reason of ["teammate-blocked", "blocked", "other-block", "xyz"]) {
     const event = blocked(reason);
     assert.equal(event.exclusion, null, reason);
-    assert.equal(event.team, "HOM");
+    assert.equal(event.kind, "blocked-shot", reason);
+    assert.equal(event.team, "HOM", reason);
   }
 });
 
@@ -102,6 +102,11 @@ test("pulledGoalie is false and the event still counts when the situation code i
 test("pulledGoalie is false for every excluded event", () => {
   assert.equal(only(play({ situationCode: "0651", periodDescriptor: { number: 5, periodType: "SO" } })).pulledGoalie, false);
   assert.equal(only(play({ situationCode: "0101" })).pulledGoalie, false);
+});
+
+test("a teammate-blocked attempt with a goalie out is a counted event, so it is flagged pulledGoalie and goes to Other (D-21)", () => {
   const teammateBlocked = play({ typeDescKey: "blocked-shot", situationCode: "0651", details: { eventOwnerTeamId: HOME.id, reason: "teammate-blocked" } });
-  assert.equal(only(teammateBlocked).pulledGoalie, false);
+  const event = only(teammateBlocked);
+  assert.equal(event.exclusion, null);
+  assert.equal(event.pulledGoalie, true);
 });

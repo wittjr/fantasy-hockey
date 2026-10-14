@@ -34,8 +34,8 @@ export interface GameEvents {
   total: Record<Situation, EventCounts>;
   /** Events on a unit key that creditsUnit allowed, before any time or cap filter. */
   byUnit: Record<Situation, { F: Map<string, EventCounts>; D: Map<string, EventCounts> }>;
-  /** Game-wide counts of events left out of every count, both teams. */
-  excluded: { shootout: number; penaltyShot: number; teammateBlocked: number };
+  /** Game-wide counts of events left out of every count, both teams: shootout attempts and penalty shots. */
+  excluded: { shootout: number; penaltyShot: number };
   /** Included events whose second had no shift data for the team; they are in no table. */
   unattributed: number;
   /** Shift-chart versus situationCode agreement for this game, both teams (D-16). */
@@ -83,7 +83,7 @@ export function attributeEvents(
       pp: { F: new Map(), D: new Map() },
       sh: { F: new Map(), D: new Map() },
     },
-    excluded: { shootout: 0, penaltyShot: 0, teammateBlocked: 0 },
+    excluded: { shootout: 0, penaltyShot: 0 },
     unattributed: 0,
     quality: { checked: 0, matched: 0 },
     chartSuspect: false,
@@ -92,7 +92,6 @@ export function attributeEvents(
   for (const event of events) {
     if (event.exclusion === "shootout") result.excluded.shootout++;
     else if (event.exclusion === "penalty-shot") result.excluded.penaltyShot++;
-    else if (event.exclusion === "teammate-blocked") result.excluded.teammateBlocked++;
     if (event.exclusion) continue;
 
     const byTeam = onIceAt(buckets, event.period, event.t);

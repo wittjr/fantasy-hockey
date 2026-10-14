@@ -184,7 +184,7 @@ This phase adds **no interactive elements**. Specifically:
 | Pulled goalie (D-21, D-22) | Either goalie out of the net | Events and seconds fall into the situation's Other row (and Total), never a listed unit. No special visual; the legend explains it. |
 | Situation with no time and no events | e.g. no penalty kill | `None` row only; no Other or Total row. |
 | Unit below cap | More units than `UNIT_LIMITS` allow | Not listed; folded into Other (time and events). |
-| Nothing excluded | Zero shootout, penalty-shot and teammate-blocked events | Exclusions note omitted entirely. |
+| Nothing excluded | Zero shootout and penalty-shot events | Exclusions note omitted entirely. |
 
 ---
 
@@ -199,10 +199,10 @@ This phase adds **no interactive elements**. Specifically:
 | Row labels | `Other`, `Total` |
 | Empty list | `None` (existing) |
 | Unknown cell | `—` |
-| Exclusions note | `Excluded from these tables: {list}.` where `{list}` joins only the non-zero items with `, `, in this order: `{n} shootout attempt(s)`, `{n} penalty shot(s)`, `{n} teammate-blocked attempt(s)`. Example: `Excluded from these tables: 2 shootout attempts, 1 penalty shot, 3 teammate-blocked attempts.` Singular for 1. Omitted when all are zero. Neutral `text-xs text-neutral-500`. Pulled-goalie events are not excluded (D-21) and are not listed here. |
+| Exclusions note | `Excluded from these tables: {list}.` where `{list}` joins only the non-zero items with `, `, in this order: `{n} shootout attempt(s)`, `{n} penalty shot(s)`. Example: `Excluded from these tables: 2 shootout attempts, 1 penalty shot.` Teammate-blocked attempts count in CF/CA and are not listed (UAT G-03-1). Singular for 1. Omitted when all are zero. Neutral `text-xs text-neutral-500`. Pulled-goalie events are not excluded (D-21) and are not listed here. |
 | Legend line 1 | `GF and GA are goals for and against. SF and SA are shots on goal for and against, goals included. CF and CA are shot attempts for and against: shots on goal, misses and blocks, credited to the team that shot. SF% is SF ÷ (SF + SA) and CF% is CF ÷ (CF + CA); both show — when for plus against is 0.` |
 | Legend line 2 | `+/- is GF − GA in that situation, so it is not the NHL's official plus-minus, which ignores power-play goals for and short-handed goals against. It shows 0 when a line had shot attempts but no goals, and — when it had no events at all. Power-play and penalty-kill percentages are lopsided by nature.` |
-| Legend line 3 | `Other is everything in that situation not on a listed line: lines below the cut-off, partial lines during changes, 4-on-4 and 3-on-3 play (counted as even strength), and all time and events while either goalie was pulled. Total is the team's total, so the listed lines plus Other equal Total. Forwards and defense show the same Total. Overtime counts; shootout attempts, penalty shots and teammate-blocked attempts are left out.` |
+| Legend line 3 | `Other is everything in that situation not on a listed line: lines below the cut-off, partial lines during changes, 4-on-4 and 3-on-3 play (counted as even strength), and all time and events while either goalie was pulled. Total is the team's total, so the listed lines plus Other equal Total. Forwards and defense show the same Total. Overtime counts; shootout attempts and penalty shots are left out.` |
 | Amber: no play-by-play, last game (D-18) | `No play-by-play for this game yet (not published, or it failed to load), so all goal, shot and Corsi columns show —. Reload the page to retry.` |
 | Amber: shift disagreement (D-16) | `Shift data disagrees with play-by-play on {N}% of events in this game; counts may be off.` `{N}` = 100 minus the match percentage, rounded, shown as at least 1. |
 | Amber: corrupted shift chart (D-23) | `This game's shift chart looks corrupted (players from other teams or repeated shifts); counts may be off.` |
@@ -243,7 +243,7 @@ Applicable state considerations resolved: 28 covered, 3 backstop, 0 unresolved. 
 | populated, partial | E4 | ✅ covered | Each note uses the Copywriting Contract text with its counts filled in; the D-16 note shows the measured mismatch percent |
 | overflow | E4, E5 | ✅ covered | Notes and legend are wrapping `text-xs` paragraphs within the section width; no horizontal scroll and no truncation |
 | error, partial | E5 | ✅ covered | With events null the exclusions note is omitted and the legend still renders; with partial exclusions only the non-zero kinds are listed |
-| populated | E5 | ✅ covered | The legend's three lines define SF, GF, CF, SF%, CF%, +/-, Other and the exclusions; the exclusions note lists shootout, penalty-shot and teammate-blocked counts |
+| populated | E5 | ✅ covered | The legend's three lines define SF, GF, CF, SF%, CF%, +/-, Other and the exclusions; the exclusions note lists shootout and penalty-shot counts |
 | overflow | E1-E3 | 🧪 backstop | `{ statement: "At a 1024px-wide laptop viewport all six stacked tables show every column without clipping the Line names or the group dividers, in light and dark mode", verification: backstop }` |
 | long-text | E4, E5 | ✅ covered | Notes and legend are normal wrapping `text-xs` paragraphs inside the section width; no truncation |
 | long-text | E1 | ✅ covered | Long names wrap in the Line column between the ` – ` separators; numbers stay on one line |
@@ -309,3 +309,9 @@ CONTEXT.md left these open; chosen for consistency with Phases 1-2 and recorded 
 - [x] Dimension 7 Inventory Provenance: PASS
 
 **Approval:** approved 2026-10-13 (dimensions 1, 2 and 5 FLAG fixes applied by the orchestrator)
+
+---
+
+## Revisions
+
+- 2026-10-14, UAT G-03-1: teammate-blocked attempts count in CF/CA; removed from the exclusions note and from legend line 3 (plan 03-12).

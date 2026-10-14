@@ -4,7 +4,7 @@ import { parseClock } from "./lines";
 import type { NhlPlayByPlay } from "@/lib/nhl/client";
 
 export type EventKind = "goal" | "shot-on-goal" | "missed-shot" | "blocked-shot";
-export type Exclusion = "shootout" | "penalty-shot" | "teammate-blocked";
+export type Exclusion = "shootout" | "penalty-shot";
 
 export interface GameEvent {
   /** Abbrev of the shooting team (eventOwnerTeamId). */
@@ -39,14 +39,9 @@ export function toGameEvents(pbp: NhlPlayByPlay): GameEvent[] {
     const t = parseClock(play.timeInPeriod);
     if (!team || t === null) continue;
     const code = play.situationCode ?? "";
+    // Every blocked shot counts for the shooting team whatever the block reason (UAT G-03-1).
     const exclusion: Exclusion | null =
-      play.periodDescriptor.periodType === "SO"
-        ? "shootout"
-        : PENALTY_SHOT_CODES.has(code)
-          ? "penalty-shot"
-          : play.typeDescKey === "blocked-shot" && play.details?.reason === "teammate-blocked"
-            ? "teammate-blocked"
-            : null;
+      play.periodDescriptor.periodType === "SO" ? "shootout" : PENALTY_SHOT_CODES.has(code) ? "penalty-shot" : null;
     events.push({
       team,
       period: play.periodDescriptor.number,
