@@ -17,6 +17,12 @@ created: "2026-10-12"
 
 ---
 
+## Revisions
+
+**2026-10-14 (quick 261014-qgu; WR-06 and UI audit).** Unknown-value `—` is `text-neutral-600 dark:text-neutral-400`, matching Phase 1 (the `neutral-400` / `neutral-500` pair was about 2.5:1). Amber footnote text is `text-amber-700 dark:text-amber-400`; the unknown cell's dashed border stays `amber-600` / `amber-400` (non-text, 3:1).
+
+---
+
 ## Design System
 
 | Property | Value |
@@ -82,7 +88,7 @@ Neutral palette matching the page. No brand accent. Phase 2 adds **no new colors
 | Dominant (60%) | `--background` `#ffffff` / `#0a0a0a` | Page surface, panel interior |
 | Secondary (30%) | `neutral-200/800` panel border, tab rule and header rule; `neutral-100/900` row rules; `neutral-300/700` F/D divider and square borders; `white` / `neutral-900` popover surface; `neutral-500` header text; `neutral-600` / `neutral-400` muted text | Panel chrome, table chrome, popover, muted text |
 | Accent (10%) | green `green-700` / `green-400`, red `red-700` / `red-400`; tint `green-100` / `green-900/40`, `red-100` / `red-900/40` | Directional movers only (list below) |
-| Caution | `amber-600` / `amber-400` | Missing-shift-chart: dashed border on unknown cells, and the footnote text |
+| Caution | `amber-600` / `amber-400` border; `amber-700` / `amber-400` text | Missing-shift-chart: dashed border on unknown cells, and the footnote text |
 | Informational | `sky-500` | OT only: `ring-1 ring-sky-500` on OT-game cells, the `OT` tag in the popover |
 | Destructive | not applicable | No destructive actions |
 
@@ -126,7 +132,7 @@ Hollow/solid versus dashed carries the meaning without relying on hue; amber onl
 1. **Header row** (`flex flex-wrap items-start justify-between gap-x-6 gap-y-2`):
    - Left: `<h2 id="player-detail-title" className="font-medium">{name}</h2>` followed by `<span className="text-xs tabular-nums text-neutral-600 dark:text-neutral-400">{position} {gamesPlayed}/{teamGames} GP</span>` (the Phase 1 Pos string, e.g. `C 5/5 GP`).
    - Right: close link `PendingLink` `× Close player detail` (see Interaction).
-2. **Header stats** (D-05): `<dl className="flex flex-wrap gap-x-6 gap-y-1">`, four items in the trends order: `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ`. Each item: `<dt className="text-xs text-neutral-600 dark:text-neutral-400">` label above `<dd className="text-sm tabular-nums">` value. Values come from the selected player's `TrendRow` with the same formatters as the table (`formatClock`, `formatSignedClock`, `Math.round(ppShare)%`, `formatSignedPoints`). Avg TOI is `font-medium`. A crossing Δ is colored per the accent rule plus `sr-only` "Moving up"/"Moving down". Unknown values render `—` (`text-neutral-400 dark:text-neutral-500`), never `0:00` or `0%`. **Window of 1:** drop the two Δ items (Phase 1 D-08). No slope arrows and no row tint in the panel.
+2. **Header stats** (D-05): `<dl className="flex flex-wrap gap-x-6 gap-y-1">`, four items in the trends order: `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ`. Each item: `<dt className="text-xs text-neutral-600 dark:text-neutral-400">` label above `<dd className="text-sm tabular-nums">` value. Values come from the selected player's `TrendRow` with the same formatters as the table (`formatClock`, `formatSignedClock`, `Math.round(ppShare)%`, `formatSignedPoints`). Avg TOI is `font-medium`. A crossing Δ is colored per the accent rule plus `sr-only` "Moving up"/"Moving down". Unknown values render `—` (`text-neutral-600 dark:text-neutral-400`), never `0:00` or `0%`. **Window of 1:** drop the two Δ items (Phase 1 D-08). No slope arrows and no row tint in the panel.
 3. **Situation tabs** (D-10): see Interaction.
 4. **Intro paragraph** (`text-sm text-neutral-500`, copy below).
 5. **Heat strip** (or an empty/no-data message), inside `<div className="overflow-x-auto pb-28 -mb-24">`.
@@ -291,7 +297,7 @@ Rendered in the Tag column as a chip: `inline-block rounded border px-1 text-xs 
 | 1-game note | `Tags need 2 or more games. Choose Last 3 or more.` |
 | Tags-unavailable note (played < 2) | `No tags: {name} played only {n} game in this window.` (singular/plural) |
 | Tags-unavailable note (missed recent) | `No tags: {name} missed the team's last 2 games.` (2-game window: `missed the team's latest game.`) |
-| No-chart footnote (amber) | `No linemate data for {Oct 8, Oct 10}: no shift chart is available for those games (not published yet, or it failed to load). They are left out of shares and tags.` (`text-xs text-amber-600 dark:text-amber-400`, omitted when every game has data) |
+| No-chart footnote (amber) | `No linemate data for {Oct 8, Oct 10}: no shift chart is available for those games (not published yet, or it failed to load). They are left out of shares and tags.` (`text-xs text-amber-700 dark:text-amber-400`, omitted when every game has data) |
 | Empty: no chart in window | `No linemate data for {name} in this window: no shift chart is available for these games (not published yet, or it failed to load).` |
 | Empty: no situation time | `{name} had no {even-strength / power-play / penalty-kill} time in this window.` |
 | Empty: below minimum | `No linemates with {2:00} or more together in this window.` |

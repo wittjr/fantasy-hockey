@@ -21,6 +21,8 @@ created: "2026-10-11"
 
 **2026-10-14 (quick 261014-lu2; UI re-audit warnings).** The `—` dash is `text-neutral-600 dark:text-neutral-400` (the old `neutral-400` / `neutral-500` pair was about 2.5:1 on white and 4.2:1 on `#0a0a0a`). A zero Δ shows `±0:00` / `±0`. The Pos cell's GP span has no margin; the literal space is the only gap. A window of 2 keeps the Δ and trend columns with its own footnote (user decision; plan 01-07 / WR-04). The PP share header title, the amber no-PP/SH note, the popover no-chart line and the page error banner are recorded as they ship.
 
+**2026-10-14 (quick 261014-qgu; AA text contrast).** Amber note text is `text-amber-700 dark:text-amber-400` (`amber-600` was about 3.2:1 on white). `amber-600` stays for non-text borders only.
+
 **2026-10-11 (plans 01-08 and 01-09; UAT gaps G-01-2, G-01-5, G-01-1b).** The strip and popover contract below was revised to match what ships:
 - The popover anchor moved from the strip `<td>` to the square (01-07): the square is `relative`, the popover is `absolute right-0 top-full`, right-aligned under the square.
 - A click or tap opens the popover through the `ToiStripCell` client wrapper (01-08); mouse hover and keyboard focus still reveal it. The popover takes no pointer events.
@@ -99,7 +101,7 @@ Neutral palette, matching the page. The page has no brand accent color; the only
 | Dominant (60%) | `--background` `#ffffff` / `#0a0a0a` | Page and table surface |
 | Secondary (30%) | `neutral-200/800` header + divider borders, `neutral-100/900` row borders, `neutral-300/700` F/D divider, `white` / `neutral-900` popover surface, `neutral-500` header text, `neutral-600` / `neutral-400` in-row muted text | Table chrome, popover, muted text |
 | Accent (10%) | green `green-700` / `green-400` (up), red `red-700` / `red-400` (down); tint `green-100` / `green-900/40` and `red-100` / `red-900/40` | Directional movers only (list below) |
-| Caution | `amber-600` / `amber-400` (existing "no PP/SH data" color) | Missing-shift-chart note only |
+| Caution | `amber-700` / `amber-400` text (`amber-600` was below AA for small text) | Missing-shift-chart note only |
 | Informational | `sky-500` (both themes) | OT marker only (strip cell ring/dashed border, sparkline OT dot) |
 | Destructive | not applicable | No destructive actions in this phase |
 
@@ -239,7 +241,7 @@ Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP 
 | Legend line 2 | `Δ compares the team's last 2 games with the player's earlier games and needs 3 or more games played. ▲ ▼ show the direction of the whole-window trend and can disagree with Δ.` |
 | Last game note (window 1) | `Deltas and trends need 2 or more games. Choose Last 3 or more.` (muted `text-xs text-neutral-500`, in the footnotes block) |
 | Window-2 note | `Δ needs 3 or more games, and this window has only 2, so every Δ shows —. ▲ ▼ show the direction of the whole-window trend.` (replaces legend line 2, same style) |
-| No PP/SH note | `No PP/SH data for {Oct 8, Oct 10}: no shift chart is available for those games (not published yet, or it failed to load).` (`text-xs text-amber-600 dark:text-amber-400`, lists dates via `formatDate`; omitted when every game has data) |
+| No PP/SH note | `No PP/SH data for {Oct 8, Oct 10}: no shift chart is available for those games (not published yet, or it failed to load).` (`text-xs text-amber-700 dark:text-amber-400`, lists dates via `formatDate`; omitted when every game has data) |
 | Empty state heading | none (section hides nothing; page-level empty copy is unchanged) |
 | Empty state body | If the window has games but no skater rows: `No skaters played in this window.` (`text-sm text-neutral-500`). Page-level copy `{team} hasn't finished a regular-season game yet this season.` and `Pick a team to see its latest line combinations and ice-time trends.` are unchanged. |
 | Error state | Page-level error banner (rose): `Couldn't load NHL data for {team} right now. Try again in a minute.` It never shows the raw `{error}` (API detail stays in the server log, T-01-11). This phase adds no new fetch, so no new error state. Invalid `sort`/`dir` never errors; it falls back to the default sort. |
