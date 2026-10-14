@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 03-unit-event-stats
 source: [03-VERIFICATION.md]
 started: 2026-10-14T14:34:47Z
-updated: 2026-10-14T15:42:28.212Z
+updated: 2026-10-14T17:59:48.603Z
 ---
 
 ## Current Test
@@ -49,11 +49,22 @@ reported: "I noticed that on shift lines the the - separating the players is dir
 severity: cosmetic
 note: "Raised by user during test 4 (which passed); screenshot showed a wide gap before each dash and almost none after it."
 
+### 8. CF/CA re-check (G-03-1 fix)
+expected: For MTL vs BUF on Oct 13 (2026020092), EV forwards L1 Suzuki – Caufield – Slafkovský shows CF 11 and L3 Kreider – Anderson – Newhook shows CA 6; legend and exclusions note no longer call teammate-blocked attempts excluded
+result: pass
+
+### 9. Spacing re-check, light and dark (G-03-3, G-03-7 fixes)
+expected: At /research?team=MTL&games=5, about 1024 px wide, in light then dark: the dash between names is centered with a small even gap; +/- and SF% numbers no longer touch the divider after them; the space after each Goals/Shots/Corsi divider no longer looks oversized
+result: issue
+reported: "the numbers look correct but there is no spacing around the \"-\" for player names"
+severity: cosmetic
+note: "Divider spacing (G-03-3 fix) confirmed. Dash is centered but too tight (G-03-9)."
+
 ## Summary
 
-total: 7
-passed: 4
-issues: 3
+total: 9
+passed: 5
+issues: 4
 pending: 0
 skipped: 0
 blocked: 0
@@ -68,7 +79,9 @@ blocked: 0
 
 - gap_id: G-03-1
   truth: "Unit CF/CA match the public convention used by other line-stat sites (e.g. MTL 2026020092: L1 Suzuki-Caufield-Slafkovsky EV CF 11, L3 Kreider-Anderson-Newhook EV CA 6)"
-  status: failed
+  status: resolved
+  resolved_by: 03-12-PLAN.md
+  resolved_at: 2026-10-14
   reason: "User reported: L1 CF shows 10 (others 11); L3 CA shows 5 (others 6) for the Oct 13 MTL vs BUF game"
   severity: major
   test: 1
@@ -86,7 +99,9 @@ blocked: 0
 
 - gap_id: G-03-3
   truth: "Units table stat groups (Goals, Shots, Corsi) have balanced spacing: the last number in a group is not flush against the next divider, and the gap after each divider is not oversized"
-  status: failed
+  status: resolved
+  resolved_by: 03-13-PLAN.md
+  resolved_at: 2026-10-14
   reason: "User reported: the numbers in the Goals +/- and Shots SF% columns need some space between them and the vertical divider line. The divider line at the start of each stat section has a little too much space"
   severity: cosmetic
   test: 3
@@ -101,7 +116,9 @@ blocked: 0
 
 - gap_id: G-03-7
   truth: "The en dash between player names in a unit row is visually centered with modest, equal spacing on both sides"
-  status: failed
+  status: resolved
+  resolved_by: 03-13-PLAN.md
+  resolved_at: 2026-10-14
   reason: "User reported: the - separating the players is directly in front of the name of the players, after the first. A little less space is needed and the - should be centered between the names"
   severity: cosmetic
   test: 7
@@ -111,4 +128,18 @@ blocked: 0
       issue: "separator <span aria-hidden> – </span> relies on literal spaces for spacing"
   missing:
     - "Render the separator with explicit, symmetric horizontal margin (e.g. mx-1 on the span, no literal spaces) and confirm in light/dark at 1024 px"
+  debug_session: ""
+
+- gap_id: G-03-9
+  truth: "The en dash between player names in a unit row has visible, even spacing on both sides - clearly separated from each name, but less than the original wide gap"
+  status: failed
+  reason: "User reported: the numbers look correct but there is no spacing around the \"-\" for player names"
+  severity: cosmetic
+  test: 9
+  root_cause: "03-13 (G-03-7 fix) set the separator span to mx-1 (4px each side, measured by harness U7). The dash is now centered, but 4px is too tight and reads as no space. The original complaint was a wide (~20px) gap before and ~4px after; the target is in between."
+  artifacts:
+    - path: "components/LastGameLines.tsx"
+      issue: "separator <span aria-hidden className=\"mx-1\"> at line 179 gives only 4px each side"
+  missing:
+    - "Widen the separator margin symmetrically (e.g. mx-2, 8px each side); update the markup test and harness U7 expectation; confirm in light/dark at 1024 px"
   debug_session: ""
