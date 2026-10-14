@@ -521,6 +521,19 @@ test("topNotes: the D-16 percent is rounded to a whole number", () => {
   assert.equal(note, "Shift data disagrees with play-by-play on 5% of events in this game; counts may be off.");
 });
 
+test("topNotes: unattributed events add a closing note, singular or plural; none when zero (WR-02)", () => {
+  const unattributed = (n: number): GameEvents => ({ ...withQuality(1000, 900, true), unattributed: n });
+  assert.equal(topNotes({ lines: lines(), events: unattributed(0) }).length, 2);
+  assert.equal(
+    topNotes({ lines: lines(), events: unattributed(1) })[2],
+    "1 shot attempt fell in seconds with no shift data, so it is in no table, including Total.",
+  );
+  assert.equal(
+    topNotes({ lines: lines(), events: unattributed(3) })[2],
+    "3 shot attempts fell in seconds with no shift data, so they are in no table, including Total.",
+  );
+});
+
 test("topNotes: notes carry no API path, status or error text (T-01-11)", () => {
   const all = topNotes({ lines: lines(), events: null }).concat(topNotes({ lines: lines(), events: withQuality(1000, 900, true) }));
   for (const note of all) assert.ok(!/api|http|\b[45]\d\d\b|error/i.test(note), note);

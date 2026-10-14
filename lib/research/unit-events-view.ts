@@ -147,6 +147,10 @@ export function topNotes(game: Pick<ResearchGame, "lines" | "events">): string[]
     const percent = Math.max(1, Math.round(100 - ratio * 100));
     notes.push(`Shift data disagrees with play-by-play on ${percent}% of events in this game; counts may be off.`);
   }
+  if (events.unattributed > 0) {
+    const n = events.unattributed;
+    notes.push(`${n} shot attempt${n === 1 ? "" : "s"} fell in seconds with no shift data, so ${n === 1 ? "it is" : "they are"} in no table, including Total.`);
+  }
   return notes;
 }
 
