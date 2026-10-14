@@ -84,13 +84,13 @@ Neutral palette matching the page. Phase 3 adds **no new colors**.
 | Dominant (60%) | `--background` `#ffffff` / `#0a0a0a` | Page and table surface |
 | Secondary (30%) | `neutral-200/800` header rule and group dividers, `neutral-100/900` row rules, `neutral-300/700` Total-row rule, `neutral-500` header and derived-percent text, `neutral-600` / `neutral-400` Other-row text, `neutral-400` / `neutral-500` (dark) for `—` | Table chrome, muted text |
 | Accent (10%) | none in this phase | Green and red remain reserved for Phase 1 deployment movers (D-10). Nothing in the event columns, +/-, SF%, CF%, Other or Total is green or red. |
-| Caution | `amber-600` / `amber-400` | Data-reliability notes only (below) |
+| Caution | `amber-700` / `amber-400` text | Data-reliability notes only (below) |
 | Informational | `sky-500` | not used in this phase |
 | Destructive | not applicable | No destructive actions |
 
 **Accent reserved for:** unchanged from Phase 1 (TOI Δ / PP share Δ movers and row tint). This phase uses none of it. **+/- is never colored** even when positive or negative (D-10): sign glyph (`+` / `−`) is the only cue, which also satisfies "color is never the only cue".
 
-**Caution (amber) reserved for these notes only:** shift-vs-play-by-play disagreement (D-16), corrupted shift chart (D-23), play-by-play missing for the last game (D-18), play-by-play missing for other window dates (D-05). Classes `text-xs text-amber-600 dark:text-amber-400`, same as the Phase 1/2 no-chart footnotes. The exclusions note and the legend are neutral (`text-neutral-500`), because they describe the method, not a problem.
+**Caution (amber) reserved for these notes only:** shift-vs-play-by-play disagreement (D-16), corrupted shift chart (D-23), play-by-play missing for the last game (D-18), play-by-play missing for other window dates (D-05), shot attempts lost to shift-data gaps (WR-02). Classes `text-xs text-amber-700 dark:text-amber-400`, same as the Phase 1/2 no-chart footnotes. The exclusions note and the legend are neutral (`text-neutral-500`), because they describe the method, not a problem.
 
 **Text contrast:** all cells sit on the plain page surface (no row tint in this section). `text-neutral-500` on `#ffffff` is about 4.8:1; `neutral-400` on `#0a0a0a` is about 8:1 for dark; the Other row uses `neutral-600` / `dark:neutral-400` (about 7:1 / 8:1).
 
@@ -105,7 +105,7 @@ Neutral palette matching the page. Phase 3 adds **no new colors**.
 `<section className="flex flex-col gap-3">` as today:
 
 1. `<h2 className="font-medium">` "Last game: ..." (unchanged).
-2. **Amber notes that change how to read the tables** (only those that apply, in this order; each a `<p className="text-xs text-amber-600 dark:text-amber-400">`): no play-by-play for this game (D-18), shift chart looks corrupted (D-23), shift data disagrees with play-by-play (D-16). Copy in the Copywriting Contract. **(discretion)** They sit above the tables, not in the footer, because they change whether the numbers in the tables can be trusted; Phases 1-2 put amber notes in footers because those notes explain a missing square, not a doubtful number.
+2. **Amber notes that change how to read the tables** (only those that apply, in this order; each a `<p className="text-xs text-amber-700 dark:text-amber-400">`): no play-by-play for this game (D-18), shift chart looks corrupted (D-23), shift data disagrees with play-by-play (D-16), shot attempts in seconds with no shift data (WR-02). Copy in the Copywriting Contract. **(discretion)** They sit above the tables, not in the footer, because they change whether the numbers in the tables can be trusted; Phases 1-2 put amber notes in footers because those notes explain a missing square, not a doubtful number.
 3. If `game.lines` is null: the existing message `No shift chart is available for this game (not published yet, or it failed to load).` and nothing else (no tables, no legend, no event notes). Unchanged.
 4. Otherwise **six full-width tables stacked** in `<div className="flex flex-col gap-6">`, order **EV Forwards, EV Defense, PP Forwards, PP Defense, SH Forwards, SH Defense** (the same iteration order as today, situation then group). Each table is wrapped in `<div className="overflow-x-auto">` as a safety net on narrow laptop windows (no popover, so no clearance padding is needed).
 5. **Footnotes block** under the tables: `<div className="flex flex-col gap-1 text-xs text-neutral-500">` holding, in order: the exclusions note, the legend lines, then the amber older-dates note (D-05) when it applies.
@@ -181,6 +181,7 @@ This phase adds **no interactive elements**. Specifically:
 | No shift chart, last game | `game.lines` null | Existing message only; no tables, no event notes, no legend. |
 | Shift data disagrees (D-16/D-17) | Match ratio under `EVENT_MATCH_THRESHOLD` (95%) | Stats still shown, amber note at the top with the rounded mismatch percentage. |
 | Corrupted shift chart (D-23) | Chart flagged (foreign-team players or repeated rows beyond the fixture threshold) | Stats still shown, amber note at the top. May appear together with the D-16 note; each is its own line. |
+| Events with no shift data (WR-02) | An included shot attempt falls in a second with no shift data for the team, so it is in no table, Total included | Stats still shown, amber note at the top, after D-23 and D-16. |
 | Pulled goalie (D-21, D-22) | Either goalie out of the net | Events and seconds fall into the situation's Other row (and Total), never a listed unit. No special visual; the legend explains it. |
 | Situation with no time and no events | e.g. no penalty kill | `None` row only; no Other or Total row. |
 | Unit below cap | More units than `UNIT_LIMITS` allow | Not listed; folded into Other (time and events). |
@@ -206,6 +207,7 @@ This phase adds **no interactive elements**. Specifically:
 | Amber: no play-by-play, last game (D-18) | `No play-by-play for this game yet (not published, or it failed to load), so all goal, shot and Corsi columns show —. Reload the page to retry.` |
 | Amber: shift disagreement (D-16) | `Shift data disagrees with play-by-play on {N}% of events in this game; counts may be off.` `{N}` = 100 minus the match percentage, rounded, shown as at least 1. |
 | Amber: corrupted shift chart (D-23) | `This game's shift chart looks corrupted (players from other teams or repeated shifts); counts may be off.` |
+| Amber: unattributed events (WR-02) | `{N} shot attempt(s) fell in seconds with no shift data, so it is / they are in no table, including Total.` Singular when `{N}` is 1. |
 | Amber: older dates without play-by-play (D-05) | `No play-by-play for {Oct 8, Oct 10}: not published yet, or it failed to load. Those games keep their ice-time data. Reload the page to retry.` (dates via `formatDate`, comma-separated; omitted when none) |
 | Empty state | No new empty state. The no-shift-chart message and page-level copy are unchanged. |
 | Error state | No new error state. The existing page-level banner (Phase 1) still names games that failed to load entirely (D-04); a play-by-play-only failure is the amber note above, not an error banner. No new fetch UI. |
