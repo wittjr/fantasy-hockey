@@ -112,7 +112,7 @@ export default async function ResearchPage({
         </>
       )}
 
-      <p className="text-xs text-neutral-400">Data from the NHL&apos;s public API. Lines are derived from shift charts.</p>
+      <p className="text-xs text-neutral-600 dark:text-neutral-400">Data from the NHL&apos;s public API. Lines are derived from shift charts.</p>
     </main>
   );
 }
