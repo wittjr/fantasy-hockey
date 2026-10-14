@@ -1,7 +1,7 @@
 // View-model for the Last game unit tables: capped rows, Other, Total and formatted stat strings.
 // Pure, no React; the component only prints these strings, including the notes and legend.
 import { emptyCounts, matchIsLow, matchRatio, type EventCounts, type GameEvents } from "./events";
-import { formatClock, formatDate, formatSignedPoints } from "./format";
+import { formatClock, formatDate, formatSignedInt } from "./format";
 import type { GameLines, Situation } from "./lines";
 import type { ResearchGame } from "./team-games";
 
@@ -57,7 +57,7 @@ export function statCells(counts: EventCounts | null): UnitStats {
     gf: String(counts.gf),
     ga: String(counts.ga),
     // D-20: attempts without goals is a real 0; no events at all has nothing to subtract, so a dash.
-    plusMinus: counts.cf + counts.ca === 0 ? DASH : formatSignedPoints(counts.gf - counts.ga),
+    plusMinus: counts.cf + counts.ca === 0 ? DASH : formatSignedInt(counts.gf - counts.ga),
     sf: String(counts.sf),
     sa: String(counts.sa),
     sfPct: share(counts.sf, counts.sa),

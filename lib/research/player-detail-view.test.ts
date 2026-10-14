@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LinemateRowView, PlayerLinemates } from "@/components/PlayerLinemates";
 import { ToiTrends } from "@/components/ToiTrends";
-import { formatSignedPoints } from "./format";
+import { formatPointsDelta } from "./format";
 import type { GameLines, Situation } from "./lines";
 import { buildLinemateView, type LinemateRow } from "./linemates";
 import type { GamePairs } from "./pair-seconds";
@@ -350,7 +350,7 @@ test("the header stats read Avg TOI, TOI Δ, PP share and PP share Δ with the t
   const r = research(headerGames());
   const items = stats(renderPanel(r));
   assert.deepEqual(items.map((i) => i.label), ["Avg TOI", "TOI Δ", "PP share", "PP share Δ"]);
-  assert.deepEqual(items.map((i) => i.value), ["20:00", "+5:00", "35%", formatSignedPoints(-30)]);
+  assert.deepEqual(items.map((i) => i.value), ["20:00", "+5:00", "35%", formatPointsDelta(-30)]);
   assert.ok(classTokens(items[0].attrs).includes("font-medium"));
   const table = stripTags(renderToStaticMarkup(createElement(ToiTrends, { research: r, sort: DEFAULT_SORT, team: "MTL", gameCount: 5 })));
   for (const item of items) assert.ok(table.includes(item.value), `${item.label} ${item.value} is in the trends table`);

@@ -21,7 +21,7 @@ import {
   type TrendGame,
   type TrendRow,
 } from "./toi-trends";
-import { formatPointsDelta, formatSignedClock, formatSignedPoints } from "./format";
+import { formatPointsDelta, formatSignedClock, formatSignedInt } from "./format";
 import type { ResearchPlayer } from "./team-games";
 
 const player = (id: number, group: "F" | "D" | "G", name = `P${id}`): ResearchPlayer => ({
@@ -215,14 +215,14 @@ test("formatSignedClock signs by rounded magnitude and shows zero as ±0:00", ()
   assert.equal(formatSignedClock(-119.5), "\u22122:00");
 });
 
-test("formatSignedPoints signs by rounded magnitude and shows zero unsigned", () => {
-  assert.equal(formatSignedPoints(18.2), "+18");
-  assert.equal(formatSignedPoints(-6.5), "\u22127");
-  assert.equal(formatSignedPoints(0.3), "0");
-  assert.equal(formatSignedPoints(14.5), "+15");
+test("formatSignedInt signs by rounded magnitude and shows zero unsigned", () => {
+  assert.equal(formatSignedInt(18.2), "+18");
+  assert.equal(formatSignedInt(-6.5), "\u22127");
+  assert.equal(formatSignedInt(0.3), "0");
+  assert.equal(formatSignedInt(14.5), "+15");
 });
 
-test("formatPointsDelta signs like formatSignedPoints but shows zero as ±0", () => {
+test("formatPointsDelta signs like formatSignedInt but shows zero as ±0", () => {
   assert.equal(formatPointsDelta(18.2), "+18");
   assert.equal(formatPointsDelta(-6.5), "\u22127");
   assert.equal(formatPointsDelta(0.3), "±0");

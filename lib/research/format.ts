@@ -14,17 +14,20 @@ export function formatSignedClock(seconds: number): string {
   return `${seconds > 0 ? "+" : MINUS}${formatClock(magnitude)}`;
 }
 
-/** Signed whole percentage points for a PP share change; a change that rounds to zero is unsigned. */
-export function formatSignedPoints(points: number): string {
-  const magnitude = Math.round(Math.abs(points));
-  if (magnitude === 0) return "0";
-  return `${points > 0 ? "+" : MINUS}${magnitude}`;
+/** Signed whole number; a value that rounds to zero is `zero`. */
+function signed(value: number, zero: string): string {
+  const magnitude = Math.round(Math.abs(value));
+  return magnitude === 0 ? zero : `${value > 0 ? "+" : MINUS}${magnitude}`;
 }
 
-/** Signed whole percentage points for a PP share Δ; unlike formatSignedPoints, zero shows ±0 so every Δ carries a sign. */
+/** Signed whole number (e.g. goal +/-); zero is unsigned. */
+export function formatSignedInt(n: number): string {
+  return signed(n, "0");
+}
+
+/** Signed whole percentage points for a PP share Δ; zero shows ±0 so every Δ carries a sign. */
 export function formatPointsDelta(points: number): string {
-  const text = formatSignedPoints(points);
-  return text === "0" ? "±0" : text;
+  return signed(points, "±0");
 }
 
 export function formatDate(date: string): string {
