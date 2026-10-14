@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { NhlPlayByPlay } from "@/lib/nhl/client";
-import { attributeEvents, buildGameEvents, onIceAt, type EventCounts } from "./events";
+import { attributeEvents, buildGameEvents, EVENT_MATCH_THRESHOLD, matchIsLow, matchQuality, matchRatio, onIceAt, type EventCounts } from "./events";
 import { analyzeGameLines, bucketOnIce, dedupeOnIce, parseClock, situationFor, type OnIce, type PositionGroup, type ShiftInput } from "./lines";
 import { toGameEvents, type EventKind, type GameEvent } from "./play-events";
 
@@ -351,4 +351,93 @@ test("toGameEvents is pure: two runs are deep-equal and the play-by-play is not 
   const before = structuredClone(pbp);
   assert.deepEqual(toGameEvents(pbp), toGameEvents(pbp));
   assert.deepEqual(pbp, before);
+});
+
+// ---- Match quality: shift chart versus situationCode (plan 03-04, D-16, D-17) ----
+const countedForMatch = (events: readonly GameEvent[]) =>
+  events.filter((e) => e.exclusion !== "shootout" && e.exclusion !== "penalty-shot" && e.situationCode.length === 4);
+const fixtureTeams = (f: Fixture) => ({ home: f.homeTeam.abbrev, away: f.awayTeam.abbrev });
+
+test("every gate fixture matches its shift chart to situationCode at or above EVENT_MATCH_THRESHOLD", () => {
+  assert.equal(EVENT_MATCH_THRESHOLD, 0.95);
+  const measured: string[] = [];
+  for (const id of GATE_FIXTURES) {
+    const { fixture, pbp, shifts, positions } = load(id);
+    const q = matchQuality(shifts, positions, toGameEvents(pbp), fixtureTeams(fixture));
+    const ratio = matchRatio(q);
+    assert.ok(ratio !== null && ratio >= EVENT_MATCH_THRESHOLD, `${id}: ${q.matched}/${q.checked}`);
+    assert.equal(matchIsLow(q), false, `${id} is not low`);
+    measured.push(`${id} ${q.matched}/${q.checked}`);
+  }
+  console.log("measured match per gate fixture:", measured.join(", "));
+});
+
+for (const id of [2025020084, 2026020075, 2025020343]) {
+  test(`${id} with every period-2 shift removed falls below EVENT_MATCH_THRESHOLD`, () => {
+    const { fixture, pbp, shifts, positions } = load(id);
+    const q = matchQuality(shifts.filter((s) => s.period !== 2), positions, toGameEvents(pbp), fixtureTeams(fixture));
+    const ratio = matchRatio(q);
+    assert.ok(ratio !== null && ratio < EVENT_MATCH_THRESHOLD, `${id}: ${q.matched}/${q.checked}`);
+    assert.equal(matchIsLow(q), true);
+  });
+}
+
+test("the shootout attempts of 2026020075 and the penalty shots of 2025020528 are not counted in checked", () => {
+  for (const id of [2026020075, 2025020528]) {
+    const { fixture, pbp, shifts, positions } = load(id);
+    const events = toGameEvents(pbp);
+    const expected = countedForMatch(events).length;
+    assert.ok(expected < events.length, `${id} has events that must not count`);
+    assert.equal(matchQuality(shifts, positions, events, fixtureTeams(fixture)).checked, expected);
+  }
+});
+
+test("matchQuality: 1551 matches 5 skaters and a goalie each side, 1451 does not", () => {
+  const teams = { home: "OPP", away: "BUF" };
+  const shifts = fiveOnFive(60);
+  assert.deepEqual(matchQuality(shifts, synthPositions, [synthEvent("BUF", 1, 10)], teams), { checked: 1, matched: 1 });
+  assert.deepEqual(matchQuality(shifts, synthPositions, [synthEvent("BUF", 1, 10, "shot-on-goal", { situationCode: "1451" })], teams), { checked: 1, matched: 0 });
+});
+
+test("matchQuality: a missing goalie shift matches only a code with that goalie digit 0", () => {
+  const teams = { home: "OPP", away: "BUF" };
+  const shifts = [...synthShifts("BUF", [1, 2, 3, 4, 11, 12], 0, 60), ...synthShifts("OPP", OPP_FULL, 0, 60)];
+  assert.deepEqual(matchQuality(shifts, synthPositions, [synthEvent("OPP", 1, 10, "goal", { situationCode: "0651" })], teams), { checked: 1, matched: 1 });
+  assert.deepEqual(matchQuality(shifts, synthPositions, [synthEvent("OPP", 1, 10, "goal", { situationCode: "1651" })], teams), { checked: 1, matched: 0 });
+});
+
+test("matchQuality: a teammate-blocked event is checked", () => {
+  const teams = { home: "OPP", away: "BUF" };
+  const event = synthEvent("BUF", 1, 10, "blocked-shot", { exclusion: "teammate-blocked" });
+  assert.deepEqual(matchQuality(fiveOnFive(60), synthPositions, [event], teams), { checked: 1, matched: 1 });
+});
+
+test("matchQuality: an event with no shift data at its second is checked and not matched", () => {
+  const teams = { home: "OPP", away: "BUF" };
+  assert.deepEqual(matchQuality(fiveOnFive(60), synthPositions, [synthEvent("BUF", 1, 100), synthEvent("BUF", 1, 0)], teams), { checked: 2, matched: 0 });
+});
+
+test("matchQuality: shootout and penalty-shot events and codes that are not 4 digits are not checked", () => {
+  const teams = { home: "OPP", away: "BUF" };
+  const events = [
+    synthEvent("BUF", 1, 10, "shot-on-goal", { exclusion: "shootout" }),
+    synthEvent("BUF", 1, 20, "shot-on-goal", { exclusion: "penalty-shot", situationCode: "1010" }),
+    synthEvent("BUF", 1, 30, "shot-on-goal", { situationCode: "" }),
+    synthEvent("BUF", 1, 40, "shot-on-goal", { situationCode: "155" }),
+  ];
+  assert.deepEqual(matchQuality(fiveOnFive(60), synthPositions, events, teams), { checked: 0, matched: 0 });
+});
+
+test("matchRatio is null with nothing checked, and matchIsLow is false there and at exactly 0.95, true at 0.94", () => {
+  assert.equal(matchRatio({ checked: 0, matched: 0 }), null);
+  assert.equal(matchIsLow({ checked: 0, matched: 0 }), false);
+  assert.equal(matchIsLow({ checked: 100, matched: 95 }), false);
+  assert.equal(matchIsLow({ checked: 100, matched: 94 }), true);
+});
+
+test("buildGameEvents carries the game's match quality", () => {
+  const { fixture, pbp, shifts, positions } = load(2025020084);
+  const built = buildGameEvents(fixture.homeTeam.abbrev, shifts, positions, pbp);
+  assert.deepEqual(built?.quality, matchQuality(shifts, positions, toGameEvents(pbp), fixtureTeams(fixture)));
+  assert.ok((built?.quality.checked ?? 0) > 0);
 });
