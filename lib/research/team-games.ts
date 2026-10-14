@@ -22,10 +22,11 @@ import { pairSeconds, type GamePairs } from "./pair-seconds";
 const RESEARCH_GAME_TYPES = new Set([2, 3]);
 const FINISHED_STATES = new Set(["OFF", "FINAL"]);
 
-// NHL api-web limits request rate (burst about 50, then a 60 s ban), not concurrency. 3 games at a time with
-// starts 500 ms apart is about 4 api-web requests per second; tuned by the cold Last 20 check (plan 03-09).
+// NHL api-web limits request rate (burst about 50, then a 60 s ban), not concurrency. Each game makes 3 requests
+// (boxscore, shift chart, play-by-play), so a start every 1000 ms is about 3 api-web requests per second. Measured by the
+// cold Last 20 check (plan 03-09): 500, 600 and 750 ms all hit 429 on the third team; 1000 ms loaded nine teams in a row.
 export const MAX_CONCURRENT_GAMES = 3;
-export const GAME_START_GAP_MS = 500;
+export const GAME_START_GAP_MS = 1000;
 
 /**
  * Runs `fn` over `items` with at most `concurrency` in flight, starting items in order at least `gapMs` apart.
