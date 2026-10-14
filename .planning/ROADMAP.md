@@ -111,7 +111,7 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 10/11 plans executed
+**Plans:** 11/11 plans executed
 
 Plans:
 **Wave 1**
@@ -139,7 +139,7 @@ Plans:
 - [x] 03-10-PLAN.md — WebKit checks of the unit tables on live data: structure and no negative Other (U3), name links (U4), 1024px light/dark (U5), dividers and Total row (U6)
 
 **Wave 8** *(blocked on Wave 7 completion)*
-- [ ] 03-11-PLAN.md — Phase 2 regression run with N8 updated, live smoke rerun, full suite and end-of-phase human check
+- [x] 03-11-PLAN.md — Phase 2 regression run with N8 updated, live smoke rerun, full suite and end-of-phase human check
 
 **UI hint**: yes
 **Gate**: Event-attribution fixture tests (criterion 1) must pass before any plan that adds event columns to the unit tables runs. The tests span 03-01 (regulation game and mapper rules), 03-02 (attribution rules on every fixture) and 03-03 (the other game types); encoded as 03-06 `depends_on: 03-01, 03-02, 03-03` (03-08, which adds the notes and legend, lists them too).
@@ -154,4 +154,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 10/11 | In Progress | - |
+| 3. Unit Event Stats | 11/11 | In Progress | - |
