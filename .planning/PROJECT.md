@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A personal fantasy hockey web app (Next.js on Vercel, Neon Postgres, Discord sign-in) that imports Fantrax and Yahoo leagues and helps with draft prep, weekly lineup planning, and player research. The current milestone focuses on the **Line research** page (`/research`): a per-team view of NHL line combinations and ice-time trends, modelled on Dobber Frozen Pool's "last 3 game lines" page, being refined into a tool for spotting players whose role is changing.
+A personal fantasy hockey web app (Next.js on Vercel, Neon Postgres, Discord sign-in) that imports Fantrax and Yahoo leagues and helps with draft prep, weekly lineup planning, and player research. Its **Line research** page (`/research`), modelled on Dobber Frozen Pool's "last 3 game lines" page, is a per-team tool for spotting players whose role is changing: an ice-time trends table, a per-player linemate panel, and shot/goal/Corsi stats on every last-game unit table (v1.0).
 
 ## Core Value
 
@@ -21,12 +21,11 @@ At a glance, show which players on a team are moving up or down in deployment �
 - ✓ Weekly planner: daily optimal lineups and pickup recommendations from Fantrax per-game projections, with "The List" spreadsheet fallback — existing
 - ✓ Line research page: pick team + last 1/3/5/10/20 games; last-game EV/PP/SH units (time and % share) derived from NHL shift charts — existing
 - ✓ Line research ice-time grid: per-game TOI/PP/SH, average TOI, PP share, TOI and PP-share trend slopes with sparklines — existing
-- ✓ Ice-time section reads cleanly as a trends table: Avg TOI (regulation), TOI Δ, PP share, PP share Δ, SH, mover tint, sortable headers in the URL; per-game values in a clickable strip with popovers — Phase 1
-- ✓ Clicking a player name opens a player detail panel (`?player=`) that shows linemate time per game and per situation (EV/PP/SH) as a heat strip, by name only, with window share — Phase 2
-- ✓ Linemate changes are visible via New / Rising / Fading / Out tags (±15 share points, regulation only); unit-table names open the player on that situation — Phase 2
-
-- ✓ Last-game unit tables (EV, PP, SH; forwards and defense) show GF/GA/+/-, SF/SA/SF%, CF/CA/CF% per unit with Other and Total rows, a legend and an exclusions note; counts reconcile with the official boxscore — Phase 3
-- ✓ "Last 20" loads without NHL API throttling failures (bounded concurrency, 429 retry, finished-game cache); missing shift charts or play-by-play show "—", never 0 — Phase 3
+- ✓ Ice-time section reads cleanly as a trends table: Avg TOI (regulation), TOI Δ, PP share, PP share Δ, SH, mover tint, sortable headers in the URL; per-game values in a clickable strip with popovers — v1.0 (Phase 1)
+- ✓ Clicking a player name opens a player detail panel (`?player=`) that shows linemate time per game and per situation (EV/PP/SH) as a heat strip, by name only, with window share — v1.0 (Phase 2)
+- ✓ Linemate changes are visible via New / Rising / Fading / Out tags (±15 share points, regulation only); unit-table names open the player on that situation — v1.0 (Phase 2)
+- ✓ Last-game unit tables (EV, PP, SH; forwards and defense) show GF/GA/+/-, SF/SA/SF%, CF/CA/CF% per unit with Other and Total rows, a legend and an exclusions note; counts reconcile with the official boxscore — v1.0 (Phase 3)
+- ✓ "Last 20" loads without NHL API throttling failures (bounded concurrency, 429 retry, finished-game cache); missing shift charts or play-by-play show "—", never 0 — v1.0 (Phase 3)
 
 ### Active
 
@@ -41,9 +40,9 @@ At a glance, show which players on a team are moving up or down in deployment �
 ## Context
 
 - Brownfield Next.js 16 / React 19 app; see `.planning/codebase/` for the full map. AGENTS.md warns this Next.js version has breaking changes — read `node_modules/next/dist/docs/` before writing code.
-- Research code: `app/research/page.tsx` (server component, ~374 lines), `lib/research/lines.ts` (line/strength derivation from shift charts, tested), `lib/research/team-games.ts` (loads schedule, boxscores, shift charts per game).
-- Data comes from the NHL's public APIs (`api-web.nhle.com` boxscore/schedule, `api.nhle.com/stats` shift charts). Strength state is inferred per second from who is on ice; no play-by-play is used yet.
-- Shots/goals/Corsi per unit require the NHL play-by-play feed, with each event attributed to the players on ice at that second via shift charts. Events at line-change seconds are ambiguous, so attribution will be approximate (as on Frozen Pool).
+- Shipped v1.0 Line Research (2026-10-14): 3 phases, 29 plans; research logic and tests in `lib/research/` (pure, fixture-tested view-models; 557 tests), UI in `components/ToiTrends.tsx`, `PlayerLinemates.tsx`, `LastGameLines.tsx`, page `app/research/page.tsx`.
+- Data comes from the NHL's public APIs (`api-web.nhle.com` boxscore/schedule/play-by-play, `api.nhle.com/stats` shift charts). Strength state is inferred per second from who is on ice; play-by-play events are attributed to the skaters on ice at that second and reconciled to the boxscore on committed fixture games.
+- Known debt: review info items carried forward (see STATE.md); Phase 3 had no UI audit; "Last 20" verified only on 6-8 finished games per team so far.
 - Inspiration: https://frozenpool.dobbersports.com/frozenpool_last3gamelines.php?team=MTL
 - It's early in the 2026-27 season (October); the draft is done, so in-season research is the priority.
 
@@ -70,3 +69,7 @@ At a glance, show which players on a team are moving up or down in deployment �
 | Pulled-goalie and 4v4/3v3 events and time go to each table's "Other" row; only shootout and penalty-shot attempts are excluded | Keeps listed units comparable and Other + units = Total (Phase 3 D-12, D-13, D-21, D-22) | ✓ Shipped Phase 3 |
 | Teammate-blocked attempts count in CF/CA | Matches the convention other line-stat sites use (UAT G-03-1) | ✓ Shipped Phase 3 |
 | Plus-minus follows the shift chart at the goal second, even where the official figure differs | One known case (Panarin, 2025020500) looks like a manual league adjustment | ✓ Accepted Phase 3 |
+| Small text meets WCAG AA: amber notes are `amber-700`, placeholder dashes `neutral-600`; disabled options stay `neutral-400` | UI audits found 2.5-3.2:1 text; inactive controls are exempt and the grey signals disabled | ✓ Applied after v1.0 audits |
+
+---
+*Last updated: 2026-10-14 after v1.0 milestone*

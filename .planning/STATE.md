@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 02
-status: completed
-stopped_at: Phase 02 re-verified (passed 5/5) — milestone ready to close
-last_updated: "2026-10-14T23:21:13.034Z"
+status: Awaiting next milestone
+stopped_at: Milestone v1.0 Line Research shipped and archived
+last_updated: "2026-10-14T23:24:34.260Z"
 last_activity: 2026-10-14
-last_activity_desc: Phase 02 complete
-state_head: d80209ab16106071488503078f7bb75379336e77
+last_activity_desc: Milestone v1.0 completed and archived
+state_head: 887771015027d277bad12e41c9b5e51be5b64e71
 progress:
   total_phases: 3
   completed_phases: 3
   total_plans: 29
   completed_plans: 29
   percent: 100
+current_phase: 02
 ---
 
 # Project State
@@ -22,16 +22,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-14)
 
 **Core value:** At a glance, show which players on a team are moving up or down in deployment, so pickup/drop decisions can be made before the rest of the league notices.
-**Current focus:** Milestone complete — ready to close
+**Current focus:** Planning next milestone (`/gsd-new-milestone`)
 
 ## Current Position
 
-Phase: 02
-Plan: Not started
-Status: All phases complete
-Last activity: 2026-10-14 - Completed quick task 261014-quc: Phase 3 WR-01 contain play-by-play mapping errors, WR-02 note unattributed events
-
-Progress: [██████████] 100% (3 of 3 phases; 29/29 plans done)
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-14 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -133,12 +131,6 @@ None yet.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 261012-tph | WR-01 follow-up: dedupe on-ice skaters before strength classification in analyzeGameLines | 2026-10-12 | 67949f3 | [261012-tph-wr-01-follow-up-dedupe-skaters-before-st](./quick/261012-tph-wr-01-follow-up-dedupe-skaters-before-st/) |
-| 261014-lu2 | Fix phase-01 UI re-audit warnings (dash contrast, window-2 rule, copy drift, Pos gap, signed zero Δ) | 2026-10-14 | f71fe3f | [261014-lu2-fix-phase-01-ui-re-audit-warnings](./quick/261014-lu2-fix-phase-01-ui-re-audit-warnings/) |
-| 261014-qgu | Fix WR-06 dash contrast (PlayerLinemates, LastGameLines) and amber-600 note text on /research | 2026-10-14 | 2670b71 | [261014-qgu-fix-wr-06-dash-contrast-in-playerlinemat](./quick/261014-qgu-fix-wr-06-dash-contrast-in-playerlinemat/) |
-| 261014-qo6 | Align 02-UI-SPEC copy with code, font-medium page chrome, fix IN-10 formatter coupling | 2026-10-14 | 4892dd6 | [261014-qo6-align-02-ui-spec-copy-with-code-font-med](./quick/261014-qo6-align-02-ui-spec-copy-with-code-font-med/) |
-| 261014-qr6 | Raise /research footer text contrast (disabled window counts left gray) | 2026-10-14 | 104cb74 | [261014-qr6-raise-research-page-footer-text-contrast](./quick/261014-qr6-raise-research-page-footer-text-contrast/) |
-| 261014-quc | Phase 3 WR-01 contain play-by-play mapping errors, WR-02 note unattributed events | 2026-10-14 | d80209a | [261014-quc-phase-3-wr-01-contain-play-by-play-mappi](./quick/261014-quc-phase-3-wr-01-contain-play-by-play-mappi/) |
 
 ## Deferred Items
 
@@ -153,3 +145,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 Last session: 2026-10-14T22:50:37.602Z
 Stopped at: Phase 02 re-verified (passed 5/5) — milestone ready to close
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
