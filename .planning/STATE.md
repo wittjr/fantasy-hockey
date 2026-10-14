@@ -1,43 +1,42 @@
 ---
 gsd_state_version: "1.0"
 current_phase: 03
-current_phase_name: Unit Event Stats
-status: executing
-stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-10-14T17:14:18.018Z"
+status: completed
+stopped_at: Phase 03 complete — all phases complete
+last_updated: "2026-10-14T18:09:12.353Z"
 last_activity: 2026-10-14
-last_activity_desc: Phase 03 execution started
-state_head: 2f546232ec12a3e69f9ae516d069eb07b03d54e0
+last_activity_desc: Phase 03 complete
+state_head: 5df36da864b96bad18aa0ff4f9bd9673974798c7
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 29
-  completed_plans: 27
-  percent: 67
+  completed_plans: 29
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-10-12)
+See: .planning/PROJECT.md (updated 2026-10-14)
 
 **Core value:** At a glance, show which players on a team are moving up or down in deployment, so pickup/drop decisions can be made before the rest of the league notices.
-**Current focus:** Phase 03 — Unit Event Stats
+**Current focus:** Milestone complete — ready to close
 
 ## Current Position
 
-Phase: 03 (Unit Event Stats) — EXECUTING
-Plan: 1 of 13
-Status: Executing Phase 03
-Last activity: 2026-10-14 — Phase 03 execution started
+Phase: 03
+Plan: Not started
+Status: All phases complete
+Last activity: 2026-10-14 — Phase 03 complete
 
-Progress: [███████░░░] 67% (2 of 3 phases; 16/16 planned plans done)
+Progress: [██████████] 100% (3 of 3 phases; 29/29 plans done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
+- Total plans completed: 29
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -47,6 +46,7 @@ Progress: [███████░░░] 67% (2 of 3 phases; 16/16 planned pla
 |-------|-------|-------|----------|
 | 1 | 9 | - | - |
 | 2 | 7 | - | - |
+| 03 | 13 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -109,6 +109,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-05: emptyReason no-chart is judged over charted games the selected player dressed for, so unknown is never reported as no time (D-24)
 - [Phase 02]: 02-05: legend line 2 says 'in the games they both played' (D-25 wording); no-chart empty state shows only the message and tabs, other empty reasons still show the amber note when games lack a chart
 - [Phase 02]: 02-06: Linemate tags are neutral chips from rounded pooled time-together shares (+/-15 via deltaCrossing); Out comes from dressing alone; tagged rows bypass the list cap and cappedCount stays the capped count when all=1
+- [Phase 03]: Teammate-blocked attempts count in CF/CA (UAT G-03-1, supersedes D-14/D-21 exclusion)
+- [Phase 03]: Pulled-goalie events and seconds go to Other, not exclusions; exclusions are shootout and penalty-shot only (D-21, D-22)
+- [Phase 03]: Plus-minus override accepted for Panarin 2025020500 (shift chart wins over official 0)
 - [Phase 02]: 02-07: overflow-anchor none on the research page main so WebKit scroll anchoring does not move the page to the top when the player panel closes — Measured: no script scrolls; anchoring on main was the cause; N10 requires Close to keep the scroll position (UI-SPEC scroll false)
 
 ### Pending Todos
@@ -119,8 +122,7 @@ None yet.
 
 - [Phase 1 → later]: WR-05..WR-08 fixed (1314b03, 88b2299, adb0f61, 888cc03). Still open: WR-10 (strip square aria-expanded tracks click only; Escape always blurs), WR-08 remainder (no DOM test of outside-click/blur), info IN-01..IN-13; see 01-REVIEW-DISPOSITION.md
 - [All phases]: Site targets laptop browsers; no phone/touch UAT
-- [Phase 3]: Decide whether SF%/CF% appear on PP/SH tables (research warns PP/SH "against" counts are easily misread as quality)
-- [Phase 3]: NHL API returned HTTP 429 at ~40 concurrent requests; verify the bounded-concurrency cap in dev before production
+- [Phase 3]: Last 20 is only verified on 6-8 finished games per team (October); re-check a full 20-game window later in the season
 
 ### Quick Tasks Completed
 
@@ -138,6 +140,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T16:15:00.244Z
-Stopped at: Phase 3 UI-SPEC approved
-Resume file: .planning/phases/03-unit-event-stats/03-UI-SPEC.md
+Last session: 2026-10-14
+Stopped at: Phase 03 complete — milestone ready to close
+Resume file: None

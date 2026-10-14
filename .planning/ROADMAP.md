@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Ice-Time Trends Table** - Replace the per-game ice-time grid with a sortable trends table that shows who is moving up or down (completed 2026-10-12)
 - [x] **Phase 2: Player Linemate Detail** - Click any player to see a per-game linemate heat strip by situation, with New/Rising/Fading tags (completed 2026-10-12)
-- [ ] **Phase 3: Unit Event Stats** - Show boxscore-reconciled shots, goals and Corsi on every last-game unit table
+- [x] **Phase 3: Unit Event Stats** - Show boxscore-reconciled shots, goals and Corsi on every last-game unit table (completed 2026-10-14)
 
 ## Phase Details
 
@@ -111,7 +111,7 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 13/13 plans executed (2 gap-closure plans from UAT)
+**Plans:** 13/13 plans complete (2 gap-closure plans from UAT)
 
 Plans:
 **Wave 1**
@@ -160,7 +160,7 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 13/13 | In Progress | - |
+| 3. Unit Event Stats | 13/13 | Complete    | 2026-10-14 |
 
 ## Backlog
 

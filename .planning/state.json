@@ -16,13 +16,13 @@
     {
       "number": "3",
       "name": "Unit Event Stats",
-      "status": "in_progress"
+      "status": "complete"
     }
   ],
   "next": {
-    "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 03 of 3 · 59% · executing"
+    "command": "/gsd:new-milestone",
+    "label": "Start a new milestone",
+    "reason": "All phases complete — start a new milestone"
   },
-  "updated_at": "2026-10-13T20:43:02.559Z"
+  "updated_at": "2026-10-14T18:09:12.372Z"
 }

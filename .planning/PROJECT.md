@@ -25,9 +25,12 @@ At a glance, show which players on a team are moving up or down in deployment �
 - ✓ Clicking a player name opens a player detail panel (`?player=`) that shows linemate time per game and per situation (EV/PP/SH) as a heat strip, by name only, with window share — Phase 2
 - ✓ Linemate changes are visible via New / Rising / Fading / Out tags (±15 share points, regulation only); unit-table names open the player on that situation — Phase 2
 
+- ✓ Last-game unit tables (EV, PP, SH; forwards and defense) show GF/GA/+/-, SF/SA/SF%, CF/CA/CF% per unit with Other and Total rows, a legend and an exclusions note; counts reconcile with the official boxscore — Phase 3
+- ✓ "Last 20" loads without NHL API throttling failures (bounded concurrency, 429 retry, finished-game cache); missing shift charts or play-by-play show "—", never 0 — Phase 3
+
 ### Active
 
-- [ ] Last-game unit tables show shots, goals, and Corsi for and against per unit, for all situations (EV, PP, SH)
+- [ ] Show the details of the "Other" row (which below-cap units, 4v4/3v3 and pulled-goalie stretches make it up) — deferred from Phase 3 UAT, backlog 999.1
 
 ### Out of Scope
 
@@ -55,8 +58,8 @@ At a glance, show which players on a team are moving up or down in deployment �
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Refine the research page before adding league-wide views | Single-team page must be readable and useful first | ✓ Good — Phase 1 trends table shipped |
-| Event stats (SF/SA, GF/GA, CF/CA) on all unit tables, not just EV | User wants PP/SH units evaluated the same way | — Pending |
-| Player detail opened by clicking a row in the trends table | Keeps selection in context of the trends | — Pending |
+| Event stats (SF/SA, GF/GA, CF/CA) on all unit tables, not just EV | User wants PP/SH units evaluated the same way | ✓ Shipped Phase 3 |
+| Player detail opened by clicking a row in the trends table | Keeps selection in context of the trends | ✓ Shipped Phase 2 (player name opens the panel) |
 | Linemates shown by name and time, no quality score | User prefers to judge linemate quality themselves | ✓ Shipped Phase 2 (grey tag chips, no ranking) |
 | League ownership belongs in the league view, not the research page | Keeps research page league-agnostic; toggle still undecided | — Pending |
 | "Recent" = team's last 2 games; Δ needs ≥3 games, arrow ≥2; OT minutes removed from all TOI trends | Small samples are noisy; OT inflates TOI (Phase 1 D-05..D-13) | ✓ Shipped Phase 1 |
@@ -64,23 +67,6 @@ At a glance, show which players on a team are moving up or down in deployment �
 | Per-game values open on click (small client component), hover/focus kept | Hover-only tiny squares were not discoverable in UAT | ✓ Shipped Phase 1 |
 | Site targets laptop browsers; no phone/touch requirement | User decision during Phase 1 UAT | ✓ Applies to all phases |
 | Linemate time is regulation only; shade = share of the player's own situation TOI; rows ordered by window share, New tag marks a line change | Consistent with OT-free TOI trends; user chose window-share order in UAT (Phase 2 D-19, D-28) | ✓ Shipped Phase 2 |
-
-## Evolution
-
-This document evolves at phase transitions and milestone boundaries.
-
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
-
----
-*Last updated: 2026-10-12 after Phase 2*
+| Pulled-goalie and 4v4/3v3 events and time go to each table's "Other" row; only shootout and penalty-shot attempts are excluded | Keeps listed units comparable and Other + units = Total (Phase 3 D-12, D-13, D-21, D-22) | ✓ Shipped Phase 3 |
+| Teammate-blocked attempts count in CF/CA | Matches the convention other line-stat sites use (UAT G-03-1) | ✓ Shipped Phase 3 |
+| Plus-minus follows the shift chart at the goal second, even where the official figure differs | One known case (Panarin, 2025020500) looks like a manual league adjustment | ✓ Accepted Phase 3 |
