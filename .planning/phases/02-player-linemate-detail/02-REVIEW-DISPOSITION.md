@@ -9,7 +9,7 @@ findings:
     title: "Quick task 1a68924 fixed the low-contrast \"—\" in ToiTrends but left the same dash in the player panel"
   - id: IN-10
     severity: info
-    disposition: open
+    disposition: fixed
     title: "`formatSignedPoints` is documented as the PP-share formatter but now formats goal +/-, and `formatPointsDelta` depends on its string output"
   - id: IN-11
     severity: info
@@ -67,7 +67,7 @@ findings:
     severity: info
     disposition: deferred
     title: "Window-share ordering favours linemates with few counted games"
-open: 2
+open: 1
 total: 16
 recorded: 2026-10-14T22:48:36.505Z
 ---
@@ -77,7 +77,7 @@ recorded: 2026-10-14T22:48:36.505Z
 | Finding | Severity | Disposition | Source |
 |---------|----------|-------------|--------|
 | WR-06 | warning | fixed | quick 261014-qgu (a5ed8c8) |
-| IN-10 | info | open | - |
+| IN-10 | info | fixed | quick 261014-qo6 (1de6396) |
 | IN-11 | info | open | - |
 | WR-05 | warning | fixed | 02-REVIEW-FIX.md (not in the current review) |
 | IN-01 | info | skipped | 02-REVIEW-FIX.md (not in the current review) |
