@@ -104,6 +104,28 @@ export function buildUnitTable(
   };
 }
 
+/** D-14: what was left out of every count; only non-zero kinds, singular for 1, null when nothing was excluded. */
+export function exclusionsNote(events: GameEvents | null): string | null {
+  if (!events) return null;
+  const { shootout, penaltyShot, teammateBlocked } = events.excluded;
+  const kinds: [number, string][] = [
+    [shootout, "shootout attempt"],
+    [penaltyShot, "penalty shot"],
+    [teammateBlocked, "teammate-blocked attempt"],
+  ];
+  const items = kinds
+    .filter(([n]) => n !== 0)
+    .map(([n, label]) => `${n} ${label}${n === 1 ? "" : "s"}`);
+  return items.length === 0 ? null : `Excluded from these tables: ${items.join(", ")}.`;
+}
+
+/** The three legend lines under the tables (03-UI-SPEC Copywriting Contract; D-06, D-07, D-15, D-21). */
+export const UNIT_LEGEND: readonly string[] = [
+  "GF and GA are goals for and against. SF and SA are shots on goal for and against, goals included. CF and CA are shot attempts for and against: shots on goal, misses and blocks, credited to the team that shot. SF% is SF ÷ (SF + SA) and CF% is CF ÷ (CF + CA); both show — when for plus against is 0.",
+  "+/- is GF − GA in that situation, so it is not the NHL's official plus-minus, which ignores power-play goals for and short-handed goals against. It shows 0 when a line had shot attempts but no goals, and — when it had no events at all. Power-play and penalty-kill percentages are lopsided by nature.",
+  "Other is everything in that situation not on a listed line: lines below the cut-off, partial lines during changes, 4-on-4 and 3-on-3 play (counted as even strength), and all time and events while either goalie was pulled. Total is the team's total, so the listed lines plus Other equal Total. Forwards and defense show the same Total. Overtime counts; shootout attempts, penalty shots and teammate-blocked attempts are left out.",
+];
+
 function subtract(a: EventCounts, b: EventCounts): EventCounts {
   return { gf: a.gf - b.gf, ga: a.ga - b.ga, sf: a.sf - b.sf, sa: a.sa - b.sa, cf: a.cf - b.cf, ca: a.ca - b.ca };
 }
