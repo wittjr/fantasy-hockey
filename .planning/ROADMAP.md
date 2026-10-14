@@ -111,7 +111,7 @@ Plans:
   4. For a game whose shift chart or play-by-play is missing, event stats show "—" (never 0) and the game is left out of any average or trend that would include it
   5. Selecting "Last 20" for any team loads without failing from NHL API throttling, even with play-by-play added to every game load
 
-**Plans:** 5/11 plans executed
+**Plans:** 7/11 plans executed
 
 Plans:
 **Wave 1**
@@ -128,8 +128,8 @@ Plans:
 - [x] 03-05-PLAN.md — Play-by-play on every game load: getPlayByPlay, ResearchGame.events (null = unknown), play-by-play failure keeps the game (D-05), live boxscore reconciliation smoke
 
 **Wave 5** *(blocked on Wave 4 completion; 03-06 is the gated event-column plan)*
-- [ ] 03-06-PLAN.md — Unit tables: GF GA +/- | SF SA SF% | CF CA CF% on all six stacked tables, Other and Total rows
-- [ ] 03-07-PLAN.md — Last 20 without throttling: tiered finished-game cache (1 h / 30 d), short Retry-After 429 retry, paced newest-first pool
+- [x] 03-06-PLAN.md — Unit tables: GF GA +/- | SF SA SF% | CF CA CF% on all six stacked tables, Other and Total rows
+- [x] 03-07-PLAN.md — Last 20 without throttling: tiered finished-game cache (1 h / 30 d), short Retry-After 429 retry, paced newest-first pool
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 03-08-PLAN.md — Unit tables: legend, exclusions note and amber reliability notes (D-05, D-14 to D-16, D-18, D-21, D-23)
@@ -154,4 +154,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Ice-Time Trends Table | 9/9 | Complete    | 2026-10-12 |
 | 2. Player Linemate Detail | 7/7 | Complete    | 2026-10-12 |
-| 3. Unit Event Stats | 5/11 | In Progress | - |
+| 3. Unit Event Stats | 7/11 | In Progress | - |
