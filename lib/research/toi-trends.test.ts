@@ -21,7 +21,7 @@ import {
   type TrendGame,
   type TrendRow,
 } from "./toi-trends";
-import { formatSignedClock, formatSignedPoints } from "./format";
+import { formatPointsDelta, formatSignedClock, formatSignedPoints } from "./format";
 import type { ResearchPlayer } from "./team-games";
 
 const player = (id: number, group: "F" | "D" | "G", name = `P${id}`): ResearchPlayer => ({
@@ -206,11 +206,11 @@ test("slopeDirection is inclusive of the threshold and null below it or without 
   assert.equal(slopeDirection(2.9, 3), null);
 });
 
-test("formatSignedClock signs by rounded magnitude and shows zero unsigned", () => {
+test("formatSignedClock signs by rounded magnitude and shows zero as ±0:00", () => {
   assert.equal(formatSignedClock(72), "+1:12");
   assert.equal(formatSignedClock(-48), "\u22120:48");
-  assert.equal(formatSignedClock(0.4), "0:00");
-  assert.equal(formatSignedClock(-0.4), "0:00");
+  assert.equal(formatSignedClock(0.4), "±0:00");
+  assert.equal(formatSignedClock(-0.4), "±0:00");
   assert.equal(formatSignedClock(119.6), "+2:00");
   assert.equal(formatSignedClock(-119.5), "\u22122:00");
 });
@@ -220,6 +220,13 @@ test("formatSignedPoints signs by rounded magnitude and shows zero unsigned", ()
   assert.equal(formatSignedPoints(-6.5), "\u22127");
   assert.equal(formatSignedPoints(0.3), "0");
   assert.equal(formatSignedPoints(14.5), "+15");
+});
+
+test("formatPointsDelta signs like formatSignedPoints but shows zero as ±0", () => {
+  assert.equal(formatPointsDelta(18.2), "+18");
+  assert.equal(formatPointsDelta(-6.5), "\u22127");
+  assert.equal(formatPointsDelta(0.3), "±0");
+  assert.equal(formatPointsDelta(-0.4), "±0");
 });
 
 test("buildTrendRows sets toiDelta and ppShareDelta for a 5-game window", () => {

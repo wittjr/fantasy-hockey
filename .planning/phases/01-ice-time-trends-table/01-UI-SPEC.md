@@ -19,6 +19,8 @@ created: "2026-10-11"
 
 ## Revisions
 
+**2026-10-14 (quick 261014-lu2; UI re-audit warnings).** The `—` dash is `text-neutral-600 dark:text-neutral-400` (the old `neutral-400` / `neutral-500` pair was about 2.5:1 on white and 4.2:1 on `#0a0a0a`). A zero Δ shows `±0:00` / `±0`. The Pos cell's GP span has no margin; the literal space is the only gap. A window of 2 keeps the Δ and trend columns with its own footnote (user decision; plan 01-07 / WR-04). The PP share header title, the amber no-PP/SH note, the popover no-chart line and the page error banner are recorded as they ship.
+
 **2026-10-11 (plans 01-08 and 01-09; UAT gaps G-01-2, G-01-5, G-01-1b).** The strip and popover contract below was revised to match what ships:
 - The popover anchor moved from the strip `<td>` to the square (01-07): the square is `relative`, the popover is `absolute right-0 top-full`, right-aligned under the square.
 - A click or tap opens the popover through the `ToiStripCell` client wrapper (01-08); mouse hover and keyboard focus still reveal it. The popover takes no pointer events.
@@ -119,7 +121,7 @@ Nothing else is green or red: not the slope arrows (always muted neutral), not s
 - Never tint when the window is 1 game (D-08) or the delta is `—`.
 
 **Color is never the only cue:**
-- Every Δ carries an explicit sign (`+` or `−`) and crossing deltas are `font-medium`.
+- Every Δ carries an explicit sign (`+` or `−`; `±` when it rounds to zero, so `±0:00` / `±0`) and crossing deltas are `font-medium`.
 - Movers get visually hidden text in the Player cell: `<span className="sr-only">Moving up</span>` / `Moving down` (screen readers; the tint is decorative).
 - OT is conveyed by outline/hollow shape, not hue alone, and by "OT" text in the popover and legend.
 - DNP / excluded cells are conveyed by dashed border (shape), not color.
@@ -171,7 +173,7 @@ Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP 
 - Null values (`—`) sink to the bottom of their F/D group in both directions; ties break by `avgToi desc`. F block always before D block.
 - Header affordance (discretion): no extra icon on inactive headers (keeps headers quiet). Sortable headers are links, so they get `hover:underline` and the browser focus ring; the intro paragraph states they are sortable. The **active** header is `font-medium text-neutral-900 dark:text-neutral-100` followed by `↓` (desc) or `↑` (asc) — deliberately not `▲▼`, which are reserved for the trend arrows. The active `<th>` carries `aria-sort="descending|ascending"`; others have none. `<th scope="col">` on every header.
 - Non-sortable headers are plain text (`font-medium text-neutral-500`).
-- Sort headers carry a `title` for mouse users (the legend repeats it for everyone): Avg TOI "Average regulation ice time per game played"; TOI Δ "Average of the team's last 2 games minus the player's earlier games in the window"; PP share "Player's share of the team's power-play time over the window"; PP share Δ "Same comparison, in percentage points".
+- Sort headers carry a `title` for mouse users (the legend repeats it for everyone): Avg TOI "Average regulation ice time per game played"; TOI Δ "Average of the team's last 2 games minus the player's earlier games in the window"; PP share "Player's share of the team's power-play time in the games he played" (the share counts only games the player dressed for); PP share Δ "Same comparison, in percentage points".
 
 ### Per-game strip and popover (D-10, D-12, D-13, TRND-02)
 - The strip `<td className="py-1 pr-3">` is not positioned; the strip itself is `<div role="group" aria-label="Per-game ice time, oldest to newest" className="flex gap-1">`.
@@ -192,7 +194,7 @@ Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP 
 - Popover content, label/value two-column grid (`grid grid-cols-[auto_auto] gap-x-3`, labels `text-neutral-600 dark:text-neutral-400`, values `tabular-nums text-right`):
   1. Title line (`font-medium`, spans both columns): `Oct 8 vs TOR · W 3–2` (uses existing `formatDate`, `gameLabel`, `resultLabel`; omit result if not final). If OT: append ` · OT` (or ` · SO`) as a bordered `rounded border border-sky-500 px-1` tag.
   2. `TOI` `16:20`. For OT games with shift data the value is **regulation** TOI and a muted line `OT excluded` `+1:05` follows (so it reconciles with NHL.com's total). For OT games without shift data: `TOI` `—` and a muted full-width line `Excluded from averages: no shift data for overtime`; also `Total (incl. OT)` `21:05` from the boxscore.
-  3. `PP` `2:10 (45% of team PP)`; `SH` `0:45`. When the game has no shift chart: both `—` plus muted full-width line `No PP/SH data (shift chart not published)`. When there was no team PP time, `PP` `0:00` and omit the percentage.
+  3. `PP` `2:10 (45% of team PP)`; `SH` `0:45`. When the game has no shift chart: both `—` plus muted full-width line `No PP/SH data (shift chart not published yet, or it failed to load)`. When there was no team PP time, `PP` `0:00` and omit the percentage.
   4. DNP cell: title line plus muted full-width `Did not play`.
 - The `aria-label` is the same facts as one sentence; the popover is `aria-hidden` to avoid double reading.
 - Known limitations (surfaced, not hidden): see UI Considerations rows on touch and tab stops.
@@ -212,14 +214,15 @@ Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP 
 
 | State | Rule | Visual |
 |-------|------|--------|
-| Delta unavailable | Fewer than 3 included games, or no included game in the recent part, or none in the earlier part (D-06) | `—` in `text-neutral-400 dark:text-neutral-500` (matches existing dash style, slightly darker for legibility), arrow slot empty |
+| Delta unavailable | Fewer than 3 included games, or no included game in the recent part, or none in the earlier part (D-06) | `—` in `text-neutral-600 dark:text-neutral-400` (the in-row muted pair; >= 4.5:1 on white, the mover tints and `#0a0a0a`), arrow slot empty |
 | Slope unavailable | Fewer than 2 included games | Arrow slot empty |
 | DNP last 2 (D-07) | Window > 2 games and the player is absent from both of the team's last 2 games | Player cell: after the name, `<span className="ml-2 rounded border border-neutral-300 px-1 text-xs text-neutral-600 dark:border-neutral-700 dark:text-neutral-400">DNP last 2</span>`; TOI Δ and PP share Δ show `—`; no tint |
 | Below 3 games played | Delta gate | GP count (`2/5 GP`) stays visible in the Pos cell; Δ `—` |
-| Avg / PP / SH unknown | No included games / no PP-eligible games / no games with shift data | `—` (never `0:00`, never `0%`) |
+| Avg / PP / SH unknown | No included games / no PP-eligible games / no games with shift data | `—` in `text-neutral-600 dark:text-neutral-400` (never `0:00`, never `0%`) |
 | Mover up / down | Tint rule above | Row tint + colored `font-medium` Δ + `sr-only` text |
 | Mixed-sign mover (D-19) | One delta crosses up, the other down | No tint; each Δ colored |
 | Window of 1 | D-08 | Δ columns, arrows, sparkline, tint all absent |
+| Window of 2 | Fewer than `MIN_GAMES_FOR_DELTA` (3) games but more than 1 (decided 2026-10-14; plan 01-07 WR-04) | TOI Δ, PP share Δ and TOI trend columns stay; every Δ is `—`; arrows and sparkline still show the whole-window direction; no tint; legend line 2 is replaced by the window-2 note |
 | Games missing shift charts | Some window games have `lines === null` | Strip cell still shaded from boxscore TOI; PP/SH `—` in popover; amber footnote lists the dates |
 | Unknown sort param | Not in allowlist or array | Default sort, no error shown |
 
@@ -235,10 +238,11 @@ Column order is exactly D-01. Old per-game numeric columns, "TOI trend" and "PP 
 | Legend line 1 | `Squares are team games, oldest to newest. Darker means more ice time than that player's own average. Dashed means did not play (or overtime with no shift data). A blue ring means overtime; OT minutes are excluded.` |
 | Legend line 2 | `Δ compares the team's last 2 games with the player's earlier games and needs 3 or more games played. ▲ ▼ show the direction of the whole-window trend and can disagree with Δ.` |
 | Last game note (window 1) | `Deltas and trends need 2 or more games. Choose Last 3 or more.` (muted `text-xs text-neutral-500`, in the footnotes block) |
-| No PP/SH note | `No PP/SH data for {Oct 8, Oct 10}: the NHL hasn't published shift charts for those games yet.` (`text-xs text-amber-600 dark:text-amber-400`, lists dates via `formatDate`; omitted when every game has data) |
+| Window-2 note | `Δ needs 3 or more games, and this window has only 2, so every Δ shows —. ▲ ▼ show the direction of the whole-window trend.` (replaces legend line 2, same style) |
+| No PP/SH note | `No PP/SH data for {Oct 8, Oct 10}: no shift chart is available for those games (not published yet, or it failed to load).` (`text-xs text-amber-600 dark:text-amber-400`, lists dates via `formatDate`; omitted when every game has data) |
 | Empty state heading | none (section hides nothing; page-level empty copy is unchanged) |
 | Empty state body | If the window has games but no skater rows: `No skaters played in this window.` (`text-sm text-neutral-500`). Page-level copy `{team} hasn't finished a regular-season game yet this season.` and `Pick a team to see its latest line combinations and ice-time trends.` are unchanged. |
-| Error state | Page-level error banner (rose) is unchanged: `Couldn't load NHL data for {team}: {error}`. This phase adds no new fetch, so no new error state. Invalid `sort`/`dir` never errors; it falls back to the default sort. |
+| Error state | Page-level error banner (rose): `Couldn't load NHL data for {team} right now. Try again in a minute.` It never shows the raw `{error}` (API detail stays in the server log, T-01-11). This phase adds no new fetch, so no new error state. Invalid `sort`/`dir` never errors; it falls back to the default sort. |
 | Destructive confirmation | none: no destructive actions in this phase |
 | Header labels | `Player`, `Pos`, `Avg TOI`, `TOI Δ`, `PP share`, `PP share Δ`, `SH`, `Per game (click a square)`, `TOI trend` |
 | DNP marker | `DNP last 2` |
