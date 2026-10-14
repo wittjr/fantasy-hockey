@@ -2,11 +2,11 @@
 gsd_state_version: "1.0"
 current_phase: 01
 status: completed
-stopped_at: Phase 01 complete — all phases complete
-last_updated: "2026-10-14T19:29:20.407Z"
+stopped_at: Phase 01 re-verified (passed 9/9) — milestone ready to close
+last_updated: "2026-10-14T19:32:39.506Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 01 complete
-state_head: 428bca1b5fe41c9f9845ee32b554e9c8ee1950f6
+state_head: 96e91a0d2e50fdaa69dc5d9d1a5ec9ffd31c2980
 progress:
   total_phases: 3
   completed_phases: 3
@@ -22,7 +22,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-14)
 
 **Core value:** At a glance, show which players on a team are moving up or down in deployment, so pickup/drop decisions can be made before the rest of the league notices.
-**Current focus:** Phase 01 — Ice-Time Trends Table
+**Current focus:** Milestone complete — ready to close
 
 ## Current Position
 
@@ -113,6 +113,7 @@ Recent decisions affecting current work:
 - [Phase 03]: Pulled-goalie events and seconds go to Other, not exclusions; exclusions are shootout and penalty-shot only (D-21, D-22)
 - [Phase 03]: Plus-minus override accepted for Panarin 2025020500 (shift chart wins over official 0)
 - [Phase 02]: 02-07: overflow-anchor none on the research page main so WebKit scroll anchoring does not move the page to the top when the player panel closes — Measured: no script scrolls; anchoring on main was the cause; N10 requires Close to keep the scroll position (UI-SPEC scroll false)
+- [Phase 01]: Re-verified after phases 02-03 changed covered files: passed 9/9 on 2026-10-14; code review not re-run because no phase-01 task commits landed since the 2026-10-12 review — the evaluation-scope fallback would have re-reviewed 42 phase 02-03 files already covered by 02-REVIEW.md and 03-REVIEW.md
 
 ### Pending Todos
 
@@ -120,9 +121,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1 → later]: WR-05..WR-08 fixed (1314b03, 88b2299, adb0f61, 888cc03). Still open: WR-10 (strip square aria-expanded tracks click only; Escape always blurs), WR-08 remainder (no DOM test of outside-click/blur), info IN-01..IN-13; see 01-REVIEW-DISPOSITION.md
+- [Phase 1 → later]: WR-05..WR-08 fixed (1314b03, 88b2299, adb0f61, 888cc03); WR-10 fixed in Phase 02 (5bbb68c). Still open: WR-08 remainder (no DOM test of outside-click/blur), info IN-01..IN-13; see 01-REVIEW-DISPOSITION.md
 - [All phases]: Site targets laptop browsers; no phone/touch UAT
 - [Phase 3]: Last 20 is only verified on 6-8 finished games per team (October); re-check a full 20-game window later in the season
+- [Phase 1]: webkit-strip-check.cjs no longer runs as written: its 3 s readiness probe is shorter than the ~5 s /research render (more NHL fetches since Phase 3), and the npx-cached playwright-core 1.64.1 needs WebKit build 2370 while only 2336 is installed. Raise the probe timeout and run `npx playwright install webkit` before relying on it
+- [Phase 1]: UI re-audit (2026-10-14) scored 19/24, warnings only: muted-dash contrast, all-dash Δ columns at a 2-game window with no UI-SPEC rule, copy drift; see 01-UI-REVIEW.md
+- [GSD tooling]: the code-review disposition step cannot parse the hand-curated 01-REVIEW-DISPOSITION.md; a future phase-01 review would rewrite it to 15 rows and reopen WR-10, so reconcile that ledger by hand
 
 ### Quick Tasks Completed
 
@@ -140,6 +144,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14
-Stopped at: Phase 01 complete — all phases complete
+Last session: 2026-10-14T19:32:39.442Z
+Stopped at: Phase 01 re-verified (passed 9/9) — milestone ready to close
 Resume file: None
