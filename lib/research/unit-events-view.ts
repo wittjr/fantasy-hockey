@@ -66,7 +66,11 @@ export function statCells(counts: EventCounts | null): UnitStats {
   };
 }
 
-/** Listed units (capped by UNIT_LIMITS, in lines.units order) with their formatted stats. */
+/**
+ * Listed units (capped by UNIT_LIMITS, in lines.units order) with their formatted stats, then Other (the situation
+ * total minus the listed rows, from raw seconds and counts) and Total. Both are null when the situation had no time
+ * and no events (D-12).
+ */
 export function buildUnitTable(
   lines: GameLines,
   events: GameEvents | null,
@@ -75,11 +79,31 @@ export function buildUnitTable(
 ): UnitTableView {
   const listed = lines.units[situation][group].slice(0, UNIT_LIMITS[situation][group]);
   const byUnit = events?.byUnit[situation][group];
-  const rows = listed.map((u) => ({
+  const listedCounts = listed.map((u) => byUnit?.get(u.playerIds.join(",")) ?? emptyCounts());
+  const rows = listed.map((u, i) => ({
     playerIds: u.playerIds,
     time: formatClock(u.seconds),
     pct: u.pct.toFixed(1),
-    stats: statCells(events ? (byUnit?.get(u.playerIds.join(",")) ?? emptyCounts()) : null),
+    stats: statCells(events ? listedCounts[i] : null),
   }));
-  return { rows, other: null, total: null };
+
+  const seconds = lines.situationSeconds[situation];
+  const totalCounts = events ? events.total[situation] : null;
+  if (seconds === 0 && (!totalCounts || totalCounts.cf + totalCounts.ca === 0)) return { rows, other: null, total: null };
+
+  const otherSeconds = seconds - listed.reduce((sum, u) => sum + u.seconds, 0);
+  const otherCounts = totalCounts && listedCounts.reduce(subtract, totalCounts);
+  return {
+    rows,
+    other: {
+      time: formatClock(otherSeconds),
+      pct: seconds === 0 ? DASH : ((otherSeconds / seconds) * 100).toFixed(1),
+      stats: statCells(otherCounts),
+    },
+    total: { time: formatClock(seconds), pct: "100.0", stats: statCells(totalCounts) },
+  };
+}
+
+function subtract(a: EventCounts, b: EventCounts): EventCounts {
+  return { gf: a.gf - b.gf, ga: a.ga - b.ga, sf: a.sf - b.sf, sa: a.sa - b.sa, cf: a.cf - b.cf, ca: a.ca - b.ca };
 }

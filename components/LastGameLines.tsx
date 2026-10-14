@@ -5,7 +5,7 @@ import type { Situation } from "@/lib/research/lines";
 import { SITUATION_ABBREV } from "@/lib/research/linemates";
 import type { TeamResearch } from "@/lib/research/team-games";
 import type { SortSpec } from "@/lib/research/toi-trends";
-import { buildUnitTable, DASH, type UnitStats, type UnitTableView } from "@/lib/research/unit-events-view";
+import { buildUnitTable, DASH, type UnitStats, type UnitSummaryRow, type UnitTableView } from "@/lib/research/unit-events-view";
 
 const DIVIDER = "border-l border-neutral-200 dark:border-neutral-800";
 
@@ -84,6 +84,19 @@ function StatCells({ stats }: { stats: UnitStats }) {
   });
 }
 
+/** The Other and Total rows: no number, the label sits in the line column. */
+function SummaryRow({ row, label, className }: { row: UnitSummaryRow; label: string; className: string }) {
+  return (
+    <tr className={className}>
+      <td className="py-1" />
+      <td className="py-1 tabular-nums">{row.time}</td>
+      <td className="py-1 tabular-nums text-neutral-500">{row.pct}</td>
+      <td className="py-1">{label}</td>
+      <StatCells stats={row.stats} />
+    </tr>
+  );
+}
+
 function UnitTable({
   title,
   view,
@@ -154,6 +167,14 @@ function UnitTable({
             </tr>
           ))
         )}
+        {view.other && (
+          <SummaryRow
+            row={view.other}
+            label="Other"
+            className="border-b border-neutral-100 text-neutral-600 dark:border-neutral-900 dark:text-neutral-400"
+          />
+        )}
+        {view.total && <SummaryRow row={view.total} label="Total" className="border-t border-neutral-300 font-medium dark:border-neutral-700" />}
       </tbody>
     </table>
   );
