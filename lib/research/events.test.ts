@@ -6,13 +6,16 @@ import type { NhlPlayByPlay } from "@/lib/nhl/client";
 import { attributeEvents, buildGameEvents, EVENT_MATCH_THRESHOLD, isShiftChartSuspect, matchIsLow, matchQuality, matchRatio, MAX_REPEATED_SHIFT_SHARE, onIceAt, type EventCounts } from "./events";
 import { analyzeGameLines, bucketOnIce, dedupeOnIce, parseClock, situationFor, uniqueShifts, type OnIce, type PositionGroup, type ShiftInput } from "./lines";
 import { toGameEvents, type EventKind, type GameEvent } from "./play-events";
+import { buildUnitTable } from "./unit-events-view";
 
 // The DATA-03 gate: counts from real NHL payloads must reproduce the official boxscore.
 // GATE_FIXTURES are games whose team SOG and every skater's plus-minus are reconciled;
 // ALL_FIXTURES is every committed fixture. Later plans append to both.
 // 2025020565 is a negative fixture for the corrupted-chart flag (D-23): in ALL_FIXTURES, never a gate game.
+// 2026020092 is the UAT G-03-1 regression for a counting rule (teammate-blocked attempts count in CF/CA), not a
+// plus-minus gate game: it is in ALL_FIXTURES only, and the gate set stays pinned by its own test.
 const GATE_FIXTURES = [2025020084, 2025020306, 2026020075, 2025020343, 2025020528, 2025020500];
-export const ALL_FIXTURES = [...GATE_FIXTURES, 2026020026, 2025020565];
+export const ALL_FIXTURES = [...GATE_FIXTURES, 2026020026, 2025020565, 2026020092];
 
 interface Fixture {
   gameId: number;
@@ -514,4 +517,75 @@ test("buildGameEvents on the corrupted 2025020565 is flagged and still returns c
 test("buildGameEvents leaves a good game unflagged", () => {
   const { pbp, shifts, positions } = load(2025020084);
   assert.equal(buildGameEvents("WPG", shifts, positions, pbp)?.chartSuspect, false);
+});
+
+// ---- UAT G-03-1: teammate-blocked attempts count in CF/CA (plan 03-12) ----
+// MTL vs BUF, 2026-10-13. Line 1 is on ice 5v5 for MTL's teammate-blocked attempt at P1 03:06, line 3 for BUF's at P2 19:34.
+const MTL_LINE_1 = { ids: [8480018, 8481540, 8483515], names: ["N. Suzuki", "C. Caufield", "J. Slafkovský"] };
+const MTL_LINE_3 = { ids: [8475184, 8476981, 8481618], names: ["C. Kreider", "J. Anderson", "A. Newhook"] };
+
+function mtlEvForwardRow(line: { ids: number[]; names: string[] }) {
+  const { fixture, pbp, shifts, positions } = load(2026020092);
+  for (const [i, id] of line.ids.entries()) assert.equal(fixture.players.find(([playerId]) => playerId === id)?.[4], line.names[i]);
+  const table = buildUnitTable(analyzeGameLines("MTL", shifts, positions), buildGameEvents("MTL", shifts, positions, pbp), "ev", "F");
+  const wanted = [...line.ids].sort((a, b) => a - b).join(",");
+  const row = table.rows.find((r) => [...r.playerIds].sort((a, b) => a - b).join(",") === wanted);
+  assert.ok(row, `unit ${wanted} is a listed EV forward row`);
+  return row;
+}
+
+test("UAT G-03-1: MTL line 1 shows EV CF 11 once its teammate-blocked attempt counts", () => {
+  assert.equal(mtlEvForwardRow(MTL_LINE_1).stats.cf, "11");
+});
+
+test("UAT G-03-1: MTL line 3 shows EV CA 6 once BUF's teammate-blocked attempt counts", () => {
+  assert.equal(mtlEvForwardRow(MTL_LINE_3).stats.ca, "6");
+});
+
+test("UAT G-03-1: teammate-blocked attempts add CF for the shooter's team and CA for the other, never SF or GF", () => {
+  const { pbp, shifts, positions } = load(2026020092);
+  const teammateBlocked = pbp.plays.filter((p) => p.typeDescKey === "blocked-shot" && p.details?.reason === "teammate-blocked");
+  assert.equal(teammateBlocked.length, 3);
+  const withAll = toGameEvents(pbp);
+  const withoutThem = toGameEvents({ ...pbp, plays: pbp.plays.filter((p) => !teammateBlocked.includes(p)) });
+  assert.equal(withAll.length - withoutThem.length, 3);
+  const sum = (r: ReturnType<typeof attributeEvents>, key: keyof EventCounts) => r.total.ev[key] + r.total.pp[key] + r.total.sh[key];
+  const delta = (team: string, key: keyof EventCounts) =>
+    sum(attributeEvents(team, shifts, positions, withAll), key) - sum(attributeEvents(team, shifts, positions, withoutThem), key);
+  // MTL took two of the three attempts and BUF one.
+  assert.deepEqual(["cf", "ca"].map((k) => delta("MTL", k as keyof EventCounts)), [2, 1]);
+  assert.deepEqual(["cf", "ca"].map((k) => delta("BUF", k as keyof EventCounts)), [1, 2]);
+  for (const team of ["MTL", "BUF"]) for (const key of ["gf", "ga", "sf", "sa"] as const) assert.equal(delta(team, key), 0, `${team} ${key}`);
+});
+
+for (const abbrev of ["MTL", "BUF"]) {
+  test(`UAT G-03-1 2026020092 ${abbrev}: attributed shots plus penalty shots equal the boxscore SOG, with no unattributed event`, () => {
+    const { fixture, pbp, shifts, positions } = load(2026020092);
+    const events = toGameEvents(pbp);
+    const own = fixture.homeTeam.abbrev === abbrev ? fixture.homeTeam : fixture.awayTeam;
+    const opp = own === fixture.homeTeam ? fixture.awayTeam : fixture.homeTeam;
+    const attributed = attributeEvents(abbrev, shifts, positions, events);
+    assert.equal(attributed.unattributed, 0);
+    const sum = (key: "sf" | "sa") => attributed.total.ev[key] + attributed.total.pp[key] + attributed.total.sh[key];
+    const isSog = (e: GameEvent) => e.kind === "goal" || e.kind === "shot-on-goal";
+    const penaltyShots = (team: string) => events.filter((e) => e.team === team && e.exclusion === "penalty-shot" && isSog(e)).length;
+    assert.equal(sum("sf") + penaltyShots(abbrev), own.sog);
+    assert.equal(sum("sa") + penaltyShots(opp.abbrev), opp.sog);
+  });
+}
+
+test("every teammate-blocked play has the shooter's own team as eventOwnerTeamId, so it credits CF to the shooter", () => {
+  let seen = 0;
+  for (const id of ALL_FIXTURES) {
+    const { fixture } = load(id);
+    const sideOf = new Map(fixture.players.map(([playerId, side]) => [playerId, side]));
+    for (const p of fixture.plays) {
+      if (p.typeDescKey !== "blocked-shot" || p.details?.reason !== "teammate-blocked") continue;
+      seen++;
+      const shooterSide = sideOf.get(p.details.shootingPlayerId ?? -1);
+      const ownerSide = p.details.eventOwnerTeamId === fixture.homeTeam.id ? "home" : "away";
+      assert.equal(ownerSide, shooterSide, `${id} ${p.timeInPeriod}`);
+    }
+  }
+  assert.ok(seen >= 29, `expected at least 29 teammate-blocked plays, saw ${seen}`);
 });
