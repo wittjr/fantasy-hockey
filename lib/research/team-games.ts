@@ -1,4 +1,5 @@
 import {
+  finishedGameCache,
   getBoxscore,
   getClubScheduleNow,
   getPlayByPlay,
@@ -20,6 +21,42 @@ import { pairSeconds, type GamePairs } from "./pair-seconds";
 // Regular season and playoffs; preseason deployment isn't representative.
 const RESEARCH_GAME_TYPES = new Set([2, 3]);
 const FINISHED_STATES = new Set(["OFF", "FINAL"]);
+
+// NHL api-web limits request rate (burst about 50, then a 60 s ban), not concurrency. 3 games at a time with
+// starts 500 ms apart is about 4 api-web requests per second; tuned by the cold Last 20 check (plan 03-09).
+export const MAX_CONCURRENT_GAMES = 3;
+export const GAME_START_GAP_MS = 500;
+
+/**
+ * Runs `fn` over `items` with at most `concurrency` in flight, starting items in order at least `gapMs` apart.
+ * Results come back in input order; a failed item is a rejected result, so this never rejects.
+ */
+export async function mapPaced<T, R>(
+  items: readonly T[],
+  fn: (item: T) => Promise<R>,
+  opts: { concurrency: number; gapMs: number },
+): Promise<PromiseSettledResult<R>[]> {
+  const results = new Array<PromiseSettledResult<R>>(items.length);
+  let next = 0;
+  let nextStartAt = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      // Reserve this item's start slot before waiting so concurrent workers stay gapMs apart.
+      const startAt = Math.max(Date.now(), nextStartAt);
+      nextStartAt = startAt + opts.gapMs;
+      const wait = startAt - Date.now();
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+      try {
+        results[i] = { status: "fulfilled", value: await fn(items[i]) };
+      } catch (reason) {
+        results[i] = { status: "rejected", reason };
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(opts.concurrency, items.length) }, worker));
+  return results;
+}
 
 export interface ResearchPlayer {
   id: number;
@@ -83,17 +120,18 @@ function addPlayers(stats: NhlBoxscoreTeamStats, into: Map<number, ResearchPlaye
 async function loadGame(
   team: string,
   gameId: number,
+  cache: ReturnType<typeof finishedGameCache>,
 ): Promise<{ game: ResearchGame; players: Map<number, ResearchPlayer> }> {
   // A failed shift chart (null) is not the same as an unpublished one ([]): a regulation game falls back to boxscore
   // TOI with no PP/SH, but an OT/SO game needs the chart for its regulation TOI, so it fails below.
   // A play-by-play failure never fails the game (D-05): its events are null (unknown).
   const [box, shifts, pbp] = await Promise.all([
-    getBoxscore(gameId),
-    getShiftCharts(gameId).catch((err: unknown) => {
+    getBoxscore(gameId, cache),
+    getShiftCharts(gameId, cache).catch((err: unknown) => {
       console.error(`Loading shift chart for game ${gameId} (${team}) failed`, err);
       return null;
     }),
-    getPlayByPlay(gameId).catch((err: unknown) => {
+    getPlayByPlay(gameId, cache).catch((err: unknown) => {
       console.error(`Loading play-by-play for game ${gameId} (${team}) failed`, err);
       return null;
     }),
@@ -146,7 +184,11 @@ async function loadGame(
 }
 
 /** The team's last `count` finished regular-season/playoff games this season. */
-export async function loadTeamResearch(team: NhlTeamAbbrev, count: number): Promise<TeamResearch> {
+export async function loadTeamResearch(
+  team: NhlTeamAbbrev,
+  count: number,
+  options: { gapMs?: number } = {},
+): Promise<TeamResearch> {
   const schedule = await getClubScheduleNow(team);
   const recent = schedule
     .filter((g) => RESEARCH_GAME_TYPES.has(g.gameType) && FINISHED_STATES.has(g.gameState))
@@ -154,7 +196,13 @@ export async function loadTeamResearch(team: NhlTeamAbbrev, count: number): Prom
     .slice(-count);
 
   // One failed game must not blank the page: keep the games that loaded and name the ones that did not.
-  const settled = await Promise.allSettled(recent.map((g) => loadGame(team, g.id)));
+  // Newest first, so if a ban hits mid-load the games that loaded are the latest ones; reversed back to match `recent`.
+  const settled = (
+    await mapPaced([...recent].reverse(), (g) => loadGame(team, g.id, finishedGameCache(g.startTimeUTC)), {
+      concurrency: MAX_CONCURRENT_GAMES,
+      gapMs: options.gapMs ?? GAME_START_GAP_MS,
+    })
+  ).reverse();
   // Merge oldest-first so the latest game's name/position wins.
   const players = new Map<number, ResearchPlayer>();
   const games: ResearchGame[] = [];
