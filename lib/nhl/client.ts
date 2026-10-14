@@ -120,6 +120,29 @@ export async function getBoxscore(gameId: number): Promise<NhlBoxscore> {
   return nhlGet<NhlBoxscore>(`gamecenter/${gameId}/boxscore`, FINISHED_GAME_CACHE);
 }
 
+/** A play-by-play event. Holds only the fields event attribution reads; `details` is optional because the JSON is untrusted. */
+export interface NhlPlay {
+  typeDescKey: string;
+  timeInPeriod: string; // "MM:SS" elapsed in period
+  situationCode?: string; // away goalie, away skaters, home skaters, home goalie
+  periodDescriptor: { number: number; periodType: string };
+  details?: {
+    eventOwnerTeamId?: number; // the shooter's team
+    reason?: string;
+    shootingPlayerId?: number;
+    scoringPlayerId?: number;
+    goalieInNetId?: number;
+  };
+}
+
+/** A game's play-by-play. Holds only the fields event attribution reads. */
+export interface NhlPlayByPlay {
+  id: number;
+  homeTeam: { id: number; abbrev: string };
+  awayTeam: { id: number; abbrev: string };
+  plays: NhlPlay[];
+}
+
 export interface NhlShift {
   playerId: number;
   teamAbbrev: string;
