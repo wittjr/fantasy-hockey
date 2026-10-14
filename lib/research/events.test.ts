@@ -150,6 +150,26 @@ test("the gate has exactly one known disagreement, on one of the gate games", ()
   }
 }
 
+test("the shootout attempts of 2026020075 are counted in excluded.shootout", () => {
+  const { fixture, shifts, positions, pbp } = load(2026020075);
+  const events = toGameEvents(pbp);
+  const shootoutEvents = events.filter((e) => e.exclusion === "shootout").length;
+  assert.ok(shootoutEvents > 0);
+  assert.equal(attributeEvents(fixture.homeTeam.abbrev, shifts, positions, events).excluded.shootout, shootoutEvents);
+});
+
+for (const id of [2025020528, 2025020500]) {
+  test(`the penalty shot of ${id} is counted in excluded.penaltyShot`, () => {
+    const { fixture, shifts, positions, pbp } = load(id);
+    assert.equal(attributeEvents(fixture.homeTeam.abbrev, shifts, positions, toGameEvents(pbp)).excluded.penaltyShot, 1);
+  });
+}
+
+test("the gate fixture set is pinned, and every gate fixture is in ALL_FIXTURES with the missing-chart game", () => {
+  assert.deepEqual([...GATE_FIXTURES].sort(), [2025020084, 2025020306, 2025020343, 2025020500, 2025020528, 2026020075]);
+  for (const id of [...GATE_FIXTURES, 2026020026]) assert.ok(ALL_FIXTURES.includes(id), `${id} is in ALL_FIXTURES`);
+});
+
 // ---- Attribution rules on synthetic games (plan 03-02) ----
 // BUF: forwards 1-6, D 11-14, G 20. OPP: forwards 101-106, D 111-114, G 120.
 const synthPositions = new Map<number, PositionGroup>([
