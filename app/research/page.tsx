@@ -56,13 +56,13 @@ export default async function ResearchPage({
       </Link>
 
       <div className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold">Line research</h1>
+        <h1 className="text-2xl font-medium">Line research</h1>
         <nav className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
           {NHL_TEAM_ABBREVS.map((t) => (
             <PendingLink
               key={t}
               href={researchHref(t, gameCount, sort, { sit })}
-              className={t === team ? "font-semibold underline" : "text-neutral-500 hover:underline"}
+              className={t === team ? "font-medium underline" : "text-neutral-500 hover:underline"}
             >
               {t}
             </PendingLink>
@@ -75,12 +75,12 @@ export default async function ResearchPage({
               <PendingLink
                 key={n}
                 href={researchHref(team, n, sort, { player, sit })}
-                className={n === gameCount ? "font-semibold underline" : "text-neutral-500 hover:underline"}
+                className={n === gameCount ? "font-medium underline" : "text-neutral-500 hover:underline"}
               >
                 {n === 1 ? "Last game" : `Last ${n}`}
               </PendingLink>
             ) : (
-              <span key={n} className={n === gameCount ? "font-semibold" : "text-neutral-400"}>
+              <span key={n} className={n === gameCount ? "font-medium" : "text-neutral-400"}>
                 {n === 1 ? "Last game" : `Last ${n}`}
               </span>
             )
