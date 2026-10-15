@@ -1,6 +1,6 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
-import { mapPaced, loadTeamResearch } from "./team-games";
+import { mapPaced, loadTeamResearch, clearGameCache } from "./team-games";
 
 interface Stub {
   /** Schedule entries; defaults to three finished games plus one future game. */
@@ -73,6 +73,7 @@ const pbpRequests = new Map<number, number>();
 
 /** Replaces global fetch with canned NHL responses and silences (but records) console.error. */
 function stubNhl(t: TestContext, stub: Stub = {}) {
+  clearGameCache();
   pbpRequests.clear();
   const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
   t.mock.method(globalThis, "fetch", async (input: string | URL | Request, init?: RequestInit) => {
@@ -288,4 +289,47 @@ test("a game with no startTimeUTC uses the hour cache", async (t) => {
   const gameCalls = calls.filter((c) => !c.url.includes("club-schedule-season"));
   assert.equal(gameCalls.length, 3);
   for (const c of gameCalls) assert.equal((c.init as { next?: { revalidate?: number } }).next?.revalidate, 3600);
+});
+
+const boxscoreIds = (calls: NonNullable<Stub["calls"]>) =>
+  calls.flatMap((c) => c.url.match(/gamecenter\/(\d+)\/boxscore/)?.[1] ?? []).map(Number);
+
+test("a second load of the same team makes no game requests and returns the same games", async (t) => {
+  const calls: NonNullable<Stub["calls"]> = [];
+  stubNhl(t, { calls });
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  calls.length = 0;
+  const research = await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].url.includes("club-schedule-season"));
+  assert.deepEqual(research.games.map((g) => g.id), [1, 2, 3]);
+  assert.equal(research.players.get(8)?.name, "Alpha Forward");
+});
+
+test("cached games skip the pacing gap", async (t) => {
+  stubNhl(t);
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  const started = Date.now();
+  await loadTeamResearch("MTL", 5, { gapMs: 1000 });
+  assert.ok(Date.now() - started < 300);
+});
+
+test("games with an unpublished play-by-play or a failed shift chart are requested again", async (t) => {
+  const calls: NonNullable<Stub["calls"]> = [];
+  stubNhl(t, { calls, pbpEmpty: [3], shiftChartFails: [2] });
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  calls.length = 0;
+  const research = await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  assert.deepEqual(boxscoreIds(calls), [3, 2]);
+  assert.deepEqual(research.games.map((g) => g.id), [1, 2, 3]);
+});
+
+test("a game whose boxscore failed is not cached and stays unavailable", async (t) => {
+  const calls: NonNullable<Stub["calls"]> = [];
+  stubNhl(t, { calls, boxscoreFails: [2] });
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  calls.length = 0;
+  const research = await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  assert.deepEqual(research.unavailableDates, ["2026-10-03"]);
+  assert.deepEqual(boxscoreIds(calls), [2]);
 });

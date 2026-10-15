@@ -122,7 +122,7 @@ async function loadGame(
   team: string,
   gameId: number,
   cache: ReturnType<typeof finishedGameCache>,
-): Promise<{ game: ResearchGame; players: Map<number, ResearchPlayer> }> {
+): Promise<{ game: ResearchGame; players: Map<number, ResearchPlayer>; complete: boolean }> {
   // A failed shift chart (null) is not the same as an unpublished one ([]): a regulation game falls back to boxscore
   // TOI with no PP/SH, but an OT/SO game needs the chart for its regulation TOI, so it fails below.
   // A play-by-play failure never fails the game (D-05): its events are null (unknown).
@@ -181,7 +181,37 @@ async function loadGame(
     pairs: shiftInputs.length > 0 ? pairSeconds(team, shiftInputs, positions) : null,
     events: buildGameEvents(team, shiftInputs, positions, pbp),
   };
-  return { game, players: gamePlayers };
+  // Same rule as client.ts: failed (null) or unpublished (empty) data is never pinned, so such a game is loaded again.
+  const complete = shifts !== null && shifts.length > 0 && pbp !== null && pbp.plays.length > 0;
+  return { game, players: gamePlayers, complete };
+}
+
+// Limit for gameCache: 32 teams x Last 20.
+export const MAX_CACHED_GAMES = 640;
+
+interface LoadedGame {
+  game: ResearchGame;
+  players: Map<number, ResearchPlayer>;
+}
+
+/**
+ * Fully loaded games by team and game id (a game's data is from one team's perspective), so a repeat /research
+ * navigation skips the pacing gap and the per-game analysis. Only complete games are stored, each for its
+ * finishedGameCache tier. Cached games are shared across requests: consumers must not mutate them. On Vercel this lives
+ * per warm instance and resets on cold start or deploy, which is fine because a miss falls back to the paced load.
+ */
+const gameCache = new Map<string, LoadedGame & { expiresAt: number }>();
+
+/** Empties the game cache (for tests). */
+export function clearGameCache() {
+  gameCache.clear();
+}
+
+function storeGame(key: string, loaded: LoadedGame, revalidateS: number) {
+  // Delete first so a re-store moves to the end of insertion order.
+  gameCache.delete(key);
+  gameCache.set(key, { ...loaded, expiresAt: Date.now() + revalidateS * 1000 });
+  while (gameCache.size > MAX_CACHED_GAMES) gameCache.delete(gameCache.keys().next().value!);
 }
 
 /** The team's last `count` finished regular-season/playoff games this season. */
@@ -196,14 +226,35 @@ export async function loadTeamResearch(
     .sort((a, b) => a.gameDate.localeCompare(b.gameDate))
     .slice(-count);
 
+  // Hits are decided once, up front, so eviction during this load does not change which games are misses.
+  const now = Date.now();
+  const loaded = new Map<number, PromiseSettledResult<LoadedGame>>();
+  const misses: typeof recent = [];
+  for (const g of recent) {
+    const key = `${team}:${g.id}`;
+    const hit = gameCache.get(key);
+    if (hit && now < hit.expiresAt) loaded.set(g.id, { status: "fulfilled", value: hit });
+    else {
+      gameCache.delete(key);
+      misses.push(g);
+    }
+  }
+
   // One failed game must not blank the page: keep the games that loaded and name the ones that did not.
-  // Newest first, so if a ban hits mid-load the games that loaded are the latest ones; reversed back to match `recent`.
-  const settled = (
-    await mapPaced([...recent].reverse(), (g) => loadGame(team, g.id, finishedGameCache(g.startTimeUTC)), {
-      concurrency: MAX_CONCURRENT_GAMES,
-      gapMs: options.gapMs ?? GAME_START_GAP_MS,
-    })
-  ).reverse();
+  // Newest first, so if a ban hits mid-load the games that loaded are the latest ones. Only misses are paced.
+  const newestFirst = [...misses].reverse();
+  const results = await mapPaced(
+    newestFirst,
+    async (g) => {
+      const tier = finishedGameCache(g.startTimeUTC);
+      const result = await loadGame(team, g.id, tier);
+      if (result.complete) storeGame(`${team}:${g.id}`, result, tier.next.revalidate);
+      return { game: result.game, players: result.players };
+    },
+    { concurrency: MAX_CONCURRENT_GAMES, gapMs: options.gapMs ?? GAME_START_GAP_MS },
+  );
+  newestFirst.forEach((g, i) => loaded.set(g.id, results[i]));
+  const settled = recent.map((g) => loaded.get(g.id)!);
   // Merge oldest-first so the latest game's name/position wins.
   const players = new Map<number, ResearchPlayer>();
   const games: ResearchGame[] = [];
