@@ -1,6 +1,6 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
-import { mapPaced, loadTeamResearch, clearGameCache } from "./team-games";
+import { mapPaced, loadTeamResearch, clearGameCache, MAX_CACHED_GAMES } from "./team-games";
 
 interface Stub {
   /** Schedule entries; defaults to three finished games plus one future game. */
@@ -332,4 +332,53 @@ test("a game whose boxscore failed is not cached and stays unavailable", async (
   const research = await loadTeamResearch("MTL", 5, { gapMs: 0 });
   assert.deepEqual(research.unavailableDates, ["2026-10-03"]);
   assert.deepEqual(boxscoreIds(calls), [2]);
+});
+
+const gamecenterCalls = (calls: NonNullable<Stub["calls"]>) => calls.filter((c) => c.url.includes("gamecenter"));
+
+test("a cached game with no start time expires after an hour", async (t) => {
+  const calls: NonNullable<Stub["calls"]> = [];
+  stubNhl(t, { calls });
+  t.mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-10-15T12:00:00Z") });
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  t.mock.timers.tick(3_599_000);
+  calls.length = 0;
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  assert.equal(gamecenterCalls(calls).length, 0);
+  t.mock.timers.tick(2_000);
+  calls.length = 0;
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  assert.deepEqual(boxscoreIds(calls), [3, 2, 1]);
+});
+
+test("a cached game that started 30 days ago keeps for 30 days", async (t) => {
+  const calls: NonNullable<Stub["calls"]> = [];
+  const now = Date.parse("2026-10-15T12:00:00Z");
+  const old = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+  stubNhl(t, { calls, games: [{ id: 1, gameDate: "2026-09-15", gameState: "OFF", startTimeUTC: old }] });
+  t.mock.timers.enable({ apis: ["Date"], now });
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  t.mock.timers.tick(2 * 60 * 60 * 1000);
+  calls.length = 0;
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  assert.equal(gamecenterCalls(calls).length, 0);
+  t.mock.timers.tick(30 * 24 * 60 * 60 * 1000);
+  calls.length = 0;
+  await loadTeamResearch("MTL", 5, { gapMs: 0 });
+  assert.deepEqual(boxscoreIds(calls), [1]);
+});
+
+test("the game cache drops the oldest stored game past MAX_CACHED_GAMES", async (t) => {
+  const calls: NonNullable<Stub["calls"]> = [];
+  const total = MAX_CACHED_GAMES + 1;
+  const games = Array.from({ length: total }, (_, i) => ({
+    id: i + 1,
+    gameDate: `2026-${String(Math.floor(i / 28) + 1).padStart(2, "0")}-${String((i % 28) + 1).padStart(2, "0")}`,
+    gameState: "OFF",
+  }));
+  stubNhl(t, { calls, games });
+  await loadTeamResearch("MTL", total, { gapMs: 0 });
+  calls.length = 0;
+  await loadTeamResearch("MTL", total, { gapMs: 0 });
+  assert.equal(boxscoreIds(calls).length, 1);
 });
