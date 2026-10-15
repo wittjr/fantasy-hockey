@@ -182,7 +182,7 @@ async function loadGame(
     events: buildGameEvents(team, shiftInputs, positions, pbp),
   };
   // Same rule as client.ts: failed (null) or unpublished (empty) data is never pinned, so such a game is loaded again.
-  const complete = shifts !== null && shifts.length > 0 && pbp !== null && pbp.plays.length > 0;
+  const complete = shifts !== null && shifts.length > 0 && !!pbp?.plays?.length;
   return { game, players: gamePlayers, complete };
 }
 
