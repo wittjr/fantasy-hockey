@@ -1,12 +1,3 @@
-# Requirements Archive: v1.0 Line Research
-
-**Archived:** 2026-10-14
-**Status:** SHIPPED
-
-For current requirements, see `.planning/REQUIREMENTS.md`.
-
----
-
 # Requirements: Fantasy Hockey Draft Prep — Line Research
 
 **Defined:** 2026-10-11
@@ -14,7 +5,7 @@ For current requirements, see `.planning/REQUIREMENTS.md`.
 
 ## v1 Requirements
 
-Requirements for this milestone. Each maps to roadmap phases.
+Requirements for the current roadmap. Each maps to roadmap phases.
 
 ### Data Reliability
 
@@ -46,7 +37,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ## v2 Requirements
 
-Deferred to a future milestone. Tracked but not in current roadmap.
+Deferred. Tracked but not in current roadmap.
 
 ### Cross-team
 

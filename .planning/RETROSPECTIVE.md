@@ -1,11 +1,12 @@
 # Project Retrospective
 
-*A living document updated after each milestone. Lessons feed forward into future planning.*
+*A living document, updated after each block of phases. Lessons feed forward into future planning.*
 
-## Milestone: v1.0 — Line Research
+## Phases 1-3 — Line Research
 
-**Shipped:** 2026-10-14
-**Phases:** 3 | **Plans:** 29 (16 initial, 13 gap/fix plans) | **Quick tasks:** 6 | **Commits:** 322 over 4 days
+**Shipped:** 2026-10-14 (started 2026-10-11)
+**Delivered:** The `/research` page became a tool for spotting role changes: an ice-time trends table, a per-player linemate panel, and boxscore-reconciled shot, goal and Corsi stats on every last-game unit table.
+**Phases:** 3 | **Plans:** 29 (16 initial, 13 gap/fix plans), 62 tasks | **Quick tasks:** 6 | **Commits:** 322 over 4 days; app/components/lib: 42 files, +7,535 / −339
 
 ### What Was Built
 - Ice-time trends table on `/research`: regulation-only Avg TOI, PP share, SH, recent-vs-window Δ with mover tints, URL sorting, clickable per-game strip
@@ -38,25 +39,25 @@
 4. Make every mapping of external JSON total (or contained) from the start; review found an unguarded path that could drop a whole game.
 
 ### Cost Observations
-- Model mix, session count and token cost were not tracked this milestone.
+- Model mix, session count and token cost were not tracked for these phases.
 - Notable: gap plans and quick tasks (19 of 35 units of work) outnumbered initial plans; tighter UI acceptance up front would cut most of them.
 
 ---
 
-## Cross-Milestone Trends
+## Trends
 
 ### Process Evolution
 
-| Milestone | Sessions | Phases | Key Change |
+| Phases | Sessions | Count | Key Change |
 |-----------|----------|--------|------------|
-| v1.0 | not tracked | 3 | Fixture reconciliation gate before UI; WebKit harness on live data |
+| 1-3 | not tracked | 3 | Fixture reconciliation gate before UI; WebKit harness on live data |
 
 ### Cumulative Quality
 
-| Milestone | Tests | Coverage | Zero-Dep Additions |
+| Phases | Tests | Coverage | Zero-Dep Additions |
 |-----------|-------|----------|-------------------|
-| v1.0 | 557 | not measured | 0 new runtime dependencies |
+| 1-3 | 557 | not measured | 0 new runtime dependencies |
 
-### Top Lessons (Verified Across Milestones)
+### Top Lessons (Verified Across Phase Blocks)
 
-1. (Needs a second milestone to verify.)
+1. (Needs a second block of phases to verify.)
